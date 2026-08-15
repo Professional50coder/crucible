@@ -1,0 +1,12 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+coverage.json
+typechain-types/
+
+# Never commit a key.
+.env
+
+# Deployment records ARE committed — downstream packages read them for addresses.
+!deployments/

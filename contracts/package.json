@@ -1,0 +1,24 @@
+{
+  "name": "@crucible/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Crucible Model Passport — ERC-7857-style Agentic ID anchoring 0G fine-tuning lineage on-chain.",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "clean": "hardhat clean",
+    "export-abi": "hardhat run scripts/export-abi.js",
+    "deploy:galileo": "hardhat run scripts/deploy.js --network galileo",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.17"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6"
+  }
+}
