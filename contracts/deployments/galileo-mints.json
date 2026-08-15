@@ -18,5 +18,28 @@
     },
     "manifestRootHash": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
     "mintedAt": "2026-08-15T17:38:24.050Z"
+  },
+  {
+    "tokenId": "2",
+    "txHash": "0x60094f63813827391266d7f77c02649342b435d86d297964d499d2deae420324",
+    "blockNumber": 49612106,
+    "gasUsed": "293514",
+    "manifest": {
+      "adapterRootHash": "0x40a5f256ff464106f6be38ef146614bd78d5ddfe07af16b156d3efcddb561b4d",
+      "artifactSha256": "0x9f78876467e409cdcf4b95fbb3aacb6958d6cd487295c31d208996838026ae1d",
+      "artifactSizeBytes": 93642469,
+      "baseModelHash": "0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7",
+      "chainId": 16602,
+      "configHash": "0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1",
+      "datasetRootHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+      "network": "testnet",
+      "note": "Adapter retrieved and acknowledged. Downloaded via the 0g-storage path from WSL2 Linux after both paths failed on Windows; the SDK validated the artifact against the provider's on-chain root hash before acknowledging.",
+      "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+      "retrievalPlatform": "wsl2-linux",
+      "taskId": "3e385c46-f5dc-4e93-b713-63ab7a987ae3",
+      "version": 1
+    },
+    "manifestRootHash": "0x0f46406e90c548205a0f59481f6c8c35e4a91a8ad5139cb8332382acd23b93a7",
+    "mintedAt": "2026-08-15T19:40:19.496Z"
   }
 ]
