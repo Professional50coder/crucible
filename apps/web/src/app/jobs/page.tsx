@@ -47,8 +47,9 @@ export default function JobsPage() {
           <p className="label">Managed by the daemon</p>
           <h1 className="mt-3 text-title font-medium text-fg">Runs</h1>
           <p className="measure mt-4 text-sm leading-relaxed text-dim text-pretty">
-            Every fine-tuning task Crucible is managing. Acknowledgement is automatic — nothing
-            here needs you watching it.
+            Every fine-tuning task Crucible is managing. The daemon watches each 48-hour
+            acknowledgement window, retries every download path 0G offers, and escalates before
+            the deadline rather than after it — so nothing here needs you polling a CLI.
           </p>
         </div>
         <Link href="/new" className="btn-primary no-underline">
@@ -69,7 +70,7 @@ export default function JobsPage() {
         ) : jobs.length === 0 ? (
           <EmptyState
             title="No runs yet"
-            body="Upload a dataset and Crucible handles funding, task creation, polling, acknowledgement and the passport."
+            body="Upload a dataset and Crucible handles funding, task creation, polling, the acknowledgement window and the passport."
             action={{ href: '/new', label: 'Start a run' }}
           />
         ) : (

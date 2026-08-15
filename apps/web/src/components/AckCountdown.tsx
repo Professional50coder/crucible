@@ -11,10 +11,18 @@
  * the first: it shows the deadline, and it shows that Crucible is already
  * handling it, with the timestamp at which it will act.
  *
- * The window strip at the bottom is what makes "we handle this for you" a thing
- * you can see rather than a thing you are told. Crucible's mark sits hard
- * against the left edge of a 48-hour bar; the deadline is the whole width away.
- * The distance between those two points is the product.
+ * What it must not do is promise the model back. On this project's own first run
+ * both of `acknowledgeModel`'s download paths failed and the deliverable went
+ * unacknowledged, which cost the model and 30% of the fee. So the copy here
+ * claims only what is true: the daemon tries every path, keeps trying, and
+ * escalates before the window closes instead of after.
+ *
+ * The window strip at the bottom is what makes "the deadline is being watched" a
+ * thing you can see rather than a thing you are told. Crucible's mark sits hard
+ * against the left edge of a 48-hour bar; the deadline is the whole width away,
+ * with the last six hours shaded as the zone nothing is allowed to reach
+ * unattended. Every mark on that strip carries a printed label — a tick you can
+ * only read by hovering is a tick a judge watching a recording never reads.
  */
 
 import { useEffect, useState } from 'react'
@@ -31,7 +39,7 @@ import {
   type DeadlineUrgency,
 } from '@/lib/deadline'
 import { formatDuration, formatOg, formatTimestamp } from '@/lib/format'
-import { ClockIcon, ShieldIcon } from './icons'
+import { AlertIcon, ClockIcon, ShieldIcon } from './icons'
 import { Dot } from './ui'
 
 export interface AckCountdownProps {
@@ -59,6 +67,16 @@ const urgencyBar: Record<DeadlineUrgency, string> = {
   warning: 'bg-warn',
   critical: 'bg-danger',
   expired: 'bg-danger',
+}
+
+/** A word for the state, so colour is never the only carrier of meaning. */
+const urgencyWord: Record<DeadlineUrgency, string> = {
+  safe: 'in hand',
+  warning: 'under a day left',
+  critical: 'inside the escalation margin',
+  // Deliberately not "window closed": the label above already says that, and two
+  // identical strings on one panel is a reader asking which one is the real one.
+  expired: 'deadline passed',
 }
 
 const clampPercent = (value: number) => Math.min(100, Math.max(0, value))
@@ -94,10 +112,17 @@ export function AckCountdown({
   const escalationPercent = clampPercent(((ACK_WINDOW_MS - AUTO_ACK_MARGIN_MS) / ACK_WINDOW_MS) * 100)
   const nowPercent = clampPercent(100 - status.percentRemaining)
 
+  /** The unattended zone: nothing is ever allowed past here silently. */
+  const marginWidth = 100 - escalationPercent
+
   return (
     <section
       className={`overflow-hidden rounded-lg border ${
-        done ? 'border-ok/30 bg-ok/[0.04]' : 'border-warn/30 bg-warn/[0.035]'
+        done
+          ? 'border-ok/30 bg-ok/[0.04]'
+          : status.urgency === 'critical' || status.urgency === 'expired'
+            ? 'border-danger/40 bg-danger/[0.05]'
+            : 'border-warn/30 bg-warn/[0.035]'
       }`}
       data-testid="ack-countdown"
       aria-live="polite"
@@ -142,11 +167,27 @@ export function AckCountdown({
             >
               {done ? 'Acknowledged' : formatDuration(status.remainingMs)}
             </div>
+
+            {!done ? (
+              <div
+                className={`mt-2 inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest2 ${
+                  urgencyText[status.urgency]
+                }`}
+              >
+                {status.urgency === 'safe' ? (
+                  <Dot tone="ok" />
+                ) : (
+                  <AlertIcon className="h-3 w-3" />
+                )}
+                {urgencyWord[status.urgency]}
+              </div>
+            ) : null}
+
             <div className="mt-2.5 font-mono text-2xs text-faint">
               deadline {formatTimestamp(status.deadline.toISOString())}
             </div>
 
-            <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-line">
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-line">
               <div
                 className={`h-full transition-all duration-1000 ${
                   done ? 'bg-ok' : urgencyBar[status.urgency]
@@ -155,6 +196,11 @@ export function AckCountdown({
                 data-testid="ack-bar"
               />
             </div>
+            <p className="mt-2 font-mono text-2xs text-faint">
+              {done
+                ? 'window closed with time to spare'
+                : `${Math.round(status.percentRemaining)}% of the window still available`}
+            </p>
           </div>
 
           {/* Right: the reason you do not have to watch it. */}
@@ -218,16 +264,32 @@ export function AckCountdown({
         <div className="mt-6 border-t border-line pt-5">
           <div className="flex items-baseline justify-between gap-3">
             <span className="label">The window, to scale</span>
-            <span className="font-mono text-2xs text-faint">0h → {ACK_WINDOW_HOURS}h</span>
+            <span className="font-mono text-2xs text-faint">
+              0h → {ACK_WINDOW_HOURS}h · one pixel ≈ {(ACK_WINDOW_HOURS * 60) / 100} minutes
+            </span>
           </div>
 
-          <div className="relative mt-3 h-6" data-testid="ack-window-strip">
+          {/* 28px of ticks and track, then a printed label row beneath it. The
+              labels are part of the drawing, not a tooltip: a mark whose meaning
+              is only in a title attribute is a mark nobody reads. */}
+          <div className="relative mt-4 h-7" data-testid="ack-window-strip">
             {/* Track. */}
-            <div className="absolute inset-x-0 top-2.5 h-1 rounded-full bg-line" aria-hidden="true" />
+            <div
+              className="absolute inset-x-0 top-3 h-1.5 overflow-hidden rounded-full bg-line"
+              aria-hidden="true"
+            >
+              {/* The last six hours: the zone the daemon escalates rather than enter. */}
+              <div
+                className="absolute inset-y-0 right-0 bg-danger/25"
+                style={{ width: `${marginWidth}%` }}
+              />
+            </div>
 
             {/* Consumed so far. */}
             <div
-              className={`absolute left-0 top-2.5 h-1 rounded-full ${done ? 'bg-ok/50' : 'bg-line-bright'}`}
+              className={`absolute left-0 top-3 h-1.5 rounded-full ${
+                done ? 'bg-ok/60' : 'bg-line-bright'
+              }`}
               style={{ width: `${nowPercent}%` }}
               aria-hidden="true"
             />
@@ -244,14 +306,43 @@ export function AckCountdown({
             {/* Now. */}
             {!done ? (
               <div
-                className="absolute top-0 h-6 w-px bg-fg/70"
+                className="absolute top-0 h-7 w-px bg-fg/70"
                 style={{ left: `${nowPercent}%` }}
                 aria-hidden="true"
               />
             ) : null}
           </div>
 
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+          {/* Printed labels, positioned under their ticks. */}
+          <div className="relative mt-1 h-8" aria-hidden="true">
+            <TickLabel percent={0} align="start" k="0h" v="delivered" />
+            <TickLabel
+              percent={actPercent}
+              align="start"
+              k="≈2m"
+              v="Crucible acts"
+              tone="text-phosphor"
+              indent
+            />
+            <TickLabel
+              percent={escalationPercent}
+              align="center"
+              k={`${ACK_WINDOW_HOURS - 6}h`}
+              v="escalation"
+              tone="text-warn"
+            />
+            <TickLabel
+              percent={100}
+              align="end"
+              k={`${ACK_WINDOW_HOURS}h`}
+              v="model destroyed"
+              tone="text-danger"
+            />
+          </div>
+
+          {/* The same four marks as a list, for screen readers and for anyone
+              whose viewport is too narrow for the labels above to sit apart. */}
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
             <Legend tone="bg-faint" k="0h · delivered" v={formatTimestamp(deliveredAt).slice(11)} />
             <Legend
               tone="bg-phosphor"
@@ -305,8 +396,46 @@ function Marker({
       style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
       title={label}
     >
-      <span className={`w-px ${tall ? 'h-6' : 'h-4 mt-1'} ${colour}`} aria-hidden="true" />
+      <span className={`w-px ${tall ? 'h-7' : 'h-5 mt-1'} ${colour}`} aria-hidden="true" />
       <span className="sr-only">{label}</span>
+    </span>
+  )
+}
+
+/**
+ * A printed label under a tick.
+ *
+ * Alignment matters more than it looks: a centred label at 0% or 100% hangs off
+ * the edge of the strip and clips, which on a countdown reads as a rendering
+ * bug rather than a design choice.
+ */
+function TickLabel({
+  percent,
+  align,
+  k,
+  v,
+  tone = 'text-faint',
+  indent = false,
+}: {
+  percent: number
+  align: 'start' | 'center' | 'end'
+  k: string
+  v: string
+  tone?: string
+  indent?: boolean
+}) {
+  const transform =
+    align === 'center' ? 'translateX(-50%)' : align === 'end' ? 'translateX(-100%)' : 'none'
+
+  return (
+    <span
+      className={`absolute top-0 flex flex-col ${
+        align === 'end' ? 'items-end text-right' : align === 'center' ? 'items-center' : 'items-start'
+      }`}
+      style={{ left: `${percent}%`, transform, paddingLeft: indent ? '0.375rem' : undefined }}
+    >
+      <span className={`font-mono text-2xs leading-tight ${tone}`}>{k}</span>
+      <span className="whitespace-nowrap font-mono text-[10px] leading-tight text-faint">{v}</span>
     </span>
   )
 }

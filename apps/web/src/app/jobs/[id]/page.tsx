@@ -19,6 +19,7 @@ import {
 } from '@/components/icons'
 import {
   Badge,
+  Dot,
   EmptyState,
   ErrorState,
   NetworkBadge,
@@ -30,10 +31,11 @@ import {
   Stat,
 } from '@/components/ui'
 import { getJob, getJobLogs, unlockJob } from '@/lib/api'
-import { NETWORKS, addressUrl, storageScanHost, storageUrl } from '@/lib/chains'
+import { NETWORKS, addressUrl, storageLookupUrl, storageScanHost } from '@/lib/chains'
 import {
   formatBytes,
   formatCount,
+  formatElapsed,
   formatLearningRate,
   formatOg,
   formatRelative,
@@ -70,11 +72,19 @@ export default function JobPage({ params }: { params: { id: string } }) {
     }
   }, [id])
 
+  /**
+   * A finished or failed task never changes again, so the poll stops. Left
+   * running it would keep the tab busy forever and make the "polling" badge a
+   * claim the page does not honour.
+   */
+  const settled = job !== null && (job.state === 'Finished' || job.state === 'Failed')
+
   useEffect(() => {
     void load()
+    if (settled) return
     const timer = setInterval(() => void load(), POLL_MS)
     return () => clearInterval(timer)
-  }, [load])
+  }, [load, settled])
 
   const onUnlock = useCallback(async () => {
     setUnlocking(true)
@@ -126,6 +136,8 @@ export default function JobPage({ params }: { params: { id: string } }) {
   const failed = job.state === 'Failed'
   const failedAt = lastReached(job)
   const awaitingAck = job.deliveredAt !== null && job.state !== 'Failed'
+  /** Still moving on 0G's side, so the page states that it is watching. */
+  const live = !failed && job.state !== 'Finished'
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -144,6 +156,13 @@ export default function JobPage({ params }: { params: { id: string } }) {
             <span>{job.id}</span>
             {job.model ? <span>{job.model}</span> : null}
             <span>started {formatRelative(job.createdAt)}</span>
+            {live ? (
+              <span className="inline-flex items-center gap-1.5 text-phosphor">
+                <Dot tone="accent" pulse />
+                <LiveElapsed since={job.createdAt} />
+                {' elapsed'}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -306,7 +325,7 @@ export default function JobPage({ params }: { params: { id: string } }) {
                   <div className="mt-1">
                     <Hash
                       value={job.datasetRootHash}
-                      href={storageUrl(job.network, job.datasetRootHash)}
+                      href={storageLookupUrl(job.network, job.datasetRootHash)}
                       hrefLabel={storageScanHost(job.network)}
                       title="dataset root hash"
                     />
@@ -320,7 +339,7 @@ export default function JobPage({ params }: { params: { id: string } }) {
                   <div className="mt-1">
                     <Hash
                       value={job.adapterRootHash}
-                      href={storageUrl(job.network, job.adapterRootHash)}
+                      href={storageLookupUrl(job.network, job.adapterRootHash)}
                       hrefLabel={storageScanHost(job.network)}
                       title="adapter root hash"
                     />
@@ -432,12 +451,39 @@ export default function JobPage({ params }: { params: { id: string } }) {
 
           <div className="flex flex-wrap gap-2">
             <Badge>chain {job.chainId ?? network.chainId}</Badge>
-            <Badge>polling {POLL_MS / 1000}s</Badge>
+            {live ? (
+              <Badge tone="accent">
+                <Dot tone="accent" pulse />
+                polling {POLL_MS / 1000}s
+              </Badge>
+            ) : (
+              <Badge>settled · no longer polling 0G</Badge>
+            )}
           </div>
         </aside>
       </div>
     </div>
   )
+}
+
+/**
+ * A wall clock that ticks while a task is still moving.
+ *
+ * The rest of this page updates on a 2s poll, which is right for state that
+ * comes from 0G but wrong for a duration: a clock that jumps in two-second steps
+ * reads as a stalled page, and the one thing a live training view has to
+ * communicate is that it is live.
+ */
+function LiveElapsed({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const seconds = Math.max(0, Math.floor((now - new Date(since).getTime()) / 1000))
+  return <span className="tabular-nums">{formatElapsed(seconds)}</span>
 }
 
 function Row({ k, v }: { k: string; v: string }) {
