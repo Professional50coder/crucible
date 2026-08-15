@@ -26,7 +26,10 @@ secrets/
 mnemonic*
 wallet-*.json
 
-# Fine-tuning artifacts
+# Fine-tuning artifacts. The retrieved model stays on disk and is referenced by
+# hash from the docs; 89 MB of encrypted weights does not belong in git.
+runs/**/*.bin
+runs/ack-*/
 models/
 *.safetensors
 encrypted_model.bin
