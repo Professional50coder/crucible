@@ -89,11 +89,25 @@ export function tokenUrl(network: Network, contract: string, tokenId: string): s
 }
 
 /**
- * 0G Storage file page for a root hash — how a stranger checks a dataset exists.
- * The network argument is mandatory precisely so a caller cannot forget it.
+ * How a stranger checks that a root hash exists on 0G Storage.
+ *
+ * There is no `/file/<rootHash>` page. Storage Scan's human-readable route is
+ * `/submission/<txSeq>`, and a txSeq cannot be derived from a root hash without
+ * asking the explorer first — its search box takes a sequence number or an
+ * address, never a root hash. So the link keyed by root hash is the JSON one,
+ * which does resolve and does answer the question being asked. A working JSON
+ * URL beats a pretty 404, and on a page whose only job is letting someone check
+ * a claim, a 404 reads as *the data is gone* rather than *the URL is wrong*.
+ *
+ * Mirrors `storageLookupUrl` in `@crucible/core`; keep the two identical.
  */
-export function storageUrl(network: Network, rootHash: string): string {
-  return `${STORAGE_SCAN_URLS[network]}/file/${rootHash}`
+export function storageLookupUrl(network: Network, rootHash: string): string {
+  return `${STORAGE_SCAN_URLS[network]}/api/txs?skip=0&limit=10&rootHash=${rootHash}`
+}
+
+/** The human-readable Storage Scan page. Only usable once a txSeq is known. */
+export function storageSubmissionUrl(network: Network, txSeq: number | string): string {
+  return `${STORAGE_SCAN_URLS[network]}/submission/${txSeq}`
 }
 
 export function storageScanHost(network: Network): string {
@@ -130,8 +144,8 @@ export function explorerLinks(manifest: {
   const { network } = manifest
 
   return {
-    dataset: storageUrl(network, manifest.dataset.rootHash),
-    adapter: storageUrl(network, manifest.adapter.rootHash),
+    dataset: storageLookupUrl(network, manifest.dataset.rootHash),
+    adapter: storageLookupUrl(network, manifest.adapter.rootHash),
     provider: addressUrl(network, manifest.task.provider),
     teeSigner: addressUrl(network, manifest.tee.signerAddress),
     storageHost: storageScanHost(network),

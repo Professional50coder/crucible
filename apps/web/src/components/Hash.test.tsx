@@ -45,7 +45,7 @@ describe('<Hash>', () => {
     render(
       <Hash
         value={HASH}
-        href="https://storagescan-galileo.0g.ai/file/0xabc"
+        href="https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xabc"
         hrefLabel="storagescan-galileo.0g.ai"
         title="dataset root hash"
       />,
@@ -54,7 +54,7 @@ describe('<Hash>', () => {
     const link = screen.getByRole('link', {
       name: /verify dataset root hash on storagescan-galileo\.0g\.ai/i,
     })
-    expect(link).toHaveAttribute('href', 'https://storagescan-galileo.0g.ai/file/0xabc')
+    expect(link).toHaveAttribute('href', 'https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xabc')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
@@ -82,7 +82,7 @@ describe('<HashRow>', () => {
       <HashRow
         label="Dataset root hash"
         value={HASH}
-        href="https://storagescan.0g.ai/file/x"
+        href="https://storagescan.0g.ai/submission/146937"
         hrefLabel="storagescan.0g.ai"
         note="Retrievable from 0G Storage by anyone."
       />,
@@ -90,6 +90,6 @@ describe('<HashRow>', () => {
 
     expect(screen.getByText('Dataset root hash')).toBeInTheDocument()
     expect(screen.getByText('Retrievable from 0G Storage by anyone.')).toBeInTheDocument()
-    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://storagescan.0g.ai/file/x')
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://storagescan.0g.ai/submission/146937')
   })
 })

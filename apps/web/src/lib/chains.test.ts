@@ -6,7 +6,8 @@ import {
   addressUrl,
   explorerLinks,
   networkByChainId,
-  storageUrl,
+  storageLookupUrl,
+  storageSubmissionUrl,
   txUrl,
 } from './chains'
 import { buildPassports } from './mock/fixtures'
@@ -39,10 +40,26 @@ describe('Storage Scan host selection', () => {
     expect(STORAGE_SCAN_URLS.mainnet).not.toBe(STORAGE_SCAN_URLS.testnet)
   })
 
-  it('builds file URLs against the right host', () => {
+  it('looks a root hash up through the API route, because /file/<rootHash> is a 404', () => {
+    // Storage Scan has no page keyed by root hash. Its human route is
+    // /submission/<txSeq>, and a txSeq cannot be derived from a root hash
+    // without asking the explorer first. A working JSON URL beats a pretty 404 —
+    // on a provenance page a 404 reads as "the data is gone", not "wrong URL".
     const hash = `0x${'a'.repeat(64)}`
-    expect(storageUrl('testnet', hash)).toBe(`https://storagescan-galileo.0g.ai/file/${hash}`)
-    expect(storageUrl('mainnet', hash)).toBe(`https://storagescan.0g.ai/file/${hash}`)
+
+    expect(storageLookupUrl('testnet', hash)).toBe(
+      `https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=${hash}`,
+    )
+    expect(storageLookupUrl('mainnet', hash)).toBe(
+      `https://storagescan.0g.ai/api/txs?skip=0&limit=10&rootHash=${hash}`,
+    )
+    expect(storageLookupUrl('testnet', hash)).not.toContain('/file/')
+  })
+
+  it('builds the human submission page only from a txSeq', () => {
+    expect(storageSubmissionUrl('testnet', 146937)).toBe(
+      'https://storagescan-galileo.0g.ai/submission/146937',
+    )
   })
 })
 
