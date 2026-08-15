@@ -1,16 +1,27 @@
 /**
  * Fixture data for mock mode.
  *
- * Every value that can be genuine IS genuine — provider addresses, TEE signer,
- * base-model hashes, per-token prices, hardware quota, chain IDs — all verified
- * live on 2026-08-14 and recorded in docs/FIELD_NOTES.md and INTERFACES.md §6.
+ * There are two kinds of record in this file and the difference is the point.
  *
- * The values that are invented, and could not be otherwise until a funded run
- * happens, are: dataset root hashes, adapter root hashes, manifest root hashes,
- * task ids, mint transaction hashes, token ids, owner addresses, and the
- * Passport contract address. They are marked FABRICATED below and listed in the
- * README so nobody mistakes one for a real on-chain artifact.
+ * **Passport #1 is real.** Every hash, address, transaction, block and token id
+ * on it was produced by the 2026-08-14 run against live 0G Galileo and the
+ * 2026-08-15 mint into `Passport.sol` at
+ * `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`. It is recorded in
+ * `contracts/deployments/galileo-mints.json`, and every link on its page
+ * resolves. It is also **not a completed fine-tune**: the task reached
+ * `Delivered` and `acknowledgeModel` then failed, so its adapter hash is an
+ * explicit sentinel and the UI says so before it says anything else.
+ *
+ * **Everything else is a demo record**, shipped so the app is demonstrable
+ * without a funded wallet. Its provider addresses, TEE signer, base-model
+ * hashes, per-token prices, hardware quota and chain IDs are genuine — all
+ * verified live on 2026-08-14 and recorded in docs/FIELD_NOTES.md — but its
+ * dataset roots, adapter roots, task ids, mint transactions, token ids and
+ * owners are invented. Those records carry `provenance: 'demo'`, and the UI
+ * refuses to draw an explorer link next to a value that would 404.
  */
+
+import { keccak256, toBytes } from 'viem'
 
 import { configHash, manifestHash } from '../manifest'
 import type {
@@ -52,10 +63,217 @@ export const HARDWARE: Hardware = {
 }
 
 /**
- * FABRICATED. Phase 3 has not deployed yet. `NEXT_PUBLIC_PASSPORT_ADDRESS`
- * overrides this everywhere it is rendered, and the UI labels it as mock.
+ * FABRICATED. Stands in as the contract address on demo records only. Real
+ * deployments live in `passport-contract.ts`; the UI labels this one as demo.
  */
 export const MOCK_PASSPORT_CONTRACT = '0x7B4f0C3a9e2d51aC8b6E1f4D0a7C93e5B2148f6A'
+
+// ---------------------------------------------------------------------------
+// Passport #1 — the real one
+// ---------------------------------------------------------------------------
+
+/**
+ * The 2026-08-14 fine-tuning task on 0G Galileo, and the token minted from it.
+ *
+ * Sources, all in-repo and checkable:
+ *   contracts/deployments/galileo.json         deployment, block 49596815
+ *   contracts/deployments/galileo-mints.json   mint, block 49597171
+ *   contracts/scripts/mint-testnet-passport.js the exact document that was hashed
+ *   docs/FIELD_NOTES.md                        the run, the fee, the failure
+ *   .paul/STATE.md                             delivery time and the 429/ENOENT
+ */
+export const REAL = {
+  taskId: '10551604-2664-4516-86cf-269a62f93bfc',
+  provider: TESTNET_PROVIDER,
+  model: 'Qwen2.5-0.5B-Instruct',
+  baseModelHash: '0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7',
+  datasetRootHash: '0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd',
+  datasetUploadTx: '0xc38e41315c97911bda12bdea3c0387eecf70d86fbae9cf78a1fc66ff09d7da52',
+  manifestRootHash: '0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f',
+  tokenId: '1',
+  mintTx: '0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1',
+  mintBlock: 49597171,
+  mintedAt: '2026-08-15T17:38:24.050Z',
+  owner: '0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF',
+  /** `Delivered` at this instant — which is when the 48-hour clock started. */
+  deliveredAt: '2026-08-14T11:18:56.000Z',
+  /**
+   * The task settled at `Finished` on 0G's side. That is the provider's view and
+   * it is true; it does not mean Crucible holds the model. `acknowledgeModel`
+   * failed on this end, so no adapter was ever retrieved — which is why the
+   * adapter field carries a sentinel rather than a root hash.
+   */
+  settledAt: '2026-08-14T17:19:27.000Z',
+  /** Charged by 0G for the run: 0.0118528 0G. */
+  totalNeuron: '11852800000000000',
+  storageReserveNeuron: '10000000000000000',
+  /** 0.0118528 − 0.01 storage reserve, at 800 gneuron/token over 3 epochs. */
+  trainingNeuron: '1852800000000000',
+  /**
+   * 30.0000% of the fee, deducted because the deliverable was never
+   * acknowledged: 0.00355584 of 0.0118528 0G. Read off 0G's FineTuningServing
+   * contract, not inferred.
+   */
+  penaltyNeuron: '3555840000000000',
+  /** datasets/sentiment/train.jsonl, counted. */
+  exampleCount: 61,
+  /** Implied by the fee 0G actually charged: 1.8528e15 / 8e11 / 3 epochs. */
+  tokenCount: 772,
+  /** The five parameters the task carried. `max_steps` is 10, not the default 45. */
+  training: {
+    neftune_noise_alpha: 5,
+    num_train_epochs: 3,
+    per_device_train_batch_size: 2,
+    learning_rate: 0.0002,
+    max_steps: 10,
+  } satisfies TrainingConfig,
+} as const
+
+/**
+ * The adapter hash on passport #1 is not an adapter hash.
+ *
+ * `Passport.sol` rejects a zero adapter hash, so a run whose adapter was never
+ * retrieved still has to anchor something. Rather than invent a plausible root
+ * hash, the mint anchored `keccak256("crucible:adapter-not-retrieved:<taskId>")`
+ * — a value nobody can mistake for a real artifact, because the preimage is
+ * published and anyone can recompute it. The passport page does exactly that,
+ * in the reader's browser, and shows the result.
+ */
+export const ADAPTER_SENTINEL_PREIMAGE = `crucible:adapter-not-retrieved:${REAL.taskId}`
+export const ADAPTER_SENTINEL = keccak256(toBytes(ADAPTER_SENTINEL_PREIMAGE))
+
+export const ADAPTER_NOT_RETRIEVED_REASON =
+  'acknowledgeModel failed on both of its download paths, on every attempt. The 0G Storage path ' +
+  'dies with spawn 0g-storage-client ENOENT, because the bundled binary is a Linux ELF and the ' +
+  'host is Windows; the TEE path dies at 0 bytes with "stream.on is not a function" before ' +
+  'surfacing HTTP 429. On this platform the artifact cannot be retrieved at all. The deliverable ' +
+  'was therefore never acknowledged, the provider force-settled, and 0G deducted its 30% penalty. ' +
+  'The model is gone — there is nothing for this field to point at, and nobody here holds it.'
+
+/**
+ * The exact JSON document whose keccak256 is anchored on chain for token #1.
+ *
+ * Reproduced verbatim from `contracts/scripts/mint-testnet-passport.js`. Keys are
+ * already in sorted order, so `canonicalize()` returns this byte-for-byte and the
+ * page's in-browser recomputation genuinely reproduces the anchored hash — the
+ * one check a reader can perform without leaving the page or trusting us.
+ */
+export const REAL_ANCHORED_MANIFEST: Record<string, unknown> = {
+  adapterRootHash: ADAPTER_SENTINEL,
+  baseModelHash: REAL.baseModelHash,
+  chainId: 16602,
+  configHash: configHash(REAL.training),
+  datasetRootHash: REAL.datasetRootHash,
+  network: 'testnet',
+  note: 'adapter not retrieved; acknowledgeModel failed on Windows (ENOENT) then HTTP 429',
+  provider: REAL.provider,
+  taskId: REAL.taskId,
+  version: 1,
+}
+
+/** Passport #1, assembled from the values above and nothing else. */
+export function realPassport(): PassportRecord {
+  const manifest: PassportManifest = {
+    version: 1,
+    network: 'testnet',
+    chainId: 16602,
+    createdAt: REAL.mintedAt,
+    task: {
+      id: REAL.taskId,
+      provider: REAL.provider,
+      // 0G reports this task as Finished, and it is. That is the provider's view
+      // of its own work; it says nothing about whether the artifact was ever
+      // collected. It was not — see `adapterOrigin` below.
+      state: 'Finished',
+    },
+    base: {
+      model: REAL.model,
+      modelHash: REAL.baseModelHash,
+      tokenizer: TOKENIZERS[REAL.model]!,
+    },
+    dataset: {
+      rootHash: REAL.datasetRootHash,
+      format: 'chat',
+      exampleCount: REAL.exampleCount,
+      tokenCount: REAL.tokenCount,
+    },
+    training: REAL.training,
+    adapter: {
+      // No sizeBytes: there is no adapter, so there is no size to state.
+      rootHash: ADAPTER_SENTINEL,
+    },
+    fee: {
+      trainingNeuron: REAL.trainingNeuron,
+      storageReserveNeuron: REAL.storageReserveNeuron,
+      totalNeuron: REAL.totalNeuron,
+    },
+    tee: {
+      signerAddress: TEE_SIGNER,
+      // Acknowledged on-chain by the provider — checkable, and true.
+      acknowledged: true,
+      // Never verified on this end: the quote is checked when the delivery is
+      // acknowledged, and that is precisely the step that failed.
+      attestationVerified: false,
+    },
+  }
+
+  return {
+    id: 'p-000001',
+    name: 'sentiment-smoke-01',
+    summary:
+      'The first passport ever minted by Crucible, on 0G Galileo. A live-chain smoke test of ' +
+      'the real contract carrying the real lineage of a real fine-tuning task — and an honest ' +
+      'record of the retrieval failure that means nobody here holds the resulting model.',
+    provenance: 'chain',
+    manifest,
+    anchoredManifest: REAL_ANCHORED_MANIFEST,
+    adapterOrigin: {
+      kind: 'sentinel',
+      sentinelPreimage: ADAPTER_SENTINEL_PREIMAGE,
+      reason: ADAPTER_NOT_RETRIEVED_REASON,
+    },
+    deliveredAt: REAL.deliveredAt,
+    manifestStorage: {
+      rootHash: '0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140',
+      txSeq: 146937,
+      uploadTx: '0x3988a3ff1fdae9dbff086532bd9709b3491277652be07cd4e9922c502d9a1520',
+      sizeBytes: 584,
+    },
+    settlement: {
+      acknowledged: false,
+      penaltyNeuron: REAL.penaltyNeuron,
+      note:
+        'getDeliverables returns acknowledged: false with an empty encryptedSecret, and 30.0000% ' +
+        'of the fee was deducted. That is 0G’s documented penalty for a deliverable nobody ' +
+        'acknowledged: the provider force-settled and the model was destroyed.',
+    },
+    caveat: {
+      title: 'This run lost its model. The passport records that, because that is what happened.',
+      body:
+        'The base-model hash, dataset root hash, training config, task id, provider and fee ' +
+        'below are the real values from the 2026-08-14 run, and the token, transaction and ' +
+        'anchored hash are real on 0G Galileo. The provider reports progress: Finished — that ' +
+        'is its view of its own work and it does not mean the deliverable was acknowledged. It ' +
+        'was not. Reading 0G’s FineTuningServing contract, acknowledged is false, the ' +
+        'encryptedSecret is empty, and 30% of the fee was deducted. Nobody here holds this ' +
+        'model; it is gone. That is the exact failure Crucible exists to survive, it happened ' +
+        'to us on the first real run, and a passport that quietly rounded it up to “Finished” ' +
+        'would be the dishonest kind of provenance this project exists to replace.',
+    },
+    mint: {
+      status: 'minted',
+      manifestRootHash: REAL.manifestRootHash,
+      configHash: configHash(REAL.training),
+      contractAddress: '0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7',
+      tokenId: REAL.tokenId,
+      txHash: REAL.mintTx,
+      owner: REAL.owner,
+      blockNumber: REAL.mintBlock,
+      mintedAt: REAL.mintedAt,
+    },
+    hardware: HARDWARE,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Providers
@@ -373,7 +591,7 @@ function manifestFor(seed: PassportSeed, now: number): PassportManifest {
 }
 
 export function buildPassports(now: number = Date.now()): PassportRecord[] {
-  return PASSPORT_SEEDS.map((seed) => {
+  const demo = PASSPORT_SEEDS.map((seed) => {
     const manifest = manifestFor(seed, now)
 
     // Derived, not invented: the anchored hash is the real keccak256 of the
@@ -405,12 +623,20 @@ export function buildPassports(now: number = Date.now()): PassportRecord[] {
       id: seed.id,
       name: seed.name,
       summary: seed.summary,
+      provenance: 'demo' as const,
       manifest,
       mint,
       hardware: HARDWARE,
       durationSeconds: seed.durationSeconds,
     }
   })
+
+  // Newest first, and the real one keeps its true issue date rather than being
+  // floated to the top by fiat. The gallery features it explicitly instead.
+  return [realPassport(), ...demo].sort(
+    (a, b) =>
+      new Date(b.manifest.createdAt).getTime() - new Date(a.manifest.createdAt).getTime(),
+  )
 }
 
 // ---------------------------------------------------------------------------

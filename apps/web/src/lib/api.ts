@@ -115,6 +115,9 @@ export function toSummary(record: PassportRecord): PassportSummary {
     tokenId: mint.tokenId,
     attestationVerified: manifest.tee.attestationVerified,
     durationSeconds: record.durationSeconds,
+    // Absent means demo: a record has to earn the claim that it is on chain.
+    provenance: record.provenance ?? 'demo',
+    adapterKind: record.adapterOrigin?.kind ?? 'retrieved',
   }
 }
 

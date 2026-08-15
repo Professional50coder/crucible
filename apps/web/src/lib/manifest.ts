@@ -40,17 +40,33 @@ export function canonicalize(value: unknown): string {
   return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalize(v)}`).join(',')}}`
 }
 
+/**
+ * keccak256 of any canonicalised value, 0x-prefixed.
+ *
+ * Exposed generically because the document a passport's hash commits to is not
+ * always this app's `PassportManifest`: a token minted before that shape settled
+ * anchored a smaller record, and reproducing *its* hash means hashing *it*.
+ */
+export function canonicalHash(value: unknown): string {
+  return keccak256(toBytes(canonicalize(value)))
+}
+
 /** keccak256 of the canonical manifest, 0x-prefixed. */
 export function manifestHash(manifest: PassportManifest): string {
-  return keccak256(toBytes(canonicalize(manifest)))
+  return canonicalHash(manifest)
 }
 
 /** keccak256 of the canonical training config — `PassportData.configHash`. */
 export function configHash(config: TrainingConfig): string {
-  return keccak256(toBytes(canonicalize(config)))
+  return canonicalHash(config)
+}
+
+/** keccak256 of a UTF-8 string, with no canonicalisation. */
+export function hashUtf8(value: string): string {
+  return keccak256(toBytes(value))
 }
 
 /** Readable form, for the "raw manifest" disclosure. */
-export function prettyManifest(manifest: PassportManifest): string {
+export function prettyManifest(manifest: PassportManifest | Record<string, unknown>): string {
   return JSON.stringify(manifest, null, 2)
 }

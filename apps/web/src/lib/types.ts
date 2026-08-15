@@ -94,6 +94,40 @@ export interface PassportManifest {
 export type MintStatus = 'minted' | 'pending' | 'unminted'
 
 /**
+ * Where the values on a record came from.
+ *
+ * `chain` — every hash, address and transaction on this record was produced by a
+ *           real run against the live 0G network. Its explorer links resolve.
+ * `demo`  — fixture data, shipped so the app is demonstrable without a funded
+ *           wallet. Its dataset roots, adapter roots, task ids, token ids and
+ *           transaction hashes are invented and have no on-chain counterpart.
+ *
+ * The distinction is load-bearing rather than cosmetic. A provenance page that
+ * renders an invented hash next to a live explorer link teaches the reader that
+ * the links are decorative, and the whole argument collapses. So a `demo` record
+ * never renders an outbound link for a value that would 404, and says why.
+ */
+export type RecordProvenance = 'chain' | 'demo'
+
+/**
+ * What the adapter root hash on a passport actually is.
+ *
+ * `Passport.sol` rejects a zero adapter hash, so a run that reached `Delivered`
+ * but whose adapter was never retrieved must anchor *something*. Crucible anchors
+ * an explicit sentinel — `keccak256("crucible:adapter-not-retrieved:<taskId>")` —
+ * chosen so that it is deliberately not a plausible root hash: anyone who
+ * recomputes the preimage sees immediately that no adapter exists. That is the
+ * honest encoding of a failure, and the UI must render it as one.
+ */
+export interface AdapterOrigin {
+  kind: 'retrieved' | 'sentinel'
+  /** The exact string hashed to produce a sentinel, so a reader can recompute it. */
+  sentinelPreimage?: string
+  /** Why the adapter was never retrieved. Shown verbatim. */
+  reason?: string
+}
+
+/**
  * The on-chain half of a passport — `Passport.sol`'s `PassportData` plus the
  * transaction that wrote it (INTERFACES.md §4). Read from chain via
  * `passportOf(tokenId)`; the web app never mints without a wallet.
@@ -138,6 +172,64 @@ export interface PassportRecord {
   hardware?: Hardware
   /** Wall-clock training duration in seconds. Not in INTERFACES.md. */
   durationSeconds?: number
+
+  /** Defaults to `demo` when absent, because that is the safe assumption. */
+  provenance?: RecordProvenance
+  /**
+   * The exact document whose keccak256 was anchored on chain, when it is known
+   * byte-for-byte.
+   *
+   * The v1 `PassportManifest` above is what Crucible writes to 0G Storage. A
+   * passport minted before that shape settled anchored a smaller document, and
+   * the hash on chain commits to *that* document, not to this one. Carrying it
+   * verbatim is what lets the page recompute the anchored hash in the reader's
+   * browser and genuinely match, rather than asserting a match it cannot show.
+   */
+  anchoredManifest?: Record<string, unknown>
+  /** What the adapter root hash is. Absent means a retrieved adapter. */
+  adapterOrigin?: AdapterOrigin
+  /**
+   * Where the canonical manifest document itself lives on 0G Storage.
+   *
+   * This is what closes the verification loop: download the document at this
+   * root hash, recompute its keccak256, and compare against the value the
+   * contract returns. Without it a reader can only check the hash they were
+   * handed, which proves nothing.
+   */
+  manifestStorage?: {
+    rootHash: string
+    /** Storage Scan submission sequence — its only human-readable route. */
+    txSeq?: number
+    uploadTx?: string
+    sizeBytes?: number
+  }
+  /** ISO timestamp the task entered `Delivered`. Starts the 48-hour clock. */
+  deliveredAt?: string
+  /**
+   * How the deliverable actually settled on chain, read from 0G's
+   * FineTuningServing contract rather than from the provider's own progress
+   * field.
+   *
+   * These are different facts and the difference is the whole point. A provider
+   * reporting `progress: Finished` is reporting on its own work; whether the
+   * deliverable was ever *acknowledged* is a separate on-chain value, and an
+   * unacknowledged deliverable means the model is gone and 30% of the fee was
+   * taken. A page that shows only the first number is telling a comfortable
+   * half of the story.
+   */
+  settlement?: {
+    /** `getDeliverables(...).acknowledged`. False means the artifact is lost. */
+    acknowledged: boolean
+    /** Neuron deducted as 0G's missed-acknowledgement penalty. */
+    penaltyNeuron?: string
+    /** What happened, in one sentence, rendered verbatim. */
+    note?: string
+  }
+  /**
+   * A caveat that must be read before the rest of the page. Rendered at the top,
+   * not in a footnote — a passport that overstates itself is worse than none.
+   */
+  caveat?: { title: string; body: string }
 }
 
 /** Flattened shape the gallery grid renders. Derived from a PassportRecord. */
@@ -156,6 +248,10 @@ export interface PassportSummary {
   tokenId?: string
   attestationVerified: boolean
   durationSeconds?: number
+  /** Drives the gallery's "verified on chain" band. Defaults to `demo`. */
+  provenance: RecordProvenance
+  /** `sentinel` means no adapter was ever retrieved for this run. */
+  adapterKind: AdapterOrigin['kind']
 }
 
 export interface PassportFilter {

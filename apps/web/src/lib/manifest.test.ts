@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { canonicalize, configHash, manifestHash } from './manifest'
+import { canonicalHash, canonicalize, configHash, hashUtf8, manifestHash } from './manifest'
 import { buildPassports } from './mock/fixtures'
 import type { PassportManifest } from './types'
 
@@ -90,11 +90,67 @@ describe('configHash', () => {
 })
 
 describe('fixture passports', () => {
-  it('anchor the real hash of their own manifest, so verification is not staged', () => {
+  it('anchor the real hash of the document they say was hashed, so verification is not staged', () => {
+    // The passport page recomputes the anchored hash in the reader's browser and
+    // compares. That check is only worth showing if it can genuinely fail, which
+    // means the anchor must be the true hash of the document the record names —
+    // `anchoredManifest` where the token committed to a different shape than
+    // this app's v1 manifest, and the manifest itself otherwise.
     for (const passport of buildPassports(Date.parse('2026-08-14T00:00:00.000Z'))) {
-      expect(passport.mint.manifestRootHash).toBe(manifestHash(passport.manifest))
+      const hashed = passport.anchoredManifest ?? passport.manifest
+      expect(passport.mint.manifestRootHash).toBe(canonicalHash(hashed))
       expect(passport.mint.configHash).toBe(configHash(passport.manifest.training))
     }
+  })
+
+  it('reproduces the hash actually anchored on chain for passport #1', () => {
+    // Not a self-consistency check: this is the value in
+    // contracts/deployments/galileo-mints.json, written by a transaction on 0G
+    // Galileo. If this ever fails, the page is showing a claim the chain does
+    // not support.
+    const real = buildPassports().find((p) => p.provenance === 'chain')!
+
+    expect(real.mint.txHash).toBe(
+      '0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1',
+    )
+    expect(real.mint.manifestRootHash).toBe(
+      '0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f',
+    )
+    expect(canonicalHash(real.anchoredManifest!)).toBe(real.mint.manifestRootHash)
+    expect(real.mint.configHash).toBe(
+      '0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1',
+    )
+  })
+
+  it('carries a recomputable sentinel rather than a plausible adapter hash', () => {
+    // The honesty constraint, pinned: passport #1's adapter field must be
+    // provably not an adapter, and provably so from the published preimage.
+    const real = buildPassports().find((p) => p.provenance === 'chain')!
+
+    expect(real.adapterOrigin?.kind).toBe('sentinel')
+    expect(real.manifest.adapter.rootHash).toBe(hashUtf8(real.adapterOrigin!.sentinelPreimage!))
+    // No adapter means no adapter size. An invented one would be the same lie in
+    // a quieter field.
+    expect(real.manifest.adapter.sizeBytes).toBeUndefined()
+    // 0G reports the task Finished, and that is recorded faithfully — but the
+    // attestation is checked on acknowledgement, which never happened.
+    expect(real.manifest.task.state).toBe('Finished')
+    expect(real.manifest.tee.attestationVerified).toBe(false)
+
+    // The provider's `Finished` must never stand alone. The on-chain settlement
+    // is the fact that decides whether a model exists, and here it does not:
+    // acknowledged is false and 0G took 30% of the fee.
+    expect(real.settlement?.acknowledged).toBe(false)
+    expect(real.settlement?.penaltyNeuron).toBe('3555840000000000')
+    expect(real.caveat?.body).toMatch(/Nobody here holds this model; it is gone/i)
+  })
+
+  it('marks every fabricated record as a demo record', () => {
+    // A demo hash rendered beside a live explorer link teaches the reader that
+    // the links are decorative. The UI keys off this flag to refuse that.
+    const passports = buildPassports()
+    expect(passports.filter((p) => p.provenance === 'chain')).toHaveLength(1)
+    expect(passports.every((p) => p.provenance === 'chain' || p.provenance === 'demo')).toBe(true)
   })
 
   it('use well-formed 32-byte hashes throughout', () => {
