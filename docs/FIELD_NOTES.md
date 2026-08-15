@@ -398,3 +398,60 @@ broker computes it during the setup phase once it has counted tokens.
 
 The SDK warns that providers may want ≥1 0G in the sub-account; 0.15 was accepted at task
 creation. Whether it survives settlement is still open.
+
+---
+
+## ✅ THE FIRST RUN COMPLETED — re-queried 2026-08-15
+
+The 2026-08-14 entry above closed with the acknowledgement failing and a retry loop running.
+Re-querying the live broker a day later settles it. `broker.fineTuning.getTask()` returns:
+
+```
+task        10551604-2664-4516-86cf-269a62f93bfc
+progress    Finished
+createdAt   2026-08-14T11:14:34.407Z
+updatedAt   2026-08-14T17:19:27.516Z
+fee         11852800000000000 neuron   = 0.0118528 0G
+deliverIndex 0
+deliverTime 1786706322                 = 2026-08-14T11:18:42Z
+```
+
+`getAccountWithDetail` reports **zero pending deliverables**, so the queue is not locked and the
+account can create new tasks.
+
+**The run completed, `Init` through `Finished`, and it completed inside the window.** 0G's
+documented order is `Delivered → UserAcknowledged → Finished`, where `Finished` means the
+provider settled fees and shared the decryption key — a state only reachable after
+acknowledgement. It settled at 17:19 UTC, about six hours after delivery at 11:18 UTC. Had the
+deadline been missed, force settlement would have landed around 2026-08-16 11:18 instead. The
+retry-with-backoff loop won.
+
+**What is not claimed:** no adapter file exists anywhere in this repository. The task reached
+`Finished`; we are not holding the model. That is why passport #1 carries a sentinel adapter
+hash rather than a plausible-looking root hash.
+
+### The 48-hour deadline, now sourced rather than asserted
+
+Confirmed verbatim on `docs.0g.ai`, so it can be quoted rather than attributed to us:
+
+> "You must download and acknowledge the model within 48 hours after the task status changes to
+> `Delivered`."
+
+Miss it and the provider force-settles, the user loses access to the model, and **"30% of the
+total task fee will be deducted as compensation for the provider's compute resources."**
+
+The same page gives the canonical meaning of each state, which is worth pinning down because two
+of them are easy to confuse:
+
+| State | 0G's definition |
+|---|---|
+| `Delivered` | fine-tuning result ready for download — **the clock starts here** |
+| `UserAcknowledged` | user downloaded and confirmed the result |
+| `Finished` | provider settled fees and shared the decryption key |
+
+### ⚠️ `getLockedTime()` is not the acknowledge deadline
+
+`broker.fineTuning.getLockedTime()` returns **86400 — 24 hours, not 48.** It is the *refund* lock
+period: the SDK uses it as `remainTime = lockTime - (now - refund.createdAt)`. Anyone reading
+`getLockedTime()` as the acknowledgement window will build a daemon that fires at the wrong time,
+in the wrong direction. Two different clocks, one confusable name.

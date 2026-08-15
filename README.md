@@ -307,21 +307,22 @@ shape, task states, contract ABI, and the orchestrator's HTTP API.
 
 ## Status
 
-Honest status as of **2026-08-14**. Nothing below is claimed as working that has not run.
+Honest status as of **2026-08-15**. Nothing below is claimed as working that has not run.
 
 | Area | Status |
 |---|---|
-| Read-only network probe, both networks | Working — providers, models, pricing and TEE status verified live |
-| `@crucible/core` — training-config validation | Shipped, tested |
-| `@crucible/core` — dataset conversion & validation | Shipped, tested |
-| `@crucible/core` — fee estimation | Shipped, tested; reproduces 0G's documented worked example |
-| `crucible doctor` CLI | Working against the live network |
-| `@crucible/core` — passport manifest + canonical hashing | In progress |
-| `Passport.sol` | In progress — **not yet deployed to any network** |
-| Orchestrator + auto-acknowledge daemon | In progress |
-| Web app + passport gallery | In progress |
-| End-to-end authenticated fine-tune | **Not yet run** — blocked on funding a wallet past the ledger minimum, not on code |
-| Demo video, X post, AKINDO submission | Not yet done |
+| Read-only network probe, both networks | ✅ Working — providers, models, pricing and TEE status verified live |
+| `@crucible/core` — config validation, dataset conversion, fee estimation | ✅ Shipped, 105 tests. Fee estimation reproduces 0G's documented worked example |
+| `@crucible/core` — passport manifest + canonical hashing | ✅ Shipped, tested |
+| `crucible doctor` CLI | ✅ Working against the live network, no wallet needed |
+| `packages/ml` — dataset analysis + eval harness | ✅ Shipped, 320 tests |
+| Orchestrator + auto-acknowledge daemon | ✅ Shipped, 155 tests, incl. a test asserting the deprecated path is unreachable |
+| Web app + passport gallery | ✅ Shipped, 158 tests, clean `next build` |
+| `Passport.sol` | ✅ **Deployed to testnet** `0x27087B5b…83C1c7`, 70 tests. ⚠️ Source verification on the explorer still open |
+| **End-to-end authenticated fine-tune** | ✅ **Completed on testnet** — task `10551604-…f93bfc` ran `Init → Finished`, fee 0.0118528 0G. No adapter artifact is held locally; see [FIELD_NOTES](docs/FIELD_NOTES.md) |
+| First passport minted, `verifyManifest` proven on-chain | ✅ Testnet, passport #1 |
+| **Mainnet deployment + mint** | ❌ **Not done** — wallet is unfunded. The one hard Wave 3 requirement outstanding |
+| Demo video, X post, AKINDO submission | ❌ Not yet done — team page exists, product not yet registered |
 
 Current position and blockers are tracked in [.paul/STATE.md](.paul/STATE.md); the phase plan is
 in [.paul/ROADMAP.md](.paul/ROADMAP.md).
