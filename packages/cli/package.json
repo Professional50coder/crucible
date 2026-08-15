@@ -1,0 +1,19 @@
+{
+  "name": "@crucible/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "crucible": "./src/index.ts" },
+  "scripts": {
+    "doctor": "tsx src/index.ts doctor"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-compute-ts-sdk": "^0.9.0",
+    "@crucible/core": "0.1.0",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.17.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
