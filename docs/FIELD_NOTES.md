@@ -455,3 +455,65 @@ of them are easy to confuse:
 period: the SDK uses it as `remainTime = lockTime - (now - refund.createdAt)`. Anyone reading
 `getLockedTime()` as the acknowledgement window will build a daemon that fires at the wrong time,
 in the wrong direction. Two different clocks, one confusable name.
+
+---
+
+## ✅ THE MODEL CAME BACK — 2026-08-16, from WSL
+
+Task `3e385c46-f5dc-4e93-b713-63ab7a987ae3` is **acknowledged on-chain** and its artifact is on
+disk. 93,642,469 bytes, `sha256 0x9f788764…8026ae1d`, acknowledge tx
+[`0x0911a132…c15aeb`](https://chainscan-galileo.0g.ai/tx/0x0911a1326338fc260a237c3c27baf8a697ffa193f2aec7c876c7d43207c15aeb).
+
+**The only variable that changed was the operating system.** Same code, same wallet, same task,
+same SDK version. Windows first, then WSL2 Ubuntu with Node 22.23.2:
+
+| Download path | Windows | WSL2 Linux |
+|---|---|---|
+| `tee` | `stream.on is not a function` at 0 bytes, 3 attempts, then HTTP 429 | **identical failure** |
+| `0g-storage` | `spawn …/binary/0g-storage-client ENOENT` | **93.6 MB downloaded, validated, acknowledged** |
+
+### There are two defects here, not one
+
+**The TEE path is broken on both platforms.** `stream.on is not a function`, failing at zero bytes
+on every attempt before the retries exhaust into a 429. That is an SDK bug — the download code
+expects a Node stream and is handed something else — and it has nothing to do with the operating
+system.
+
+**The 0G Storage path is broken only on Windows**, and the reason is one line of `file`:
+
+```
+node_modules/@0gfoundation/0g-compute-ts-sdk/binary/0g-storage-client:
+  ELF 64-bit LSB executable, x86-64, ... for GNU/Linux 3.2.0
+```
+
+A Linux binary, shipped inside an npm package, spawned on whatever host installs it.
+
+**The combination is what destroys models.** `downloadMethod: 'auto'` tries 0G Storage first and
+falls back to the TEE. On Windows a user hits the ENOENT, falls back, hits the stream bug, and has
+no path left — so the deliverable is never acknowledged and the provider force-settles it. That is
+exactly what happened to task `10551604`, and it cost the model plus 30% of the fee.
+
+### What the download actually did, once it could run
+
+```
+get storage nodes from indexer: [34.83.53.209:5678, 34.169.28.106:5678]
+Begin to download file from storage nodes   num nodes=2
+Start downloading file   numChunks=365791  size=93642469
+Completed to download file
+Succeeded to validate the downloaded file
+sending tx with gas price 4000000007n
+```
+
+Note the validation step: the SDK hash-checks the retrieved artifact against the root hash the
+provider committed on-chain, and only then acknowledges. The integrity guarantee is real; it is
+merely unreachable on Windows.
+
+### The workaround, for anyone who finds this
+
+Run the acknowledgement from Linux, or from WSL on a Windows host, and force the storage path:
+
+```bash
+broker.fineTuning.acknowledgeModel(provider, taskId, outDir, { downloadMethod: '0g-storage' })
+```
+
+Do not rely on `'auto'`, and do not rely on `'tee'` at all until the stream bug is fixed.
