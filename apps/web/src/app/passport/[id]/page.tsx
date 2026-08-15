@@ -38,18 +38,26 @@ export default function PassportPage({ params }: { params: { id: string } }) {
   useEffect(load, [load])
 
   if (status === 'loading') {
+    // The skeleton traces the certificate it is standing in for — ribbon, head,
+    // four checks, chain of custody — so the page does not visibly reflow into a
+    // different shape the moment the record lands.
     return (
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14" aria-busy="true">
         <Skeleton className="mb-8 h-3 w-20" />
-        <Skeleton className="h-52 w-full" />
+        <Skeleton className="h-7 w-full rounded-b-none" />
+        <Skeleton className="h-52 w-full rounded-none" />
+        <Skeleton className="h-12 w-full rounded-t-none" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
         <div className="mt-4">
-          <LoadingPanel label="Reading manifest" />
+          <LoadingPanel label="Reading manifest and recomputing its hash" />
         </div>
+        <p className="mt-4 font-mono text-2xs text-faint" role="status">
+          Nothing is trusted here: the anchored hash is recomputed in this browser.
+        </p>
       </div>
     )
   }
@@ -69,8 +77,9 @@ export default function PassportPage({ params }: { params: { id: string } }) {
           title={`No passport with id "${id}"`}
           body={
             <>
-              Passport ids look like <span className="font-mono text-dim">p-4c1f9a</span>. If you
-              followed a link from a fine-tuning run, the passport may not have been minted yet.
+              Passport ids look like <span className="font-mono text-dim">p-000001</span> or{' '}
+              <span className="font-mono text-dim">p-4c1f9a</span>. If you followed a link from a
+              fine-tuning run, the passport may not have been minted yet.
             </>
           }
           action={{ href: '/gallery', label: 'Browse the gallery' }}

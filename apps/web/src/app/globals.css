@@ -242,3 +242,103 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Print                                                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A passport is a certificate, and certificates get printed and attached to
+ * things. The screen design is a dark instrument panel; on paper that is both
+ * unreadable and rude to a toner cartridge, so print gets its own light
+ * treatment rather than a colour-adjusted photocopy of the dark one.
+ *
+ * Two rules carry most of the work: every hash must print in full — a truncated
+ * hash on paper cannot be checked and so is worse than blank — and every
+ * disclosure must print open, because a printed <details> that stayed shut has
+ * silently dropped evidence from the document.
+ */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #101110 !important;
+  }
+
+  /* Chrome, navigation, guides and anything that cannot be acted on on paper. */
+  .no-print,
+  .passport [aria-hidden='true'] {
+    display: none !important;
+  }
+
+  .passport {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Flatten the surface stack: on paper, hairlines do the whole job. */
+  .passport * {
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .passport section,
+  .passport article,
+  .passport header,
+  .passport details,
+  .passport .panel,
+  .passport .well {
+    background: #ffffff !important;
+    border-color: #c9ccc6 !important;
+    break-inside: avoid;
+  }
+
+  .passport h1,
+  .passport h2,
+  .passport h3,
+  .passport dt,
+  .passport dd,
+  .passport p,
+  .passport span,
+  .passport code,
+  .passport pre,
+  .passport th,
+  .passport td,
+  .passport li {
+    color: #101110 !important;
+  }
+
+  /* A hash you cannot read in full is a hash you cannot check. */
+  .passport [data-testid='hash-value'] {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    word-break: break-all;
+  }
+
+  /* Evidence hidden inside a closed disclosure is evidence missing from the
+     printed document. */
+  .passport details > div {
+    display: block !important;
+  }
+  .passport details > summary {
+    list-style: none;
+  }
+
+  /* Print the verification target next to its link, since a printed <a> is
+     just underlined text otherwise. */
+  .passport a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 9px;
+    word-break: break-all;
+  }
+
+  a {
+    text-decoration: none !important;
+  }
+}
