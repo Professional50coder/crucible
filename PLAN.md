@@ -85,6 +85,24 @@ These are what keep the project defensible. They are not one-off tasks.
 - **The honest version always ships.** Two runs lost their models. That is the finding, and it is
   worth more than a clean demo.
 
+## DELEGATION RULES — learned the hard way
+
+Every one of these is here because it already cost us something.
+
+| Rule | What it cost when it was missing |
+|---|---|
+| **One owner for `next build`.** Agents run `npm test` only; the lead runs the single authoritative build | Three agents plus a dev server wrote to the same `apps/web/.next` concurrently. Two agents saw phantom failures — `_ssgManifest.js` and `.next/types/…` races — and one nearly reverted good work chasing a bug that did not exist. The build was green the moment it ran alone |
+| **Every agent gets a time bound**, stated up front | Agents left open-ended ran for 25–35 minutes each while the critical path waited on them |
+| **Numbered gates, in order, each blocking the next** | Without them an agent spreads effort evenly and finishes nothing completely. With them, a cut-off still yields working increments |
+| **Report format is mandatory: `GATE n — PASSED/FAILED — evidence`, plus `BLOCKED` and `NOT ATTEMPTED` named explicitly** | A silently partial audit reads exactly like a complete one. The claims-audit agent's "not audited, treat as unaudited" section is the only reason the rest of it could be trusted |
+| **Exclusive file ownership, listed by path** | Two agents editing one file is a merge conflict nobody asked for. Shared foundations — tokens, CSS, `package.json` — are the lead's, and agents request additions rather than editing |
+| **Install shared dependencies before launching**, never from inside an agent | Three agents racing on `package.json` corrupts a lockfile |
+| **Ground truth in the brief, and correct it mid-flight when it changes** | I briefed an agent that the first run completed successfully. It read the contract, found `acknowledged: false` and a 30% penalty, and told me I was wrong. Had it taken my word, a false claim would have shipped |
+| **Say what must not be claimed**, not just what to build | Copy drifts toward the flattering version unless the honesty constraints are in the brief itself |
+| **Agents may spawn their own sub-agents** | Fine, and sometimes faster. The gates and the report format still apply to whatever comes back |
+
+---
+
 ## LATER — if Wave 3 lands
 
 Wave 4 closes 2026-09-20; Wave 5 on 09-25; Demo Day at Token2049 in October.
