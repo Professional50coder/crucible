@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 
+import { Backdrop } from '@/components/Backdrop'
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome'
 import { ColumnGuides } from '@/components/ui'
 import { Providers } from './providers'
@@ -36,6 +37,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen">
+        {/*
+          The motion register, mounted once so every route carries it. It is a
+          fixed plate at `z-index: -1`, outside <Providers> because it needs no
+          wallet, no query client and no chain — it must render even if those
+          fail. See components/Backdrop.tsx for the four rules it obeys.
+        */}
+        <Backdrop />
+
         <Providers>
           <a
             href="#main"
