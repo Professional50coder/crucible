@@ -9,6 +9,12 @@ reference/
 # judges — the corrections themselves are public in CHANGELOG.md.
 MISTAKES.md
 
+# Our own working boards: what is done, what is left, what is blocked. These are
+# for running the project, not for reading it. The public record of progress is
+# the commit history and CHANGELOG.md.
+PLAN.md
+TODO.md
+
 node_modules/
 dist/
 .next/
