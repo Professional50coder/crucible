@@ -132,10 +132,14 @@ Switching to the SSE stream is a change confined to `src/app/jobs/[id]/page.tsx`
   API response. The read path (`passportOf`, `verifyManifest`) needs no wallet
   and could run through viem against the public RPC as soon as an address exists.
 - Addresses are per-network (`passportAddress(network)` in
-  `src/lib/passport-contract.ts`) and empty until the env vars are set. The
-  fixtures use `0x7B4f0C3a9e2d51aC8b6E1f4D0a7C93e5B2148f6A`, which is
-  **fabricated**, and the UI says so on the page rather than quietly linking to
-  a dead explorer address.
+  `src/lib/passport-contract.ts`). Testnet is baked in — `Passport.sol` is live
+  and source-verified on 0G Galileo at
+  `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` — so a shared passport link
+  resolves with no build-time configuration. Mainnet is deliberately empty, which
+  is what makes the UI say "not yet deployed" rather than render a plausible
+  address whose explorer link goes nowhere. Both are overridable with
+  `NEXT_PUBLIC_PASSPORT_ADDRESS_{TESTNET,MAINNET}`. Demo records keep the
+  fabricated `0x7B4f0C3a…148f6A`, labelled as such on the page.
 - **Minting from the browser is not implemented.** `api.mintPassport()` exists
   and is wired to the orchestrator-managed path; a wallet-signed `mint()` through
   wagmi is the remaining piece, and needs the deployed address plus a decision on
@@ -158,17 +162,58 @@ Core exports an equivalent `explorerLinks(manifest)` and
 
 ### 4. Fixture data
 
-`src/lib/mock/fixtures.ts` marks which values are genuine and which are not.
+`src/lib/mock/fixtures.ts` holds two kinds of record, and every `PassportRecord`
+carries a `provenance` field saying which it is. The UI keys off that field: a
+`demo` record never renders an outbound explorer link for a value that would
+404, because a link that goes nowhere teaches the reader that every link on the
+page is decorative.
 
-**Genuine** (verified live 2026-08-14, per `docs/FIELD_NOTES.md` and
-INTERFACES.md §6): provider addresses, TEE signer, base-model hashes, per-token
-prices, chain IDs, RPC and explorer hosts, hardware quota, storage reserve fees.
+**`provenance: 'chain'` — passport #1 (`p-000001`).** Real. The 2026-08-14 run on
+0G Galileo and the 2026-08-15 mint, recorded in
+`contracts/deployments/galileo-mints.json`. Task
+`10551604-2664-4516-86cf-269a62f93bfc`, dataset root `0xa5051ae7…9e7dbfd`,
+token #1 in tx `0xb608a8a5…00b3b1` (block 49,597,171), manifest anchored at
+`0x4f64bfe6…59890f` and stored on 0G Storage at submission 146937.
 
-**Fabricated** — no funded run has happened yet, so these could not be otherwise:
+Three things on that page are recomputed in the reader's browser rather than
+asserted: the anchored manifest hash (from `anchoredManifest`, the exact
+document the mint hashed — not this app's v1 shape, which came later), the
+config hash, and the **adapter sentinel**.
+
+**That run lost its model, and the UI says so.** `acknowledgeModel` failed on
+both download paths — the bundled `0g-storage-client` is a Linux ELF and the host
+is Windows (`ENOENT`), and the TEE path dies at zero bytes with `stream.on is not
+a function` before surfacing a 429 — so the deliverable was never acknowledged.
+Reading 0G's FineTuningServing contract: `acknowledged: false`, empty
+`encryptedSecret`, and 30.0000% of the fee deducted (0.00355584 of 0.0118528 0G).
+The provider force-settled and the artifact was destroyed.
+
+Two consequences the copy must keep:
+
+- `manifest.task.state` is `Finished` because the **provider reports** it so.
+  That is not acknowledgement and does not mean a model exists. The record
+  carries `settlement.acknowledged: false`, `PassportView` renders a settlement
+  panel from it, and the hint beside the state reads *deliverable never
+  acknowledged*. Never show the provider's progress field on its own.
+- The adapter field holds `keccak256("crucible:adapter-not-retrieved:<taskId>")`.
+  The page hashes the published preimage locally and shows that it reproduces the
+  anchored value, so a reader can confirm the failure rather than take it on
+  trust.
+
+Nothing in the UI may claim Crucible retrieves the model today. The honest and
+still-strong claim, and the one the copy makes, is that it detects the delivery,
+retries every path 0G offers, escalates before the window closes instead of
+after, records the failure, and can release a locked queue with
+`acknowledgeDeliverable`.
+
+**`provenance: 'demo'` — everything else.** Genuine within them (verified live
+2026-08-14, per `docs/FIELD_NOTES.md` and INTERFACES.md §6): provider addresses,
+TEE signer, base-model hashes, per-token prices, chain IDs, RPC and explorer
+hosts, hardware quota, storage reserve fees — those stay linked. Fabricated:
 dataset root hashes, adapter root hashes, 0G task ids, mint transaction hashes,
-token ids, owner addresses, and the Passport contract address. Manifest hashes
-and config hashes are *derived* from the manifests rather than invented, so the
-page's own verification check is real.
+token ids, owner addresses, and the demo contract address. Their manifest and
+config hashes are *derived* from the manifests rather than invented, so the
+page's own verification check is a real computation even on a demo record.
 
 ---
 

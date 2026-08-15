@@ -4,17 +4,41 @@ import Link from 'next/link'
 
 import { formatBytes, formatCount, formatElapsed, formatOg, formatRelative } from '@/lib/format'
 import type { PassportSummary } from '@/lib/types'
-import { AdapterIcon, ArrowIcon, ShieldIcon } from './icons'
+import { AdapterIcon, AlertIcon, ArrowIcon, CheckIcon, ShieldIcon } from './icons'
 import { Badge, Dot, IconTile, NetworkBadge } from './ui'
 
 export function PassportCard({ passport }: { passport: PassportSummary }) {
+  const onChain = passport.provenance === 'chain'
+  const sentinel = passport.adapterKind === 'sentinel'
+
   return (
     <Link
       href={`/passport/${passport.id}`}
-      className="group flex h-full flex-col rounded-lg border border-line bg-panel no-underline transition-colors hover:border-line-bright hover:bg-raised"
+      className={`group flex h-full flex-col rounded-lg border bg-panel no-underline transition-colors hover:bg-raised ${
+        onChain
+          ? 'border-phosphor/35 hover:border-phosphor/60'
+          : 'border-line hover:border-line-bright'
+      }`}
     >
+      {/* The provenance strip. On a wall of cards this is the first thing that
+          separates a record you can check from one that only shows the shape. */}
+      <div
+        className={`flex items-center gap-2 rounded-t-lg px-4 py-1.5 ${
+          onChain ? 'bg-phosphor/[0.07]' : 'bg-sub'
+        }`}
+      >
+        <Dot tone={onChain ? 'accent' : 'neutral'} />
+        <span
+          className={`font-mono text-2xs uppercase tracking-widest2 ${
+            onChain ? 'text-phosphor' : 'text-faint'
+          }`}
+        >
+          {onChain ? 'verified on chain' : 'demo record'}
+        </span>
+      </div>
+
       <div className="flex items-start gap-3 border-b border-line px-4 py-3.5">
-        <IconTile tone={passport.mintStatus === 'minted' ? 'accent' : 'default'}>
+        <IconTile tone={onChain ? 'accent' : 'default'}>
           <AdapterIcon className="h-4 w-4" />
         </IconTile>
 
@@ -41,6 +65,12 @@ export function PassportCard({ passport }: { passport: PassportSummary }) {
           ) : (
             <Badge tone="warn">TEE unverified</Badge>
           )}
+          {sentinel ? (
+            <Badge tone="danger">
+              <AlertIcon className="h-3 w-3" />
+              no adapter
+            </Badge>
+          ) : null}
         </div>
 
         <p className="mt-3.5 line-clamp-3 text-xs leading-relaxed text-dim text-pretty">
@@ -60,8 +90,15 @@ export function PassportCard({ passport }: { passport: PassportSummary }) {
           </div>
           <div className="min-w-0">
             <dt className="label">Adapter</dt>
-            <dd className="mt-0.5 font-mono text-xs text-fg">
-              {passport.adapterSizeBytes ? formatBytes(passport.adapterSizeBytes) : '—'}
+            <dd
+              className={`mt-0.5 font-mono text-xs ${sentinel ? 'text-danger' : 'text-fg'}`}
+              title={sentinel ? 'No adapter was ever retrieved for this run' : undefined}
+            >
+              {sentinel
+                ? 'not retrieved'
+                : passport.adapterSizeBytes
+                  ? formatBytes(passport.adapterSizeBytes)
+                  : '—'}
             </dd>
           </div>
           <div className="min-w-0">
@@ -75,7 +112,10 @@ export function PassportCard({ passport }: { passport: PassportSummary }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
         {passport.mintStatus === 'minted' ? (
-          <Badge tone="accent">anchored · #{passport.tokenId}</Badge>
+          <Badge tone={onChain ? 'accent' : 'neutral'}>
+            {onChain ? <CheckIcon className="h-3 w-3" /> : null}
+            anchored · #{passport.tokenId}
+          </Badge>
         ) : passport.mintStatus === 'pending' ? (
           <Badge tone="warn">
             <Dot tone="warn" pulse />

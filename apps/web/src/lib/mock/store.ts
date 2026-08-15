@@ -386,6 +386,9 @@ function passportFromJob(job: Job): PassportRecord {
 
   const record: PassportRecord = {
     id,
+    // Simulated in this browser, so it is a demo record no matter how real the
+    // run felt to watch. Nothing here has an on-chain counterpart.
+    provenance: 'demo',
     name: job.name ?? job.id,
     summary: `Fine-tuned on ${job.dataset?.exampleCount ?? 0} examples from ${
       job.dataset?.filename ?? 'an uploaded dataset'

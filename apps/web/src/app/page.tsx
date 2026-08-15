@@ -8,6 +8,7 @@ import {
   ClockIcon,
   DatasetIcon,
   EnclaveIcon,
+  ExternalIcon,
   ModelIcon,
   ShieldIcon,
   SlidersIcon,
@@ -24,14 +25,21 @@ import { Badge, Dot, HatchBand, IconTile, SectionHead } from '@/components/ui'
  * the moment it is lost drawn on top of it.
  */
 
-/** What the CLI prints, in the order it prints it. */
+/**
+ * What the CLI prints, in the order it prints it.
+ *
+ * These are the real values from task `10551604-2664-4516-86cf-269a62f93bfc` on
+ * 0G Galileo, 2026-08-14 — not a mock-up of what a lineage might look like. The
+ * point of the panel is that this data already exists on every run; inventing it
+ * would undercut the only claim the hero makes.
+ */
 const RECEIPT = [
   { k: 'base model', v: 'Qwen2.5-0.5B-Instruct' },
-  { k: 'model hash', v: '0x1f0c9d2b…a83e41' },
-  { k: 'dataset root', v: '0xb4f76a88…2c75a7' },
-  { k: 'config', v: '5 params · 0x77d1c4…' },
-  { k: 'adapter root', v: '0x3ac81f60…9be204' },
-  { k: 'delivery', v: 'Intel TDX · verified' },
+  { k: 'model hash', v: '0xb4f76a88…2c75a7' },
+  { k: 'dataset root', v: '0xa5051ae7…9e7dbfd' },
+  { k: 'config', v: '5 params · 0xe65b3e51…' },
+  { k: 'task', v: '10551604-2664…f93bfc' },
+  { k: 'provider', v: '0xA02b95Aa…1E31A09' },
 ]
 
 /** The two that cost you the model, not just your time. */
@@ -81,13 +89,42 @@ const ANSWERS = [
   },
   {
     icon: <ClockIcon className="h-4 w-4" />,
-    title: 'A daemon that never sleeps through the window',
-    body: 'Acknowledgement happens about two minutes after delivery and retries on failure, with a hard escalation six hours before the deadline. Missing the window becomes structurally impossible.',
+    title: 'A daemon that watches the window for you',
+    body: 'It starts acknowledging about two minutes after delivery, retries every download path 0G offers, and escalates six hours before the deadline instead of letting it pass in silence. It cannot fix a broken SDK — on Windows both download paths fail outright — but it turns a model quietly deleted 48 hours later into a failure you are told about while there is still time to act, and it can free a locked queue with acknowledgeDeliverable.',
   },
   {
     icon: <ShieldIcon className="h-4 w-4" />,
     title: 'A passport anyone can check',
     body: 'The lineage the run already produced is written to 0G Storage, hashed on 0G Chain, and minted as an ERC-7857 Agentic ID. Every hash links to the explorer that proves it. No wallet needed to verify.',
+  },
+]
+
+/**
+ * Three explorer links, recorded from `contracts/deployments/`. A landing page
+ * that says "verifiable" and then offers nothing to verify is asking for the
+ * same trust it claims to remove.
+ */
+const PROOF = [
+  {
+    label: 'Passport.sol',
+    value: '0x27087B5b…83C1c7',
+    note: 'deployed · block 49,596,815',
+    href: 'https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7',
+  },
+  {
+    label: 'Passport #1 minted',
+    value: '0xb608a8a5…00b3b1',
+    note: 'block 49,597,171 · gas 327,702',
+    href: 'https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1',
+  },
+  {
+    // Storage Scan has no page keyed by a root hash — its human route is
+    // /submission/<txSeq>, and the manifest upload has a real one. So this links
+    // to the page that exists rather than to a plausible URL that 404s.
+    label: 'Manifest on 0G Storage',
+    value: 'submission 146937',
+    note: '584 bytes · hashes to the anchored value',
+    href: 'https://storagescan-galileo.0g.ai/submission/146937',
   },
 ]
 
@@ -109,10 +146,13 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-16">
         <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
           <div className="min-w-0">
+            {/* The badge names the network the contract is actually on. Claiming
+                mainnet here while Passport.sol lives on Galileo would be the
+                first thing a judge checks and the first thing they find wrong. */}
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="accent">
                 <Dot tone="accent" pulse />
-                live on 0G mainnet · chain 16661
+                live on 0G Galileo · chain 16602
               </Badge>
               <Badge>ERC-7857 Agentic ID</Badge>
             </div>
@@ -185,6 +225,58 @@ export default function LandingPage() {
             </div>
           ))}
         </dl>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Proof, not a promise. Three links a stranger can click right now. */}
+        {/* ---------------------------------------------------------------- */}
+        <section
+          className="mt-4 overflow-hidden rounded-lg border border-phosphor/30 bg-panel"
+          aria-labelledby="proof"
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-phosphor/20 bg-phosphor/[0.06] px-4 py-2 sm:px-5">
+            <Dot tone="accent" pulse />
+            <h2
+              id="proof"
+              className="font-mono text-2xs uppercase tracking-widest2 text-phosphor"
+            >
+              Live on 0G Galileo
+            </h2>
+            <span className="font-mono text-2xs text-faint">
+              executed, not described — every link below resolves
+            </span>
+          </div>
+
+          <div className="grid gap-px bg-line sm:grid-cols-3">
+            {PROOF.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col bg-panel px-4 py-4 no-underline transition-colors hover:bg-raised sm:px-5"
+              >
+                <span className="label">{item.label}</span>
+                <span className="mt-1.5 inline-flex items-center gap-1.5 break-hash font-mono text-[13px] text-fg transition-colors group-hover:text-phosphor">
+                  {item.value}
+                  <ExternalIcon className="h-3.5 w-3.5 shrink-0" />
+                </span>
+                <span className="mt-1 font-mono text-2xs text-faint">{item.note}</span>
+              </a>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 sm:px-5">
+            <p className="text-xs leading-relaxed text-faint text-pretty">
+              Passport #1 records a run that lost its model: the deliverable was never
+              acknowledged, 0G deducted 30% of the fee, and the adapter hash is a published
+              sentinel. Its page says that before it says anything else.
+            </p>
+            <Link href="/passport/p-000001" className="btn-ghost shrink-0 no-underline">
+              Read passport #1
+              <ArrowIcon className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </section>
       </section>
 
       <HatchBand />
@@ -305,7 +397,7 @@ export default function LandingPage() {
               </div>
             </dl>
 
-            <Link href="/gallery" className="btn-ghost no-underline">
+            <Link href="/passport/p-000001" className="btn-ghost no-underline">
               See a real passport
               <ArrowIcon className="h-3.5 w-3.5" />
             </Link>

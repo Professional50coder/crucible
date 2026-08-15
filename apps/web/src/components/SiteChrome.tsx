@@ -18,7 +18,7 @@ export function SiteHeader() {
   const pathname = usePathname() ?? '/'
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-ink/90 backdrop-blur">
+    <header className="no-print sticky top-0 z-40 border-b border-line bg-ink/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
         <Link
           href="/"
@@ -75,7 +75,7 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="relative mt-24">
+    <footer className="no-print relative mt-24">
       {/* The hatched band is the page's last structural mark: content ends
           here, the colophon is below the cut. */}
       <div className="h-8 border-y border-line hatch" aria-hidden="true" />
@@ -92,25 +92,29 @@ export function SiteFooter() {
           </p>
         </div>
 
+        {/* The explorers named here are Galileo's, because Galileo is where
+            Passport.sol is actually deployed. Pointing at the mainnet explorer
+            would send anyone checking the contract to a page that has never
+            heard of it. */}
         <div className="flex flex-col gap-2 font-mono md:items-end">
           <span className="label">Verify against</span>
           <a
-            href="https://chainscan.0g.ai"
+            href="https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7"
             target="_blank"
             rel="noopener noreferrer"
             className="no-underline transition-colors hover:text-fg"
           >
-            chainscan.0g.ai
+            chainscan-galileo.0g.ai
           </a>
           <a
-            href="https://storagescan.0g.ai"
+            href="https://storagescan-galileo.0g.ai"
             target="_blank"
             rel="noopener noreferrer"
             className="no-underline transition-colors hover:text-fg"
           >
-            storagescan.0g.ai
+            storagescan-galileo.0g.ai
           </a>
-          <span className="text-faint">built on 0G · chain 16661</span>
+          <span className="text-faint">Passport.sol on 0G Galileo · chain 16602</span>
         </div>
       </div>
     </footer>
