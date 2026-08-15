@@ -5,6 +5,10 @@ reference/
 # Local editor / tooling configuration. Not part of the project.
 .claude/
 
+# Working log of mistakes and their lessons. Useful to us, not a document for
+# judges — the corrections themselves are public in CHANGELOG.md.
+MISTAKES.md
+
 node_modules/
 dist/
 .next/
