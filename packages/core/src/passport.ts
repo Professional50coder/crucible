@@ -318,14 +318,34 @@ export function verifyManifest(manifest: PassportManifest, expectedHash: string)
   return manifestHash(manifest).toLowerCase() === expectedHash.trim().toLowerCase()
 }
 
+/**
+ * Storage Scan has no page keyed by root hash.
+ *
+ * `/file/<rootHash>` returns **404** — verified against the live Galileo explorer on
+ * 2026-08-15. The human-readable page is `/submission/<txSeq>`, and a txSeq cannot be
+ * derived from a root hash without asking the explorer first. The search box accepts a
+ * sequence number or an address, not a root hash.
+ *
+ * The only route that *is* keyed by root hash is the explorer's JSON API, so that is what
+ * we emit. It returns the submission list for the hash, including the txSeq needed to
+ * build a `/submission/<txSeq>` link. A working JSON URL beats a pretty 404.
+ */
+export function storageLookupUrl(network: Network, rootHash: string): string {
+  return `${STORAGE_SCAN_URLS[network]}/api/txs?skip=0&limit=10&rootHash=${rootHash}`
+}
+
+/** The human-readable Storage Scan page, once a submission sequence number is known. */
+export function storageSubmissionUrl(network: Network, txSeq: number | string): string {
+  return `${STORAGE_SCAN_URLS[network]}/submission/${txSeq}`
+}
+
 /** Everything in the manifest a human might want to click through and check for themselves. */
 export function explorerLinks(manifest: PassportManifest): ExplorerLinks {
-  const storageScan = STORAGE_SCAN_URLS[manifest.network]
   const { explorerUrl } = NETWORKS[manifest.network]
 
   return {
-    storageDataset: `${storageScan}/file/${manifest.dataset.rootHash}`,
-    storageAdapter: `${storageScan}/file/${manifest.adapter.rootHash}`,
+    storageDataset: storageLookupUrl(manifest.network, manifest.dataset.rootHash),
+    storageAdapter: storageLookupUrl(manifest.network, manifest.adapter.rootHash),
     chainProvider: `${explorerUrl}/address/${manifest.task.provider}`,
   }
 }

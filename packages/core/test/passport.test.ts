@@ -355,11 +355,18 @@ describe('explorerLinks', () => {
     const links = explorerLinks(buildManifest(VALID_INPUT))
 
     expect(links.storageDataset).toBe(
-      `${STORAGE_SCAN_URLS.testnet}/file/${VALID_INPUT.dataset.rootHash}`,
+      `${STORAGE_SCAN_URLS.testnet}/api/txs?skip=0&limit=10&rootHash=${VALID_INPUT.dataset.rootHash}`,
     )
     expect(links.storageAdapter).toBe(
-      `${STORAGE_SCAN_URLS.testnet}/file/${VALID_INPUT.adapter.rootHash}`,
+      `${STORAGE_SCAN_URLS.testnet}/api/txs?skip=0&limit=10&rootHash=${VALID_INPUT.adapter.rootHash}`,
     )
+  })
+
+  test('never emits the /file/<rootHash> route, which the explorer 404s', () => {
+    const links = explorerLinks(buildManifest(VALID_INPUT))
+
+    expect(links.storageDataset).not.toContain('/file/')
+    expect(links.storageAdapter).not.toContain('/file/')
   })
 
   test('points storage links at mainnet Storage Scan for mainnet', () => {
