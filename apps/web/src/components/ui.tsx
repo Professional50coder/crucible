@@ -114,16 +114,31 @@ export function SectionHead({
 // Surfaces
 // ---------------------------------------------------------------------------
 
+/**
+ * The one hover gesture the app uses on a surface: the panel lifts by a single
+ * pixel and its hairline brightens, in 150ms of ease-out. Nothing pulses,
+ * nothing loops, and nothing moves on a value that is not changing — the motion
+ * is a response to the pointer and ends the moment the pointer leaves.
+ */
+export const HOVER_LIFT =
+  'transition-[border-color,box-shadow,transform] duration-150 ease-out ' +
+  'hover:-translate-y-px hover:border-line-bright hover:shadow-panel-lg'
+
 export function Panel({
   children,
   className = '',
+  hover = false,
   as: As = 'div',
 }: {
   children: ReactNode
   className?: string
+  /** Lift on hover. For panels a reader is meant to treat as one object. */
+  hover?: boolean
   as?: 'div' | 'section' | 'article'
 }) {
-  return <As className={`panel rounded-lg ${className}`}>{children}</As>
+  return (
+    <As className={`panel rounded-lg ${hover ? HOVER_LIFT : ''} ${className}`}>{children}</As>
+  )
 }
 
 export function PanelHeader({
