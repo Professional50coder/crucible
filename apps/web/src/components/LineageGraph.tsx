@@ -129,32 +129,56 @@ export function LineageGraph({
     timers.current = []
   }, [])
 
-  const runTrace = useCallback(() => {
-    clearTimers()
-    if (reduced) {
-      // Everything still works; it just resolves instantly.
-      setStepIndex(steps.length - 1)
-      setTracing(false)
-      return
-    }
-    setStepIndex(-1)
-    setTracing(true)
-    let elapsed = 0
-    steps.forEach((step, index) => {
-      timers.current.push(setTimeout(() => setStepIndex(index), elapsed))
-      elapsed += step.ms
-    })
-    timers.current.push(setTimeout(() => setTracing(false), elapsed))
-  }, [clearTimers, reduced, steps])
+  /**
+   * How long the finished chain is left standing before the trace runs again.
+   *
+   * Long on purpose. The end state — every node lit, or the severed edge on a
+   * run that lost its model — is the information; the animation is only how a
+   * reader gets there. A short pause would keep pulling the eye back to motion
+   * it has already understood, so the still frame gets more time than the
+   * animation does.
+   */
+  const LOOP_PAUSE_MS = 7000
+
+  const runTrace = useCallback(
+    (loop = false) => {
+      clearTimers()
+      if (reduced) {
+        // Everything still works; it just resolves instantly, and never repeats.
+        setStepIndex(steps.length - 1)
+        setTracing(false)
+        return
+      }
+      setStepIndex(-1)
+      setTracing(true)
+      let elapsed = 0
+      steps.forEach((step, index) => {
+        timers.current.push(setTimeout(() => setStepIndex(index), elapsed))
+        elapsed += step.ms
+      })
+      timers.current.push(setTimeout(() => setTracing(false), elapsed))
+      if (loop) {
+        timers.current.push(setTimeout(() => runTrace(true), elapsed + LOOP_PAUSE_MS))
+      }
+    },
+    [clearTimers, reduced, steps],
+  )
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
-  // Autoplay exactly once. A certificate that replays forever looks unstable.
+  /**
+   * Autoplay, then repeat on a long cycle.
+   *
+   * Reduced motion opts out of the loop entirely rather than running a faster
+   * one: someone who has asked the operating system for less movement has not
+   * asked for the same movement more often. They get the resolved chain and the
+   * replay button, which is the whole meaning without any of the motion.
+   */
   useEffect(() => {
     if (played.current) return
     played.current = true
     const delay = reduced ? 0 : lineage.rankCount * 140 + 220
-    const timer = setTimeout(runTrace, delay)
+    const timer = setTimeout(() => runTrace(!reduced), delay)
     return () => clearTimeout(timer)
   }, [reduced, runTrace, lineage.rankCount])
 
@@ -254,7 +278,11 @@ export function LineageGraph({
           ) : null}
           <button
             type="button"
-            onClick={runTrace}
+            // Explicit rather than passing the handler directly: React would
+            // hand the click event in as `loop`, which is truthy by accident.
+            // A manual replay resumes the cycle, which is what a reader means
+            // by pressing it.
+            onClick={() => runTrace(!reduced)}
             aria-label="Trace this provenance"
             className="cursor-pointer rounded border border-phosphor/35 bg-phosphor/[0.07] px-2.5 py-1 font-mono text-2xs text-phosphor hover:bg-phosphor/[0.12]"
           >
