@@ -1,0 +1,22 @@
+[
+  {
+    "tokenId": "1",
+    "txHash": "0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1",
+    "blockNumber": 49597171,
+    "gasUsed": "327702",
+    "manifest": {
+      "adapterRootHash": "0x418e9f5f06b5930bd8a7fcb5d50a42d7646485b169916e23b818eb5d8c5ae8eb",
+      "baseModelHash": "0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7",
+      "chainId": 16602,
+      "configHash": "0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1",
+      "datasetRootHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+      "network": "testnet",
+      "note": "adapter not retrieved; acknowledgeModel failed on Windows (ENOENT) then HTTP 429",
+      "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+      "taskId": "10551604-2664-4516-86cf-269a62f93bfc",
+      "version": 1
+    },
+    "manifestRootHash": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
+    "mintedAt": "2026-08-15T17:38:24.050Z"
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "network": "galileo",
+  "chainId": 16602,
+  "address": "0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7",
+  "deployer": "0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF",
+  "txHash": "0x302a4278b9759f985f2e43964a4d5db1c2b6f14ef453935f230441ce728a6dd1",
+  "blockNumber": 49596815,
+  "deployedAt": "2026-08-15T17:35:24.757Z",
+  "compiler": {
+    "version": "0.8.19",
+    "evmVersion": "paris",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    }
+  }
+}

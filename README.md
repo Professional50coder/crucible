@@ -11,6 +11,54 @@ repo was executed, not read from documentation ([docs/FIELD_NOTES.md](docs/FIELD
 
 ---
 
+## Proof of work — live on 0G
+
+| | |
+|---|---|
+| **`Passport.sol` — 0G Galileo testnet** | **[`0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7)** |
+| Deployment tx | [`0x302a4278…8a6dd1`](https://chainscan-galileo.0g.ai/tx/0x302a4278b9759f985f2e43964a4d5db1c2b6f14ef453935f230441ce728a6dd1) · block 49596815 · gas 2,238,586 |
+| **Passport #1 minted** | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) · block 49597171 · gas 327,702 |
+| Dataset on 0G Storage | root [`0xa5051ae7…9e7dbfd`](https://storagescan-galileo.0g.ai) · upload tx `0xc38e4131…d7da52` |
+| 0G Compute fine-tuning task | `10551604-2664-4516-86cf-269a62f93bfc` on provider `0xA02b95Aa…1E31A09` |
+| **`Passport.sol` — 0G mainnet (16661)** | **not yet deployed** — the Wave 3 hard requirement, still open |
+
+Anyone can check the claim without cloning anything:
+
+```
+verifyManifest(1, 0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f) → true
+verifyManifest(1, keccak256("tampered"))                                            → false
+```
+
+> Passport #1 is a **live-chain smoke test, not a completed fine-tune.** Its base-model hash,
+> dataset root hash, training config and task ID are the real values from the 2026-08-14 run.
+> Its adapter hash is an explicit sentinel, because the adapter was never retrieved — the task
+> reached `Delivered` and `acknowledgeModel` failed on Windows. That failure is the exact one
+> this project exists to survive, and it happened to us on the first real run.
+
+---
+
+## In plain words
+
+**What it does.** You upload a dataset. Crucible fine-tunes a model for you on 0G and hands
+back two things: the working model, and a public certificate proving where that model came from.
+
+**The problem it solves.** Fine-tuning on 0G today is a twelve-step command-line flow with a
+trap in it: when your model is ready, a 48-hour timer starts that nobody tells you about. Miss
+it and the model is deleted and you are charged 30% anyway. One wrong command locks your
+account out of the network permanently. And the proof of how your model was made — which base
+model, which data, which settings, which secure chip ran it — is printed to a terminal and lost.
+
+**The value to the ecosystem.** Fine-tuning is the half of 0G Compute almost nobody uses: 21
+inference providers against 1 fine-tuning provider, and of the 173 projects ever shipped on 0G,
+three touch training and none do provenance. Crucible makes that capability safe to use and
+turns its output into something a stranger can verify. Every run is a paid task on 0G, and the
+findings along the way — including [three corrections to 0G's own
+documentation](docs/FIELD_NOTES.md) — are published for every other builder.
+
+![Architecture](docs/diagrams/architecture.svg)
+
+---
+
 ## The problem
 
 **You have 48 hours, and nothing tells you.**
@@ -120,18 +168,19 @@ All four. Details in [submission/ARCHITECTURE.md](submission/ARCHITECTURE.md#whi
 
 ## 0G integration proof
 
-> **PLACEHOLDER — must be filled before submission.** Nothing below is deployed yet.
+| Item | Testnet — Galileo (16602) | Mainnet — 0G (16661) |
+|---|---|---|
+| `Passport.sol` | [`0x27087B5b…83C1c7`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7) ✅ deployed | `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` — **open** |
+| Source verified on explorer | ⚠️ `hardhat verify` cannot reach the Blockscout endpoint; verifying through the explorer UI | pending |
+| Mint transaction | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) ✅ passport #1 | `PLACEHOLDER_MINT_TX_URL` — **open** |
+| Fine-tuning task | `10551604-2664-4516-86cf-269a62f93bfc` ✅ reached `Delivered` | — |
+| Fine-tuning provider | `0xA02b95Aa6886b1116C4f334eDe00381511E31A09` | `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` |
+| Dataset on 0G Storage | root `0xa5051ae7…9e7dbfd` ✅ uploaded | — |
+| TEE signer (acknowledged on-chain) | `0x24135b4Bd964872284728F79F5f17eB874C5583A` | same signer |
 
-| Item | Value |
-|---|---|
-| Network | 0G mainnet, chain **16661** |
-| `Passport.sol` address | `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` |
-| Explorer link (contract) | `PLACEHOLDER_CHAINSCAN_CONTRACT_URL` (`https://chainscan.0g.ai/address/<contract>`) |
-| First mint tx (on-chain activity) | `PLACEHOLDER_MINT_TX_URL` |
-| Fine-tuning task ID | `PLACEHOLDER_TASK_ID` |
-| Passport manifest on 0G Storage | `PLACEHOLDER_STORAGESCAN_URL` (`https://storagescan.0g.ai`) |
-| Fine-tuning provider used | `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` (mainnet) |
-| TEE signer (acknowledged on-chain) | `0x24135b4Bd964872284728F79F5f17eB874C5583A` |
+Wave 3 requires a **mainnet** contract address plus explorer activity. That row is still open and
+is the single largest remaining gap; the testnet deployment above exists to de-risk it, not to
+substitute for it. Development runs on testnet to keep real value out of the loop.
 
 Development and the end-to-end fine-tuning spike run on 0G **testnet** (chain 16602, provider
 `0xA02b95Aa6886b1116C4f334eDe00381511E31A09`) to keep real value out of the development loop.
