@@ -39,16 +39,19 @@ export default function PassportPage({ params }: { params: { id: string } }) {
 
   if (status === 'loading') {
     // The skeleton traces the certificate it is standing in for — ribbon, head,
-    // four checks, chain of custody — so the page does not visibly reflow into a
-    // different shape the moment the record lands.
+    // verification panel, checks, chain of custody — so the page does not
+    // visibly reflow into a different shape the moment the record lands. The
+    // verification panel is the tallest block on purpose: it is the one the
+    // reader is waiting for, and its slot should not appear to grow.
     return (
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14" aria-busy="true">
         <Skeleton className="mb-8 h-3 w-20" />
         <Skeleton className="h-7 w-full rounded-b-none" />
-        <Skeleton className="h-52 w-full rounded-none" />
+        <Skeleton className="h-64 w-full rounded-none" />
         <Skeleton className="h-12 w-full rounded-t-none" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
+        <Skeleton className="mt-4 h-64 w-full" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>

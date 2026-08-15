@@ -22,14 +22,24 @@
  *    reader's browser from the exact document that was hashed at mint. A
  *    verification you watch happen is worth more than one a server asserts.
  *
- * The centrepiece is the chain of custody: six links, drawn as a physical chain,
- * from the weights the run started with to the transaction that anchored the
- * result. Each link states what it is, shows its hash, and points at the thing
- * that proves it. The chain is the argument; everything else is detail.
+ * The page reads top to bottom as an argument:
+ *
+ *   head          what this is, its full identifier, and the record quad
+ *   caveat        anything that must be read before the evidence it qualifies
+ *   VERIFICATION  the one check, performed here, both hashes stacked
+ *   settlement    what the chain says happened to the deliverable
+ *   custody       six links from the base weights to the anchoring transaction
+ *   decoded       the manifest as a typed record rather than a hash dump
+ *   anchor        the on-chain half, in full
+ *
+ * Two structural patterns are reimplemented from the Ethereum Attestation
+ * Service's single-attestation view (easscan.org) — the full untruncated
+ * identifier under the title, and typed field rows. Both are ideas, not code;
+ * nothing was copied. See docs/PRIOR_ART.md.
  */
 
 import Link from 'next/link'
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import {
   NETWORKS,
@@ -59,7 +69,7 @@ import {
 } from '@/lib/manifest'
 import { DEPLOYMENT_BLOCKS, isDeployed, passportAddress } from '@/lib/passport-contract'
 import type { PassportRecord } from '@/lib/types'
-import { CopyButton, Hash, HashRow } from './Hash'
+import { CopyButton, Hash, TypedRow, TypedRows } from './Hash'
 import {
   AdapterIcon,
   AlertIcon,
@@ -71,6 +81,7 @@ import {
   ModelIcon,
   ShieldIcon,
   SlidersIcon,
+  TerminalIcon,
 } from './icons'
 import { Badge, Dot, IconTile, NetworkBadge, Note, Panel, PanelHeader, Stat } from './ui'
 
@@ -99,6 +110,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
    * asserting a match it cannot demonstrate.
    */
   const hashedDocument = record.anchoredManifest ?? manifest
+  const canonicalDocument = useMemo(() => canonicalize(hashedDocument), [hashedDocument])
   const recomputed = useMemo(() => canonicalHash(hashedDocument), [hashedDocument])
   const anchored = mint.manifestRootHash
   const matches = recomputed.toLowerCase() === anchored.toLowerCase()
@@ -145,7 +157,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
       {/* ================================================================ */}
       {/* Certificate head                                                  */}
       {/* ================================================================ */}
-      <header className="relative overflow-hidden rounded-lg border border-line-bright bg-panel">
+      <header className="relative overflow-hidden rounded-lg border border-line-bright bg-panel shadow-panel">
         {/* The one place colour is used structurally: a foil rule across the top. */}
         <div className="h-px w-full origin-left animate-drawline bg-gradient-to-r from-phosphor via-phosphor/25 to-transparent" />
 
@@ -154,15 +166,43 @@ export function PassportView({ record }: { record: PassportRecord }) {
         <ProvenanceRibbon onChain={onChain} network={manifest.network} tokenId={mint.tokenId} />
 
         <div className="px-5 py-7 sm:px-8 sm:py-9">
-          <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
-            <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
+            <div className="min-w-0 flex-1">
               <p className="label">Model Passport</p>
-              <h1 className="mt-2 break-words font-mono text-2xl leading-tight text-fg sm:text-3xl">
-                {record.name ?? manifest.base.model}
-              </h1>
+
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                {/* The serial. A certificate has a number on it, set large. */}
+                <span
+                  className="font-mono text-readout leading-none text-phosphor"
+                  aria-label={mint.tokenId ? `Token number ${mint.tokenId}` : 'Not minted'}
+                >
+                  {serial}
+                </span>
+                <h1 className="min-w-0 break-words font-mono text-2xl leading-tight text-fg sm:text-3xl">
+                  {record.name ?? manifest.base.model}
+                </h1>
+              </div>
+
               <p className="mt-2 font-mono text-2xs text-faint">
-                issued by Crucible · ERC-7857 Agentic ID · anchored on {network.label}
+                issued by Crucible · ERC-7857-style Agentic ID · anchored on {network.label}
               </p>
+
+              {/*
+                The full identifier, untruncated. On a certificate the complete
+                hash *is* the content — truncation is for tables. This is the
+                value the whole page exists to let you check.
+              */}
+              <div className="mt-5 border-t border-line pt-4">
+                <div className="label">
+                  {onChain
+                    ? 'Anchored manifest hash · PassportData.manifestRootHash'
+                    : 'Manifest hash on this demo record'}
+                </div>
+                <div className="mt-1.5">
+                  <Hash value={anchored} title="anchored manifest hash" full />
+                </div>
+              </div>
+
               {record.summary ? (
                 <p className="measure mt-4 text-sm leading-relaxed text-dim text-pretty">
                   {record.summary}
@@ -170,17 +210,9 @@ export function PassportView({ record }: { record: PassportRecord }) {
               ) : null}
             </div>
 
-            {/* The serial. A certificate has a number on it, set large. */}
-            <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
-              <div className="sm:text-right">
-                <div className="label">Token</div>
-                <div
-                  className="mt-0.5 font-mono text-readout leading-none text-phosphor"
-                  aria-label={mint.tokenId ? `Token number ${mint.tokenId}` : 'Not minted'}
-                >
-                  {serial}
-                </div>
-              </div>
+            {/* The record quad, mirroring how an attestation states its metadata:
+                four small label-over-value pairs, no prose. */}
+            <div className="flex shrink-0 flex-col items-start gap-4 sm:items-end">
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <NetworkBadge network={manifest.network} />
                 {mint.status === 'minted' ? (
@@ -197,6 +229,35 @@ export function PassportView({ record }: { record: PassportRecord }) {
                   <Badge>not minted</Badge>
                 )}
               </div>
+
+              <dl className="grid w-full grid-cols-2 gap-x-8 gap-y-4 sm:w-auto">
+                <QuadCell
+                  label="Minted"
+                  value={mint.mintedAt ? formatDate(mint.mintedAt) : '—'}
+                  hint={mint.mintedAt ? formatTimestamp(mint.mintedAt).slice(11) : undefined}
+                />
+                <QuadCell
+                  label="Block"
+                  value={mint.blockNumber ? formatCount(mint.blockNumber) : '—'}
+                  href={
+                    mint.blockNumber ? proof(blockUrl(manifest.network, mint.blockNumber)) : undefined
+                  }
+                />
+                <QuadCell
+                  label="Network"
+                  value={network.label}
+                  hint={`chain ${manifest.chainId}`}
+                />
+                <QuadCell
+                  label="Token"
+                  value={serial}
+                  href={
+                    mint.tokenId && contract && deployed
+                      ? proof(tokenUrl(manifest.network, contract, mint.tokenId))
+                      : undefined
+                  }
+                />
+              </dl>
             </div>
           </div>
 
@@ -235,9 +296,6 @@ export function PassportView({ record }: { record: PassportRecord }) {
             />
           </dl>
         </div>
-
-        {/* The seal: the one check the reader just performed themselves. */}
-        <Seal integrity={integrity} network={network.explorerLabel} />
       </header>
 
       {/* ================================================================ */}
@@ -263,23 +321,27 @@ export function PassportView({ record }: { record: PassportRecord }) {
       ) : null}
 
       {/* ================================================================ */}
-      {/* Verification strip — what a stranger can check, and its result    */}
+      {/* THE VERIFICATION. The one check, performed here, in front of you.  */}
+      {/* ================================================================ */}
+      <VerificationHero
+        integrity={integrity}
+        anchored={anchored}
+        recomputed={recomputed}
+        canonicalBytes={canonicalDocument.length}
+        anchoredIsFullManifest={record.anchoredManifest === undefined}
+        tokenId={mint.tokenId}
+        explorerLabel={network.explorerLabel}
+        indexerUrl={network.indexerUrl}
+        manifestRootHash={onChain ? record.manifestStorage?.rootHash : undefined}
+      />
+
+      {/* ================================================================ */}
+      {/* What a stranger can check, and its result                         */}
       {/* ================================================================ */}
       <section
-        className="mt-4 grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-4 grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3"
         aria-label="Independent checks"
       >
-        <Check
-          state={integrity === 'verified' ? 'ok' : integrity === 'demo' ? 'na' : 'bad'}
-          label="Manifest integrity"
-          detail={
-            integrity === 'verified'
-              ? 'Recomputed in this browser; matches the hash anchored on chain.'
-              : integrity === 'demo'
-                ? 'Demo record. Nothing was anchored, so there is nothing to check against.'
-                : 'Recomputed hash does not match the anchored value. Do not trust this passport.'
-          }
-        />
         <Check
           state={manifest.tee.acknowledged ? 'ok' : 'warn'}
           label="TEE signer"
@@ -296,7 +358,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
             manifest.tee.attestationVerified
               ? 'Intel TDX quote verified for this run.'
               : sentinel
-                ? 'Not verified. Attestation is checked on delivery acknowledgement, and that step never completed.'
+                ? 'Not verified. verifyService() was never called on this run, and the attestation is checked on delivery acknowledgement — the step that never completed. The manifest records attestationVerified: false.'
                 : 'Attestation could not be verified for this run.'
           }
         />
@@ -339,15 +401,26 @@ export function PassportView({ record }: { record: PassportRecord }) {
             >
               {lost ? 'Deliverable never acknowledged — model destroyed' : 'Deliverable acknowledged'}
             </h2>
+            <span className="font-mono text-2xs text-faint">
+              read from 0G’s FineTuningServing contract, not from the provider
+            </span>
           </div>
 
-          <div className="grid gap-6 px-5 py-5 sm:grid-cols-3 sm:px-6">
+          <div className="grid gap-6 px-5 py-5 sm:grid-cols-4 sm:px-6">
             <Stat
               label="getDeliverables.acknowledged"
               value={record.settlement.acknowledged ? 'true' : 'false'}
               tone={record.settlement.acknowledged ? 'ok' : 'danger'}
-              hint="read from 0G’s FineTuningServing contract"
+              hint="on-chain, and authoritative"
             />
+            {lost ? (
+              <Stat
+                label="encryptedSecret"
+                value="0x"
+                tone="danger"
+                hint="empty — no decryption key was ever shared"
+              />
+            ) : null}
             <Stat
               label="Fee paid"
               value={`${formatOg(manifest.fee.totalNeuron)} 0G`}
@@ -358,7 +431,10 @@ export function PassportView({ record }: { record: PassportRecord }) {
                 label="Penalty deducted"
                 value={`${formatOg(record.settlement.penaltyNeuron)} 0G`}
                 tone="danger"
-                hint="0G’s 30% missed-acknowledgement penalty"
+                hint={`${penaltyPercent(
+                  record.settlement.penaltyNeuron,
+                  manifest.fee.totalNeuron,
+                )} of the fee — 0G’s missed-acknowledgement deduction`}
               />
             ) : null}
           </div>
@@ -372,7 +448,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
       ) : null}
 
       {/* ================================================================ */}
-      {/* Chain of custody — the centrepiece                                */}
+      {/* Chain of custody — the narrative                                  */}
       {/* ================================================================ */}
       <Panel className="mt-4" as="section">
         <PanelHeader
@@ -516,6 +592,124 @@ export function PassportView({ record }: { record: PassportRecord }) {
       </Panel>
 
       {/* ================================================================ */}
+      {/* Decoded manifest — the record format, not a hash dump             */}
+      {/* ================================================================ */}
+      <Panel className="mt-4" as="section">
+        <PanelHeader
+          title="Decoded manifest"
+          icon={<TerminalIcon className="h-3.5 w-3.5" />}
+          aside={
+            <span className="font-mono text-2xs text-faint">
+              v{manifest.version} schema · {canonicalDocument.length} bytes canonical
+            </span>
+          }
+        />
+
+        <TypedRows>
+          <TypedRow type="string" name="task.id" value={manifest.task.id} />
+          <TypedRow
+            type="address"
+            name="task.provider"
+            value={manifest.task.provider}
+            href={links.provider}
+            hrefLabel={links.chainHost}
+            hash
+          />
+          <TypedRow
+            type="string"
+            name="task.state"
+            value={manifest.task.state}
+            tone={lost ? 'warn' : 'default'}
+            note={
+              lost
+                ? 'Provider-reported and off-chain. It describes the provider’s own work, not whether anyone collected the deliverable — see the settlement panel above.'
+                : undefined
+            }
+          />
+          <TypedRow type="string" name="base.model" value={manifest.base.model} />
+          <TypedRow type="bytes32" name="base.modelHash" value={manifest.base.modelHash} hash />
+          <TypedRow
+            type="string"
+            name="base.tokenizer"
+            value={manifest.base.tokenizer}
+            href={`https://huggingface.co/${manifest.base.tokenizer}`}
+          />
+          <TypedRow
+            type="bytes32"
+            name="dataset.rootHash"
+            value={manifest.dataset.rootHash}
+            href={proof(links.dataset)}
+            hrefLabel={links.storageHost}
+            unverifiable={!onChain}
+            hash
+          />
+          <TypedRow type="string" name="dataset.format" value={manifest.dataset.format} />
+          <TypedRow
+            type="uint256"
+            name="dataset.exampleCount"
+            value={formatCount(manifest.dataset.exampleCount)}
+          />
+          <TypedRow
+            type="uint256"
+            name="dataset.tokenCount"
+            value={formatCount(manifest.dataset.tokenCount)}
+          />
+          <TypedRow
+            type="bytes32"
+            name="training.configHash"
+            value={derivedConfigHash}
+            note="Derived here from the five accepted keys, not read from the record."
+            hash
+          />
+          <TypedRow
+            type="bytes32"
+            name={sentinel ? 'adapter.rootHash — SENTINEL' : 'adapter.rootHash'}
+            value={manifest.adapter.rootHash}
+            href={sentinel ? undefined : proof(links.adapter)}
+            hrefLabel={links.storageHost}
+            unverifiable={!sentinel && !onChain}
+            tone={sentinel ? 'danger' : 'default'}
+            note={
+              sentinel
+                ? 'keccak256 of a published string, not the Merkle root of a file. There is no artifact behind this value and the preimage below proves it.'
+                : undefined
+            }
+            hash
+          />
+          <TypedRow
+            type="uint256"
+            name="fee.totalNeuron"
+            value={`${manifest.fee.totalNeuron} (${formatOg(manifest.fee.totalNeuron)} 0G)`}
+          />
+          <TypedRow
+            type="address"
+            name="tee.signerAddress"
+            value={manifest.tee.signerAddress}
+            href={links.teeSigner}
+            hrefLabel={links.chainHost}
+            hash
+          />
+          <TypedRow
+            type="bool"
+            name="tee.acknowledged"
+            value={manifest.tee.acknowledged ? 'true' : 'false'}
+            tone={manifest.tee.acknowledged ? 'ok' : 'warn'}
+          />
+          <TypedRow
+            type="bool"
+            name="tee.attestationVerified"
+            value={manifest.tee.attestationVerified ? 'true' : 'false'}
+            tone={manifest.tee.attestationVerified ? 'ok' : 'warn'}
+            note={
+              manifest.tee.attestationVerified
+                ? undefined
+                : 'False, and shown as false. verifyService() is not called anywhere in this codebase, so the attestation has not been checked on this end — recording the TEE signer is not the same as verifying its quote.'
+            }
+          />
+        </TypedRows>
+      </Panel>
+
+      {/* ================================================================ */}
       {/* Training configuration + cost                                     */}
       {/* ================================================================ */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -561,7 +755,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
             <div className="mt-4 border-t border-line pt-4">
               <div className="label">configHash</div>
               <div className="mt-1">
-                <Hash value={derivedConfigHash} title="config hash" tone="muted" />
+                <Hash value={derivedConfigHash} title="config hash" tone="muted" full />
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-faint text-pretty">
                 keccak256 of those five keys, sorted and serialised with no whitespace.
@@ -650,147 +844,165 @@ export function PassportView({ record }: { record: PassportRecord }) {
           }
         />
 
-        <div className="px-4 py-4 sm:px-5">
-          {!onChain ? (
-            <div className="mb-4">
-              <Note>
-                <strong className="font-normal text-fg">Demo record.</strong> The values below show
-                what a passport anchors and in what shape. They were never minted, so none of them
-                links to an explorer — a link that 404s is worse than no link.
-              </Note>
-            </div>
+        {!onChain ? (
+          <div className="border-b border-line px-4 py-4 sm:px-5">
+            <Note>
+              <strong className="font-normal text-fg">Demo record.</strong> The values below show
+              what a passport anchors and in what shape. They were never minted, so none of them
+              links to an explorer — a link that 404s is worse than no link.
+            </Note>
+          </div>
+        ) : null}
+
+        <TypedRows>
+          <TypedRow
+            type="bytes32"
+            name="manifestRootHash (anchored)"
+            value={anchored}
+            note="Public, and checkable without decrypting anything."
+            hash
+          />
+          <TypedRow
+            type="bytes32"
+            name="manifestRootHash (recomputed here)"
+            value={recomputed}
+            tone={integrity === 'mismatch' ? 'danger' : 'default'}
+            note={
+              record.anchoredManifest
+                ? 'keccak256 of the canonical document this token committed to, computed client-side from the JSON at the bottom of this page.'
+                : 'keccak256 of the canonical manifest, computed client-side from the JSON at the bottom of this page.'
+            }
+            hash
+          />
+
+          {contract ? (
+            <TypedRow
+              type="address"
+              name="passportContract"
+              value={contract}
+              href={onChain && deployed ? addressUrl(manifest.network, contract) : undefined}
+              hrefLabel={network.explorerLabel}
+              note={
+                !onChain
+                  ? 'Demo address. The deployed contract lives elsewhere.'
+                  : deployed
+                    ? `Passport.sol on ${network.label}${
+                        DEPLOYMENT_BLOCKS[manifest.network]
+                          ? `, deployed in block ${formatCount(DEPLOYMENT_BLOCKS[manifest.network]!)}`
+                          : ''
+                      }. Source is verified on the explorer, so the code behind these hashes is readable too.`
+                    : `Passport.sol is not deployed on ${network.label} yet — nothing has been deployed to mainnet — so this link does not resolve.`
+              }
+              hash
+            />
           ) : null}
 
-          <div className="divide-y divide-line">
-            <HashRow
-              label="Manifest hash (anchored)"
-              value={anchored}
-              note="PassportData.manifestRootHash — public, and checkable without decrypting anything."
-            />
-            <HashRow
-              label="Manifest hash (recomputed)"
-              value={recomputed}
-              note={
-                record.anchoredManifest
-                  ? 'keccak256 of the canonical document this token committed to, computed client-side from the JSON shown at the bottom of this page.'
-                  : 'keccak256 of the canonical manifest, computed client-side from the JSON shown at the bottom of this page.'
+          {mint.tokenId ? (
+            <TypedRow
+              type="uint256"
+              name="tokenId"
+              value={mint.tokenId}
+              href={
+                contract && onChain && deployed
+                  ? tokenUrl(manifest.network, contract, mint.tokenId)
+                  : undefined
               }
             />
-
-            {contract ? (
-              <HashRow
-                label="Passport contract"
-                value={contract}
-                href={onChain && deployed ? addressUrl(manifest.network, contract) : undefined}
-                hrefLabel={network.explorerLabel}
-                note={
-                  !onChain
-                    ? 'Demo address. The deployed contract lives elsewhere.'
-                    : deployed
-                      ? `Passport.sol on ${network.label}${
-                          DEPLOYMENT_BLOCKS[manifest.network]
-                            ? `, deployed in block ${formatCount(DEPLOYMENT_BLOCKS[manifest.network]!)}`
-                            : ''
-                        }. Source is verified on the explorer, so the code behind these hashes is readable too.`
-                      : `Passport.sol is not deployed on ${network.label} yet, so this link does not resolve.`
-                }
-              />
-            ) : null}
-
-            {mint.tokenId && contract ? (
-              <LinkRow
-                label="Token"
-                display={`#${mint.tokenId}`}
-                href={onChain && deployed ? tokenUrl(manifest.network, contract, mint.tokenId) : undefined}
-              />
-            ) : null}
-
-            {mint.txHash ? (
-              <HashRow
-                label="Mint transaction"
-                value={mint.txHash}
-                href={proof(txUrl(manifest.network, mint.txHash))}
-                hrefLabel={network.explorerLabel}
-                note={
-                  mint.blockNumber
-                    ? `Block ${formatCount(mint.blockNumber)}${
-                        mint.mintedAt ? ` · ${formatTimestamp(mint.mintedAt)}` : ''
-                      }`
-                    : undefined
-                }
-              />
-            ) : null}
-
-            {mint.owner ? (
-              <HashRow
-                label="Owner"
-                value={mint.owner}
-                href={proof(addressUrl(manifest.network, mint.owner))}
-                hrefLabel={network.explorerLabel}
-              />
-            ) : null}
-
-            {mint.blockNumber ? (
-              <LinkRow
-                label="Block"
-                display={formatCount(mint.blockNumber)}
-                href={proof(blockUrl(manifest.network, mint.blockNumber))}
-              />
-            ) : null}
-
-            {/* The document itself, so the loop actually closes: download, hash,
-                compare. A hash you were handed proves nothing on its own. */}
-            {record.manifestStorage ? (
-              <>
-                <HashRow
-                  label="Manifest on 0G Storage"
-                  value={record.manifestStorage.rootHash}
-                  href={
-                    onChain
-                      ? storageLookupUrl(manifest.network, record.manifestStorage.rootHash)
-                      : undefined
-                  }
-                  hrefLabel={links.storageHost}
-                  note={`The canonical document above, stored${
-                    record.manifestStorage.sizeBytes
-                      ? ` — ${record.manifestStorage.sizeBytes} bytes`
-                      : ''
-                  }. Download it, hash it, and compare against the anchor.`}
-                />
-                {record.manifestStorage.txSeq !== undefined ? (
-                  <LinkRow
-                    label="Storage submission"
-                    display={`#${record.manifestStorage.txSeq}`}
-                    href={
-                      onChain
-                        ? storageSubmissionUrl(manifest.network, record.manifestStorage.txSeq)
-                        : undefined
-                    }
-                    note="Storage Scan’s human-readable page for this upload."
-                  />
-                ) : null}
-              </>
-            ) : null}
-
-            {record.deliveredAt ? (
-              <LinkRow
-                label="Delivered at"
-                display={formatTimestamp(record.deliveredAt)}
-                note="0G reports Delivered here; the 48-hour acknowledgement window opened at this instant."
-              />
-            ) : null}
-          </div>
-
-          {mint.status !== 'minted' ? (
-            <div className="mt-5">
-              <Note tone="warn">
-                This manifest is written to 0G Storage but has no on-chain anchor yet. Until the
-                mint lands, the lineage is readable but not tamper-evident — anyone serving you
-                this page could have altered it.
-              </Note>
-            </div>
           ) : null}
-        </div>
+
+          {mint.txHash ? (
+            <TypedRow
+              type="bytes32"
+              name="mintTransaction"
+              value={mint.txHash}
+              href={proof(txUrl(manifest.network, mint.txHash))}
+              hrefLabel={network.explorerLabel}
+              note={
+                mint.blockNumber
+                  ? `Block ${formatCount(mint.blockNumber)}${
+                      mint.mintedAt ? ` · ${formatTimestamp(mint.mintedAt)}` : ''
+                    }`
+                  : undefined
+              }
+              hash
+            />
+          ) : null}
+
+          {mint.owner ? (
+            <TypedRow
+              type="address"
+              name="owner"
+              value={mint.owner}
+              href={proof(addressUrl(manifest.network, mint.owner))}
+              hrefLabel={network.explorerLabel}
+              hash
+            />
+          ) : null}
+
+          {mint.blockNumber ? (
+            <TypedRow
+              type="uint256"
+              name="blockNumber"
+              value={formatCount(mint.blockNumber)}
+              href={proof(blockUrl(manifest.network, mint.blockNumber))}
+            />
+          ) : null}
+
+          {/* The document itself, so the loop actually closes: download, hash,
+              compare. A hash you were handed proves nothing on its own. */}
+          {record.manifestStorage ? (
+            <TypedRow
+              type="bytes32"
+              name="manifestStorage.rootHash"
+              value={record.manifestStorage.rootHash}
+              href={
+                onChain
+                  ? storageLookupUrl(manifest.network, record.manifestStorage.rootHash)
+                  : undefined
+              }
+              hrefLabel={links.storageHost}
+              note={`The canonical document above, stored on 0G Storage${
+                record.manifestStorage.sizeBytes
+                  ? ` — ${record.manifestStorage.sizeBytes} bytes`
+                  : ''
+              }. Storage Scan has no page keyed by a root hash, so this link is its JSON lookup; the human page is the submission below.`}
+              hash
+            />
+          ) : null}
+
+          {record.manifestStorage?.txSeq !== undefined ? (
+            <TypedRow
+              type="uint256"
+              name="manifestStorage.txSeq"
+              value={`#${record.manifestStorage.txSeq}`}
+              href={
+                onChain
+                  ? storageSubmissionUrl(manifest.network, record.manifestStorage.txSeq)
+                  : undefined
+              }
+              note="Storage Scan’s human-readable page for this upload."
+            />
+          ) : null}
+
+          {record.deliveredAt ? (
+            <TypedRow
+              type="string"
+              name="deliveredAt"
+              value={formatTimestamp(record.deliveredAt)}
+              note="0G reports Delivered here; the 48-hour acknowledgement window opened at this instant."
+            />
+          ) : null}
+        </TypedRows>
+
+        {mint.status !== 'minted' ? (
+          <div className="border-t border-line px-4 py-4 sm:px-5">
+            <Note tone="warn">
+              This manifest is written to 0G Storage but has no on-chain anchor yet. Until the
+              mint lands, the lineage is readable but not tamper-evident — anyone serving you
+              this page could have altered it.
+            </Note>
+          </div>
+        ) : null}
       </Panel>
 
       {/* ================================================================ */}
@@ -832,7 +1044,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
                 Call <span className="font-mono text-fg">passportOf({mint.tokenId ?? '<tokenId>'})</span>{' '}
                 on the Passport contract via{' '}
                 <ProofLink
-                  href={onChain && contract ? addressUrl(manifest.network, contract) : undefined}
+                  href={onChain && contract && deployed ? addressUrl(manifest.network, contract) : undefined}
                   label={network.explorerLabel}
                 />{' '}
                 or any {network.label} RPC. It returns the lineage hashes exactly as they were
@@ -919,8 +1131,433 @@ export function PassportView({ record }: { record: PassportRecord }) {
 }
 
 // ---------------------------------------------------------------------------
+// The verification hero
+// ---------------------------------------------------------------------------
+
+/**
+ * How long the panel dwells on `checking` before showing the verdict.
+ *
+ * The hash itself is computed synchronously during render — keccak256 over a few
+ * hundred bytes takes microseconds, which is far too fast for a human to see
+ * happen. The dwell is presentation, not fake work: it holds the reveal long
+ * enough that a reader watches `checking → match` rather than arriving after the
+ * fact. Nothing about the result depends on it, and reduced-motion skips it.
+ */
+const REVEAL_MS = 450
+
+type VerifyPhase = 'checking' | 'match' | 'mismatch' | 'demo'
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/**
+ * The single most important claim on this page, given the room it deserves.
+ *
+ * A hash anchored on a public chain is only evidence if you can reproduce it. So
+ * the panel stacks the two values — the one the chain holds, and the one this
+ * browser just computed from the published document — character-aligned in one
+ * well, and lets the reader's eye do the comparison rather than asking them to
+ * accept a green tick.
+ *
+ * Three states, and the page genuinely passes through them: `checking` while the
+ * verdict is withheld, then `match` or `mismatch`. Everything the reader would
+ * need to redo the check outside this page is in the disclosure at the bottom,
+ * copyable, exact.
+ */
+function VerificationHero({
+  integrity,
+  anchored,
+  recomputed,
+  canonicalBytes,
+  anchoredIsFullManifest,
+  tokenId,
+  explorerLabel,
+  indexerUrl,
+  manifestRootHash,
+}: {
+  integrity: Integrity
+  anchored: string
+  recomputed: string
+  canonicalBytes: number
+  /** Whether the hashed document is this app's v1 manifest or an older record. */
+  anchoredIsFullManifest: boolean
+  tokenId?: string
+  explorerLabel: string
+  indexerUrl: string
+  /** 0G Storage root of the manifest document, when one exists to curl. */
+  manifestRootHash?: string
+}) {
+  const settled: Exclude<VerifyPhase, 'checking'> =
+    integrity === 'demo' ? 'demo' : integrity === 'verified' ? 'match' : 'mismatch'
+
+  const [phase, setPhase] = useState<VerifyPhase>('checking')
+
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setPhase(settled)
+      return
+    }
+
+    setPhase('checking')
+    const timer = setTimeout(() => setPhase(settled), REVEAL_MS)
+    return () => clearTimeout(timer)
+  }, [settled])
+
+  const checking = phase === 'checking'
+  const diffAt = useMemo(() => firstDifference(anchored, recomputed), [anchored, recomputed])
+
+  const skin = {
+    checking: 'border-line-bright bg-panel',
+    match: 'border-ok/30 bg-ok/[0.045]',
+    mismatch: 'border-danger/40 bg-danger/[0.06]',
+    demo: 'border-line bg-panel',
+  }[phase]
+
+  const call = `verifyManifest(${tokenId ?? '<tokenId>'}, ${recomputed})`
+
+  return (
+    <section
+      className={`relative mt-4 overflow-hidden rounded-lg border shadow-panel ${skin}`}
+      aria-labelledby="verification"
+      data-state={phase}
+    >
+      {/* The recomputation crossing the panel. Plays once, on the transition to
+          a match — this element does not exist in any other state. */}
+      {phase === 'match' ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-1/3 animate-verifysweep bg-gradient-to-r from-transparent via-ok/[0.13] to-transparent"
+        />
+      ) : null}
+
+      {/* ---- header ---- */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-inherit px-5 py-3 sm:px-6">
+        <PhaseIcon phase={phase} />
+        <h2
+          id="verification"
+          className={`font-mono text-xs uppercase tracking-widest2 ${
+            phase === 'match'
+              ? 'text-ok'
+              : phase === 'mismatch'
+                ? 'text-danger'
+                : phase === 'demo'
+                  ? 'text-faint'
+                  : 'text-dim'
+          }`}
+        >
+          {checking
+            ? 'Recomputing the anchored hash…'
+            : phase === 'match'
+              ? 'Hash verified in this browser'
+              : phase === 'mismatch'
+                ? 'Hash mismatch'
+                : 'Nothing anchored to check against'}
+        </h2>
+        <span className="font-mono text-2xs text-faint">
+          keccak256 · canonical JSON · {canonicalBytes} bytes · nothing left this tab
+        </span>
+      </div>
+
+      {/* ---- the two hashes, stacked and character-aligned ---- */}
+      <div className="px-5 py-5 sm:px-6">
+        <div className="well px-4 py-4">
+          <HashLine
+            label={
+              phase === 'demo'
+                ? 'Recorded on this demo record'
+                : `Anchored on ${explorerLabel} · passportOf(${tokenId ?? '…'}).manifestRootHash`
+            }
+            value={anchored}
+            tone="text-dim"
+          />
+
+          <div className="my-3 flex items-center gap-3" aria-hidden="true">
+            <span
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border font-mono text-xs ${
+                checking
+                  ? 'border-line-bright text-faint'
+                  : phase === 'match'
+                    ? 'border-ok/40 text-ok'
+                    : phase === 'mismatch'
+                      ? 'border-danger/50 text-danger'
+                      : 'border-line-bright text-faint'
+              }`}
+            >
+              {checking ? '?' : phase === 'mismatch' ? '≠' : '='}
+            </span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+
+          {checking ? (
+            <div>
+              <div className="label">Recomputed in this browser · keccak256(canonicalize(doc))</div>
+              <div className="relative mt-1.5 h-5 overflow-hidden rounded-sm bg-raised">
+                <div className="absolute inset-y-0 w-1/3 animate-sweep bg-gradient-to-r from-transparent via-phosphor/20 to-transparent" />
+              </div>
+            </div>
+          ) : (
+            <div className="animate-fadeup">
+              <HashLine
+                label="Recomputed in this browser · keccak256(canonicalize(doc))"
+                value={recomputed}
+                tone={
+                  phase === 'match'
+                    ? 'text-ok'
+                    : phase === 'mismatch'
+                      ? 'text-danger'
+                      : 'text-dim'
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ---- the verdict ---- */}
+        <p
+          className={`measure mt-4 text-sm leading-relaxed text-pretty ${
+            phase === 'match'
+              ? 'text-ok/90'
+              : phase === 'mismatch'
+                ? 'text-danger'
+                : 'text-dim'
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {checking
+            ? `Reading the canonical document and taking its keccak256 in this tab. The manifest is not uploaded anywhere to do this — the comparison is local, and so is the document.`
+            : phase === 'match'
+              ? `Hashed in your browser just now — the result matches the value anchored on ${explorerLabel}. Nothing in between was trusted: not this server, not this page, not us.`
+              : phase === 'mismatch'
+                ? `This document does not hash to the anchored value${
+                    diffAt >= 0 ? `; the two first differ at character ${diffAt} of ${anchored.length}` : ''
+                  }. Either it was altered after minting, or the anchor belongs to a different document. Do not trust this passport.`
+                : 'Demo record. The hash below is recomputed in your browser from the document shown, but there is no on-chain anchor to compare it against.'}
+        </p>
+
+        {anchoredIsFullManifest ? null : (
+          <p className="measure mt-2 text-xs leading-relaxed text-faint text-pretty">
+            The document hashed here is the smaller record this token was minted against, carried
+            verbatim — not the v1 manifest further down the page. Hashing anything else would not
+            reproduce the anchored value, and pretending otherwise would defeat the point.
+          </p>
+        )}
+
+        {/* ---- the value the contract returns ---- */}
+        {phase === 'match' || phase === 'mismatch' ? (
+          <div className="mt-5">
+            <div className="label">Returned by the contract</div>
+            <div className="well mt-1.5 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <span className="mt-px shrink-0 font-mono text-xs text-faint">›</span>
+                <code className="min-w-0 flex-1 break-hash font-mono text-2xs leading-5 text-dim">
+                  {call}
+                </code>
+                <CopyButton value={call} label="verifyManifest call" />
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="shrink-0 font-mono text-xs text-faint">↳</span>
+                <code
+                  data-testid="verify-manifest-return"
+                  className={`font-mono text-lg leading-none ${
+                    phase === 'match' ? 'text-ok' : 'text-danger'
+                  }`}
+                >
+                  {phase === 'match' ? 'true' : 'false'}
+                </code>
+                <span className="font-mono text-2xs text-faint">bool</span>
+              </div>
+            </div>
+            <p className="measure mt-2 text-xs leading-relaxed text-faint text-pretty">
+              <span className="font-mono text-dim">verifyManifest</span> is a{' '}
+              <span className="font-mono text-dim">view</span> function on{' '}
+              <span className="font-mono text-dim">Passport.sol</span>: it compares its argument
+              against the stored{' '}
+              <span className="font-mono text-dim">manifestRootHash</span> and returns that
+              comparison. This is the value it returns for the hash above — a value read back, not
+              a claim made here. The command below makes the call against {explorerLabel} yourself.
+            </p>
+          </div>
+        ) : null}
+
+        {/* ---- verify it yourself ---- */}
+        <details className="group mt-5 rounded-md border border-line bg-sub/60">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5">
+            <span className="inline-flex items-center gap-2">
+              <TerminalIcon className="h-3.5 w-3.5 text-faint" />
+              <span className="label text-dim">Verify it yourself — no wallet, no clone</span>
+            </span>
+            <span className="shrink-0 font-mono text-2xs text-faint group-open:hidden">show</span>
+            <span className="hidden shrink-0 font-mono text-2xs text-faint group-open:inline">
+              hide
+            </span>
+          </summary>
+
+          <div className="space-y-3 border-t border-line px-4 py-4">
+            {manifestRootHash ? (
+              <Command
+                caption="1 · fetch the exact document that was hashed, from 0G Storage"
+                value={`curl -s "${indexerUrl}/file?root=${manifestRootHash}"`}
+              />
+            ) : (
+              <p className="text-xs leading-relaxed text-faint text-pretty">
+                This record has no document on 0G Storage to fetch, so there is no{' '}
+                <span className="font-mono text-dim">curl</span> that would return anything. The
+                recomputation above still runs against the document printed at the bottom of this
+                page.
+              </p>
+            )}
+
+            <Command
+              caption="2 · canonicalise it, hash it, and ask the deployed contract"
+              value="node tools/verify-manifest.mjs"
+            />
+
+            <div>
+              <div className="label">What it prints</div>
+              <div className="scroll-x mt-1.5 rounded-sm border border-line bg-ink">
+                <pre className="px-3 py-2.5 font-mono text-2xs leading-5 text-faint">
+                  {[
+                    `manifest keccak256                ${recomputed}`,
+                    `passportOf(${tokenId ?? '…'}).manifestRootHash    ${anchored}`,
+                    `verifyManifest(${tokenId ?? '…'}, that hash)      ${
+                      phase === 'mismatch' ? 'false' : 'true'
+                    }`,
+                    `verifyManifest(${tokenId ?? '…'}, keccak256("tampered"))   false`,
+                  ].join('\n')}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * One of the two stacked hashes.
+ *
+ * Both render into the same block, at the same start column, in the same
+ * monospace at the same size, wrapping at the same character. That is what lets
+ * the reader confirm the match themselves instead of being told about it.
+ */
+function HashLine({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div>
+      <div className="label">{label}</div>
+      <div className="mt-1.5 flex items-start gap-2">
+        <code
+          className={`min-w-0 flex-1 break-hash font-mono text-[13px] leading-5 ${tone}`}
+          title={value}
+          data-testid="aligned-hash"
+        >
+          {value}
+        </code>
+        <CopyButton value={value} label="hash" />
+      </div>
+    </div>
+  )
+}
+
+function PhaseIcon({ phase }: { phase: VerifyPhase }) {
+  if (phase === 'match') return <CheckIcon className="h-4 w-4 shrink-0 text-ok" />
+  if (phase === 'mismatch') return <AlertIcon className="h-4 w-4 shrink-0 text-danger" />
+  if (phase === 'demo') return <ShieldIcon className="h-4 w-4 shrink-0 text-faint" />
+  return <Dot tone="accent" pulse />
+}
+
+/** A copyable command line. The whole point is that it is exact. */
+function Command({ caption, value }: { caption: string; value: string }) {
+  return (
+    <div>
+      <div className="label">{caption}</div>
+      <div className="mt-1.5 flex items-start gap-2 rounded-sm border border-line bg-ink px-3 py-2">
+        <span className="mt-px shrink-0 font-mono text-2xs text-faint">$</span>
+        <code className="min-w-0 flex-1 break-hash font-mono text-2xs leading-5 text-phosphor">
+          {value}
+        </code>
+        <CopyButton value={value} label={caption} />
+      </div>
+    </div>
+  )
+}
+
+/** Index of the first differing character, or -1 when the two are identical. */
+function firstDifference(a: string, b: string): number {
+  const left = a.toLowerCase()
+  const right = b.toLowerCase()
+  const limit = Math.min(left.length, right.length)
+
+  for (let i = 0; i < limit; i += 1) {
+    if (left[i] !== right[i]) return i
+  }
+
+  return left.length === right.length ? -1 : limit
+}
+
+/**
+ * The penalty as a percentage of the fee, computed from the two neuron amounts
+ * rather than restating "30%" as a constant. If the numbers ever stop agreeing
+ * with 0G's documented deduction, the page says so instead of the doc winning.
+ */
+function penaltyPercent(penaltyNeuron: string, totalNeuron: string): string {
+  try {
+    const penalty = BigInt(penaltyNeuron)
+    const total = BigInt(totalNeuron)
+    if (total === 0n) return '—'
+
+    // Four decimal places, computed in integer arithmetic so nothing rounds
+    // through a float on the way.
+    const basis = (penalty * 1_000_000n) / total
+    const whole = basis / 10_000n
+    const fraction = (basis % 10_000n).toString().padStart(4, '0')
+    return `${whole}.${fraction}%`
+  } catch {
+    return '—'
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Certificate furniture
 // ---------------------------------------------------------------------------
+
+/** One cell of the record quad: small label over value, EAS-style. */
+function QuadCell({
+  label,
+  value,
+  hint,
+  href,
+}: {
+  label: string
+  value: string
+  hint?: string
+  href?: string
+}) {
+  return (
+    <div className="min-w-0 sm:text-right">
+      <dt className="label">{label}</dt>
+      <dd className="mt-1 font-mono text-[13px] leading-5 text-fg">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 no-underline hover:text-phosphor"
+          >
+            {value}
+            <ExternalIcon className="h-3 w-3" />
+          </a>
+        ) : (
+          value
+        )}
+        {hint ? <span className="block font-mono text-2xs text-faint">{hint}</span> : null}
+      </dd>
+    </div>
+  )
+}
 
 function ProvenanceRibbon({
   onChain,
@@ -953,39 +1590,6 @@ function ProvenanceRibbon({
       <span className="font-mono text-2xs text-faint">
         shows the shape of a passport · hashes here have no on-chain counterpart
       </span>
-    </div>
-  )
-}
-
-function Seal({ integrity, network }: { integrity: Integrity; network: string }) {
-  const skin = {
-    verified: 'border-ok/25 bg-ok/[0.045]',
-    mismatch: 'border-danger/40 bg-danger/[0.06]',
-    demo: 'border-line bg-sub',
-  }[integrity]
-
-  const text = {
-    verified: 'text-ok/90',
-    mismatch: 'text-danger',
-    demo: 'text-faint',
-  }[integrity]
-
-  return (
-    <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-5 py-4 sm:px-8 ${skin}`}>
-      {integrity === 'verified' ? (
-        <CheckIcon className="h-4 w-4 shrink-0 text-ok" />
-      ) : integrity === 'mismatch' ? (
-        <AlertIcon className="h-4 w-4 shrink-0 text-danger" />
-      ) : (
-        <ShieldIcon className="h-4 w-4 shrink-0 text-faint" />
-      )}
-      <p className={`text-xs leading-relaxed text-pretty ${text}`}>
-        {integrity === 'verified'
-          ? `Hashed in your browser just now. The result matches the value anchored on ${network} — nothing in between was trusted.`
-          : integrity === 'mismatch'
-            ? 'This document does not hash to the anchored value. Either it was altered after minting, or the anchor belongs to a different document.'
-            : 'Demo record. The hash below is recomputed in your browser from the document shown, but there is no on-chain anchor to compare it against.'}
-      </p>
     </div>
   )
 }
@@ -1067,7 +1671,8 @@ function ChainLink({
           </div>
 
           <div className="mt-2.5">
-            <Hash value={hash} href={href} hrefLabel={hrefLabel} title={hashLabel} />
+            {/* Full, not truncated. This page is the certificate, not the index. */}
+            <Hash value={hash} href={href} hrefLabel={hrefLabel} title={hashLabel} full />
           </div>
 
           {unverifiable ? (
@@ -1119,7 +1724,7 @@ function ChainLink({
 /**
  * The adapter sentinel, recomputed in front of the reader.
  *
- * This is the honest counterpart to the integrity seal: rather than asking the
+ * This is the honest counterpart to the verification hero: rather than asking the
  * reader to believe that the adapter hash means "no adapter", the page hashes
  * the published preimage locally and shows that it reproduces the anchored
  * value. A failure you can verify is a stronger claim than a success you cannot.
@@ -1232,41 +1837,6 @@ function Check({
       >
         {detail}
       </p>
-    </div>
-  )
-}
-
-/** A labelled value that is a link when — and only when — following it proves something. */
-function LinkRow({
-  label,
-  display,
-  href,
-  note,
-}: {
-  label: string
-  display: string
-  href?: string
-  note?: string
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4">
-      <div className="label pt-0.5">{label}</div>
-      <div className="min-w-0">
-        {href ? (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 font-mono text-[13px] text-fg no-underline hover:text-phosphor"
-          >
-            {display}
-            <ExternalIcon className="h-3.5 w-3.5" />
-          </a>
-        ) : (
-          <span className="font-mono text-[13px] text-fg">{display}</span>
-        )}
-        {note ? <p className="mt-1 text-xs leading-relaxed text-faint">{note}</p> : null}
-      </div>
     </div>
   )
 }
