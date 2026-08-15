@@ -1,135 +1,182 @@
 'use client'
 
+/**
+ * The gallery's record list.
+ *
+ * This used to be a wall of cards. A card grid gives every record the same
+ * visual weight, which is exactly wrong here: seven of the eight are fixtures
+ * and one is a token that actually exists on a public chain. Eight equal cards
+ * say "eight things happened". They did not.
+ *
+ * So the list is now a dense table, in the register of a public attestations
+ * index — the structural reference is EAS's attestation list at
+ * easscan.org/attestations, reimplemented here rather than adapted: a compact
+ * header row, one line per record, provenance as a badge in its own column, and
+ * relative age last. Cited in the report; no EAS code is used.
+ *
+ * Three things the table is built around:
+ *
+ *  - **Provenance is a column, not a decoration.** It sorts, it scans, and a
+ *    reader can see at a glance how much of this page is real.
+ *  - **Numbers are tabular and right-aligned.** Comparing example counts down a
+ *    column is the only reason to put them in a table at all, and proportional
+ *    digits make that comparison impossible.
+ *  - **One tab stop per row.** The link in the first cell is stretched across
+ *    the row, so the whole line is a hit target while the keyboard still sees a
+ *    single focusable element with a visible ring.
+ */
+
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 
-import { formatBytes, formatCount, formatElapsed, formatOg, formatRelative } from '@/lib/format'
+import { formatCount, formatOg, formatRelative } from '@/lib/format'
 import type { PassportSummary } from '@/lib/types'
-import { AdapterIcon, AlertIcon, ArrowIcon, CheckIcon, ShieldIcon } from './icons'
-import { Badge, Dot, IconTile, NetworkBadge } from './ui'
+import { AlertIcon, CheckIcon } from './icons'
+import { Dot } from './ui'
 
-export function PassportCard({ passport }: { passport: PassportSummary }) {
+// ---------------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------------
+
+export function PassportTable({ passports }: { passports: PassportSummary[] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-line">
+      <table className="w-full min-w-[38rem] border-collapse text-left">
+        <caption className="sr-only">
+          Every passport Crucible has recorded, with its provenance, size, fee and age.
+        </caption>
+
+        <thead>
+          <tr className="border-b border-line bg-sub">
+            <Th className="w-14 text-right">#</Th>
+            <Th>Passport</Th>
+            <Th>Provenance</Th>
+            <Th className="hidden lg:table-cell">Model</Th>
+            <Th className="hidden md:table-cell text-right">Examples</Th>
+            <Th className="hidden md:table-cell text-right">Tokens</Th>
+            <Th className="hidden xl:table-cell text-right">Fee</Th>
+            <Th className="text-right">Age</Th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {passports.map((passport) => (
+            <PassportRow key={passport.id} passport={passport} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+export function PassportRow({ passport }: { passport: PassportSummary }) {
   const onChain = passport.provenance === 'chain'
   const sentinel = passport.adapterKind === 'sentinel'
 
   return (
-    <Link
-      href={`/passport/${passport.id}`}
-      className={`group flex h-full flex-col rounded-lg border bg-panel no-underline transition-colors hover:bg-raised ${
-        onChain
-          ? 'border-phosphor/35 hover:border-phosphor/60'
-          : 'border-line hover:border-line-bright'
+    <tr
+      className={`group relative border-b border-line/70 transition-colors last:border-b-0 hover:bg-raised focus-within:bg-raised ${
+        onChain ? 'bg-phosphor/[0.035]' : ''
       }`}
+      data-testid="passport-row"
+      data-provenance={passport.provenance}
     >
-      {/* The provenance strip. On a wall of cards this is the first thing that
-          separates a record you can check from one that only shows the shape. */}
-      <div
-        className={`flex items-center gap-2 rounded-t-lg px-4 py-1.5 ${
-          onChain ? 'bg-phosphor/[0.07]' : 'bg-sub'
-        }`}
-      >
-        <Dot tone={onChain ? 'accent' : 'neutral'} />
+      {/* Token number. The best numeral in the app, given its own column. */}
+      <Td className="w-14 text-right">
         <span
-          className={`font-mono text-2xs uppercase tracking-widest2 ${
-            onChain ? 'text-phosphor' : 'text-faint'
-          }`}
+          className={`font-mono text-sm tabular-nums ${onChain ? 'text-phosphor' : 'text-faint'}`}
         >
-          {onChain ? 'verified on chain' : 'demo record'}
+          {passport.tokenId ? `#${passport.tokenId}` : '—'}
         </span>
-      </div>
+      </Td>
 
-      <div className="flex items-start gap-3 border-b border-line px-4 py-3.5">
-        <IconTile tone={onChain ? 'accent' : 'default'}>
-          <AdapterIcon className="h-4 w-4" />
-        </IconTile>
-
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-mono text-sm text-fg transition-colors group-hover:text-phosphor">
-            {passport.name}
-          </h3>
-          <p className="mt-0.5 truncate font-mono text-2xs text-faint">
-            {passport.id} · {passport.model}
-          </p>
-        </div>
-
-        <ArrowIcon className="mt-1 h-3.5 w-3.5 shrink-0 text-faint transition-colors group-hover:text-phosphor" />
-      </div>
-
-      <div className="flex-1 px-4 py-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <NetworkBadge network={passport.network} />
-          {passport.attestationVerified ? (
-            <Badge tone="ok">
-              <ShieldIcon className="h-3 w-3" />
-              TEE verified
-            </Badge>
-          ) : (
-            <Badge tone="warn">TEE unverified</Badge>
-          )}
+      {/* Name. Carries the stretched link, so the whole row is clickable while
+          the keyboard sees exactly one stop. */}
+      <Td>
+        <Link
+          // Encoded: the id is orchestrator-supplied, so it is not ours to
+          // splice into a route unescaped.
+          href={`/passport/${encodeURIComponent(passport.id)}`}
+          className="font-mono text-[13px] text-fg no-underline transition-colors after:absolute after:inset-0 after:content-[''] group-hover:text-phosphor"
+        >
+          {passport.name}
+        </Link>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-2xs text-faint">
+          <span>{passport.id}</span>
+          <span className="lg:hidden">{passport.model}</span>
           {sentinel ? (
-            <Badge tone="danger">
-              <AlertIcon className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1 text-danger/90">
+              <AlertIcon className="h-2.5 w-2.5" />
               no adapter
-            </Badge>
+            </span>
           ) : null}
         </div>
+      </Td>
 
-        <p className="mt-3.5 line-clamp-3 text-xs leading-relaxed text-dim text-pretty">
-          {passport.summary}
-        </p>
+      {/* Rendered once, at every width. Duplicating it into the name cell for
+          small screens would read it twice to a screen reader — the badge is
+          compact enough to keep its own column throughout. */}
+      <Td>
+        <ProvenanceBadge onChain={onChain} />
+      </Td>
 
-        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4">
-          <div className="min-w-0">
-            <dt className="label">Examples</dt>
-            <dd className="mt-0.5 font-mono text-xs text-fg">
-              {formatCount(passport.exampleCount)}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="label">Tokens</dt>
-            <dd className="mt-0.5 font-mono text-xs text-fg">{formatCount(passport.tokenCount)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="label">Adapter</dt>
-            <dd
-              className={`mt-0.5 font-mono text-xs ${sentinel ? 'text-danger' : 'text-fg'}`}
-              title={sentinel ? 'No adapter was ever retrieved for this run' : undefined}
-            >
-              {sentinel
-                ? 'not retrieved'
-                : passport.adapterSizeBytes
-                  ? formatBytes(passport.adapterSizeBytes)
-                  : '—'}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="label">Fee</dt>
-            <dd className="mt-0.5 font-mono text-xs text-fg">
-              {formatOg(passport.totalNeuron)} 0G
-            </dd>
-          </div>
-        </dl>
-      </div>
+      <Td className="hidden lg:table-cell">
+        <span className="font-mono text-2xs text-dim">{passport.model}</span>
+      </Td>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
-        {passport.mintStatus === 'minted' ? (
-          <Badge tone={onChain ? 'accent' : 'neutral'}>
-            {onChain ? <CheckIcon className="h-3 w-3" /> : null}
-            anchored · #{passport.tokenId}
-          </Badge>
-        ) : passport.mintStatus === 'pending' ? (
-          <Badge tone="warn">
-            <Dot tone="warn" pulse />
-            minting
-          </Badge>
-        ) : (
-          <Badge>unminted</Badge>
-        )}
+      <Num className="hidden md:table-cell">{formatCount(passport.exampleCount)}</Num>
+      <Num className="hidden md:table-cell">{formatCount(passport.tokenCount)}</Num>
+      <Num className="hidden xl:table-cell">{formatOg(passport.totalNeuron)} 0G</Num>
 
-        <span className="font-mono text-2xs text-faint">
-          {passport.durationSeconds ? `${formatElapsed(passport.durationSeconds)} · ` : ''}
+      <Td className="text-right">
+        <span className="whitespace-nowrap font-mono text-2xs tabular-nums text-faint">
           {formatRelative(passport.createdAt)}
         </span>
-      </div>
-    </Link>
+      </Td>
+    </tr>
+  )
+}
+
+/**
+ * The one distinction the page exists to make.
+ *
+ * `on chain` is claimed only by a record whose hashes were produced by a real
+ * run and whose explorer links resolve. Everything else says `demo`, in grey,
+ * without apology — a fixture that admits it is a fixture costs nothing, and a
+ * fixture dressed as evidence costs the whole argument.
+ */
+function ProvenanceBadge({ onChain }: { onChain: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 font-mono text-2xs uppercase tracking-widest2 ${
+        onChain ? 'border-phosphor/40 text-phosphor' : 'border-line text-faint'
+      }`}
+    >
+      {onChain ? <CheckIcon className="h-2.5 w-2.5" /> : <Dot tone="neutral" />}
+      {onChain ? 'on chain' : 'demo'}
+    </span>
+  )
+}
+
+function Th({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <th
+      scope="col"
+      className={`label whitespace-nowrap px-3 py-2.5 font-normal first:pl-4 last:pr-4 ${className}`}
+    >
+      {children}
+    </th>
+  )
+}
+
+function Td({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <td className={`px-3 py-3 align-top first:pl-4 last:pr-4 ${className}`}>{children}</td>
+}
+
+function Num({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <Td className={`text-right ${className}`}>
+      <span className="whitespace-nowrap font-mono text-2xs tabular-nums text-dim">{children}</span>
+    </Td>
   )
 }

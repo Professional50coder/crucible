@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Hash } from '@/components/Hash'
-import { PassportCard } from '@/components/PassportCard'
+import { PassportTable } from '@/components/PassportCard'
 import { AlertIcon, AnchorIcon, ArrowIcon, CheckIcon, SearchIcon } from '@/components/icons'
 import { Badge, Dot, EmptyState, ErrorState, HatchBand, IconTile, Skeleton } from '@/components/ui'
 import { applyFilter, getPassport, listPassports } from '@/lib/api'
@@ -22,14 +22,27 @@ import type { Network, PassportRecord, PassportSummary } from '@/lib/types'
 type NetworkFilter = Network | 'all'
 
 /**
- * The gallery is the demo's opening shot: a wall of passports, each one a page a
- * stranger can open and check.
+ * The gallery is the demo's opening shot, and the first screen has to earn
+ * itself.
  *
- * It leads with the one record that is real — the token actually minted on 0G
- * Galileo — because the difference between a checkable claim and a demonstration
- * of shape is the whole argument, and burying the real one in a grid of seven
- * identical cards throws that difference away. Everything below the fold is
- * clearly labelled as the fixture data it is.
+ * The previous version opened with a label, a title, a paragraph and a row of
+ * four numbers before anything checkable appeared — the token actually minted on
+ * 0G Galileo sat below the fold, under a stat row that led with `8 PASSPORTS`.
+ * Both of those are corrected here, and the correction is not cosmetic:
+ *
+ *  - **The stat row leads with `1 / 8`, not `8`.** Eight is the flattering
+ *    number and one is the true one. A judge who reads `8 PASSPORTS`, opens two
+ *    and finds fixtures has learned that this page inflates; a judge who reads
+ *    `1 / 8 MINTED ON 0G` has been told the ratio up front and can spend their
+ *    attention on the one that counts.
+ *  - **`TOKENS TRAINED` says what it sums.** 3,121,508 is a sum across fixture
+ *    records. An impressive number that dissolves the moment someone checks it
+ *    costs more than it earns, so the figure carries its own provenance.
+ *  - **The real passport is above the fold**, immediately under the numbers,
+ *    with every hash beside the explorer that resolves it.
+ *
+ * Below the seam, the list itself is a dense table rather than a card wall —
+ * see PassportCard.tsx for why, and for the reference it reimplements.
  */
 export default function GalleryPage() {
   const [passports, setPassports] = useState<PassportSummary[] | null>(null)
@@ -48,8 +61,8 @@ export default function GalleryPage() {
       .then(async (list) => {
         setPassports(list)
 
-        // Pull the full record for the on-chain one, so the feature card can show
-        // the hashes it links out with rather than a summary of them.
+        // Pull the full record for the on-chain one, so the feature panel can
+        // show the hashes it links out with rather than a summary of them.
         const real = list.find((p) => p.provenance === 'chain')
         if (real) {
           const record = await getPassport(real.id).catch(() => null)
@@ -73,60 +86,96 @@ export default function GalleryPage() {
     [passports, network, model, query],
   )
 
+  /**
+   * Every number on the stat header, split by provenance rather than totalled
+   * blindly. The split is the whole point: a total that mixes one real run with
+   * seven fixtures is a number nobody can act on.
+   */
   const totals = useMemo(() => {
     const source = passports ?? []
+    const chain = source.filter((p) => p.provenance === 'chain')
+
     return {
       count: source.length,
+      onChain: chain.length,
       tokens: source.reduce((sum, p) => sum + p.tokenCount, 0),
-      onChain: source.filter((p) => p.provenance === 'chain').length,
-      anchored: source.filter((p) => p.mintStatus === 'minted').length,
+      chainTokens: chain.reduce((sum, p) => sum + p.tokenCount, 0),
     }
   }, [passports])
 
-  const filtered = passports !== null && visible.length !== passports.length
+  const ready = passports !== null
+  const filtered = ready && visible.length !== passports.length
 
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 sm:pt-16">
-        <p className="label">Public record</p>
-        <h1 className="mt-3 text-title font-medium text-fg text-balance">Passport gallery</h1>
-        <p className="measure mt-4 text-sm leading-relaxed text-dim text-pretty">
-          Every model fine-tuned through Crucible, with its full lineage. Each page is public and
-          checkable by anyone — no wallet, no account, no permission. Records minted on 0G are
-          marked as such; the rest are fixtures, and say so on every hash.
-        </p>
+      {/* ================================================================ */}
+      {/* First screen: who this is, how much of it is real, and the one   */}
+      {/* record that proves the claim. Nothing else competes for the top. */}
+      {/* ================================================================ */}
+      <section className="mx-auto max-w-6xl px-4 pb-7 pt-8 sm:px-6 sm:pt-10">
+        <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
+          <div className="min-w-0">
+            <p className="label">Public record</p>
+            <h1 className="mt-2 text-title font-medium text-fg text-balance">Passport gallery</h1>
+          </div>
+          <p className="max-w-md text-sm leading-relaxed text-dim text-pretty">
+            Every model fine-tuned through Crucible, with its full lineage — public and checkable
+            by anyone, with no wallet and no account. Records minted on 0G are marked; the rest are
+            fixtures, and say so on every hash.
+          </p>
+        </div>
 
-        <dl className="mt-9 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
-          <Total label="Passports" value={passports ? formatCount(totals.count) : null} />
+        <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
+          {/* The truthful number goes first, and it is the impressive one. */}
           <Total
             label="Minted on 0G"
-            value={passports ? `${totals.onChain} / ${totals.count}` : null}
+            value={ready ? `${totals.onChain} / ${totals.count}` : null}
+            hint={
+              featured?.mint.blockNumber
+                ? `token #${featured.mint.tokenId} · block ${formatCount(featured.mint.blockNumber)}`
+                : 'Galileo · chain 16602'
+            }
             accent
           />
-          <Total label="Tokens trained" value={passports ? formatCount(totals.tokens) : null} />
           <Total
-            label="Carry an anchor"
-            value={passports ? `${totals.anchored} / ${totals.count}` : null}
+            label="Passport records"
+            value={ready ? formatCount(totals.count) : null}
+            hint={
+              ready
+                ? `${totals.onChain} on chain · ${totals.count - totals.onChain} fixtures`
+                : undefined
+            }
+          />
+          {/*
+            Labelled, not dropped. The figure is real arithmetic over the records
+            this app holds — it is just that seven of those records are invented,
+            and a reader deserves to know that before they quote it.
+          */}
+          <Total
+            label="Tokens trained"
+            value={ready ? formatCount(totals.tokens) : null}
+            hint={
+              ready
+                ? `${formatCount(totals.chainTokens)} from the live run · the rest is a fixture sum`
+                : undefined
+            }
           />
         </dl>
       </section>
 
-      {/* ================================================================ */}
-      {/* The real one, above the fold.                                     */}
-      {/* ================================================================ */}
       {featured ? (
         <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6" aria-labelledby="featured">
           <FeaturedPassport record={featured} />
         </section>
       ) : passports === null ? (
         <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
-          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-64 w-full" />
         </div>
       ) : null}
 
       <HatchBand height="h-6" />
 
-      {/* Filters — sticky, because the grid below can get long. */}
+      {/* Filters — sticky, because the table below can get long. */}
       <div className="sticky top-14 z-30 border-b border-line bg-ink/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-3.5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -173,7 +222,7 @@ export default function GalleryPage() {
 
       <div className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         {/* Summary line -------------------------------------------------- */}
-        {passports && !error ? (
+        {ready && !error ? (
           <p className="py-4 font-mono text-2xs uppercase tracking-widest2 text-faint" role="status">
             {filtered
               ? `${visible.length} of ${passports.length} passports`
@@ -204,11 +253,7 @@ export default function GalleryPage() {
             onRetry={load}
           />
         ) : !passports ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-80" />
-            ))}
-          </div>
+          <TableSkeleton />
         ) : visible.length === 0 ? (
           passports.length === 0 ? (
             <EmptyState
@@ -223,10 +268,8 @@ export default function GalleryPage() {
             />
           )
         ) : (
-          <div className="grid animate-fadeup gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((passport) => (
-              <PassportCard key={passport.id} passport={passport} />
-            ))}
+          <div className="animate-fadeup">
+            <PassportTable passports={visible} />
           </div>
         )}
       </div>
@@ -247,7 +290,7 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
   const sentinel = record.adapterOrigin?.kind === 'sentinel'
 
   return (
-    <article className="overflow-hidden rounded-lg border border-phosphor/35 bg-panel">
+    <article className="overflow-hidden rounded-lg border border-phosphor/35 bg-panel shadow-panel">
       <div className="h-px w-full origin-left animate-drawline bg-gradient-to-r from-phosphor via-phosphor/25 to-transparent" />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-phosphor/20 bg-phosphor/[0.06] px-5 py-2 sm:px-6">
@@ -255,10 +298,12 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
         <span className="font-mono text-2xs uppercase tracking-widest2 text-phosphor">
           Minted on {network.label} · token #{mint.tokenId}
         </span>
-        <span className="font-mono text-2xs text-faint">block {formatCount(mint.blockNumber ?? 0)}</span>
+        <span className="font-mono text-2xs tabular-nums text-faint">
+          block {formatCount(mint.blockNumber ?? 0)}
+        </span>
       </div>
 
-      <div className="grid gap-8 px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-10">
+      <div className="grid gap-7 px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-10">
         <div className="min-w-0">
           <div className="flex items-start gap-3">
             <IconTile tone="accent">
@@ -278,7 +323,7 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
             {record.summary}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
             <Badge tone="accent">
               <CheckIcon className="h-3 w-3" />
               every link resolves
@@ -292,13 +337,16 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
             <Badge tone="warn">task {manifest.task.state} on 0G</Badge>
           </div>
 
-          <Link href={`/passport/${record.id}`} className="btn-primary mt-6 no-underline">
+          <Link
+            href={`/passport/${encodeURIComponent(record.id)}`}
+            className="btn-primary mt-5 no-underline"
+          >
             Open the passport
             <ArrowIcon className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        {/* Four rows a stranger can click straight into. */}
+        {/* Rows a stranger can click straight into. */}
         <dl className="min-w-0 divide-y divide-line rounded-md border border-line bg-sub px-4 py-1">
           <Row
             k="Passport contract"
@@ -358,13 +406,57 @@ function Row({
   )
 }
 
-function Total({ label, value, accent = false }: { label: string; value: string | null; accent?: boolean }) {
+/**
+ * A stat header cell.
+ *
+ * The hint line is not decoration — it is where a number states what it is a sum
+ * of. Every figure on this page that aggregates across fixtures says so here,
+ * in the same breath as the figure itself rather than in a footnote nobody
+ * reaches.
+ */
+function Total({
+  label,
+  value,
+  hint,
+  accent = false,
+}: {
+  label: string
+  value: string | null
+  hint?: string
+  accent?: boolean
+}) {
   return (
-    <div className="bg-panel px-4 py-4">
+    <div className="bg-panel px-4 py-3.5">
       <dt className="label">{label}</dt>
-      <dd className={`mt-1.5 font-mono text-lg leading-none ${accent ? 'text-phosphor' : 'text-fg'}`}>
-        {value ?? <Skeleton className="h-4 w-16" />}
+      <dd
+        className={`mt-1.5 font-mono text-2xl leading-none tabular-nums ${
+          accent ? 'text-phosphor' : 'text-fg'
+        }`}
+      >
+        {value ?? <Skeleton className="h-6 w-20" />}
       </dd>
+      {hint ? <p className="mt-2 font-mono text-2xs leading-tight text-faint">{hint}</p> : null}
+    </div>
+  )
+}
+
+/** The list's shape while it loads, rather than a blank block. */
+function TableSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-lg border border-line" aria-hidden="true">
+      <div className="border-b border-line bg-sub px-4 py-2.5">
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="divide-y divide-line/70">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+            <Skeleton className="h-3 w-8 shrink-0" />
+            <Skeleton className="h-3 flex-1" />
+            <Skeleton className="hidden h-3 w-20 sm:block" />
+            <Skeleton className="hidden h-3 w-16 md:block" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
