@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Where the dashed guide lines fall. Kept as a variable so the frame, the
+       hatched bands and the content column can never drift apart. */
+    --column: 72rem;
+    --gutter: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    :root {
+      --gutter: 1.5rem;
+    }
+  }
+
+  html {
+    /* Nothing in this app is allowed to scroll the page sideways. Wide content
+       gets its own overflow container instead. */
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-ink text-fg font-sans antialiased;
+    /* A faint dot field. Barely visible, but it stops the large dark margins at
+       wide viewports reading as empty rather than deliberate. */
+    background-image: radial-gradient(rgba(236, 237, 234, 0.045) 1px, transparent 1px);
+    background-size: 14px 14px;
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(200, 240, 80, 0.24);
+    color: #ecedea;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-phosphor/80 ring-offset-2 ring-offset-ink;
+  }
+
+  a {
+    @apply underline-offset-4;
+  }
+
+  /* Data columns and countdowns must not reflow as digits change. */
+  .font-mono,
+  code,
+  pre,
+  kbd {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Scrollbars, styled so log panels do not look like a different application. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #383a38 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #2f312f;
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #43463f;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- */
+  /* Surfaces                                                          */
+  /* ---------------------------------------------------------------- */
+
+  /* A bordered instrument panel. */
+  .panel {
+    @apply border border-line bg-panel;
+  }
+
+  .panel-raised {
+    @apply border border-line bg-raised;
+  }
+
+  /* A recessed well: code, inputs, anything that reads as "inside". */
+  .well {
+    @apply rounded-md border border-line bg-sub;
+  }
+
+  /* Small uppercase section label. Used everywhere a field needs naming. */
+  .label {
+    @apply font-mono text-2xs uppercase tracking-widest2 text-faint;
+  }
+
+  .rule {
+    @apply border-t border-line;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Controls                                                          */
+  /* ---------------------------------------------------------------- */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md
+           border px-4 py-2 font-mono text-xs uppercase tracking-widest2
+           transition-colors duration-150;
+  }
+
+  .btn-primary {
+    @apply btn border-phosphor bg-phosphor text-ink hover:bg-phosphor/85 hover:border-phosphor/85;
+  }
+
+  .btn-ghost {
+    @apply btn border-line bg-panel text-fg hover:border-line-bright hover:bg-raised;
+  }
+
+  .btn-quiet {
+    @apply btn border-transparent text-dim hover:text-fg hover:bg-raised;
+  }
+
+  /* A disabled button must not read as a primary call to action. Dimming the
+     phosphor fill by opacity alone leaves an olive block that still looks
+     pressable, so the disabled state drops the fill entirely. Listed per
+     variant because `@apply btn` copies declarations rather than the class,
+     so a `.btn:disabled` rule would never match a `.btn-primary` element. */
+  .btn:disabled,
+  .btn-primary:disabled,
+  .btn-ghost:disabled,
+  .btn-quiet:disabled {
+    @apply cursor-not-allowed border-line bg-transparent text-faint
+           hover:border-line hover:bg-transparent hover:text-faint;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-line bg-sub px-3 py-2 font-mono text-sm text-fg
+           placeholder:text-faint focus:border-phosphor/60 focus:outline-none;
+  }
+
+  /* A keycap. Used by the command palette hint. */
+  .kbd {
+    @apply inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-sm border
+           border-line-bright bg-sub px-1.5 font-mono text-[10px] leading-none text-dim;
+  }
+
+  /* A scroll container with no visible bar. Only for short strips — the
+     primary nav — where a 10px bar would eat a third of the row height. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Any wide, un-wrappable content lives inside one of these. */
+  .scroll-x {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer utilities {
+  /* ---------------------------------------------------------------- */
+  /* Structural texture                                                */
+  /* ---------------------------------------------------------------- */
+
+  /* Diagonal-striped divider band. Marks the seam between major sections the
+     way hatching marks a cut on a drawing: this is an edge, not a gap. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(236, 237, 234, 0.055) 0,
+      rgba(236, 237, 234, 0.055) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+
+  .hatch-accent {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(200, 240, 80, 0.16) 0,
+      rgba(200, 240, 80, 0.16) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+
+  /* Denser dot field for empty regions inside a panel. */
+  .dotfield {
+    background-image: radial-gradient(rgba(236, 237, 234, 0.07) 1px, transparent 1px);
+    background-size: 10px 10px;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Text                                                              */
+  /* ---------------------------------------------------------------- */
+
+  /* Long hashes wrap by character rather than blowing out a grid cell. */
+  .break-hash {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Comfortable measure for prose set beside data. */
+  .measure {
+    max-width: 62ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
