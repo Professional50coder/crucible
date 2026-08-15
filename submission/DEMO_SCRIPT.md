@@ -91,8 +91,9 @@ storage reserve, total. Provider card showing H200, Intel TDX, TEE signer acknow
 **Launch**.
 
 **Voiceover:**
-> The cost comes from the live on-chain price, not a guess. That's the real mainnet provider —
-> an H200 inside an Intel TDX enclave, with its TEE signer acknowledged on chain. Launch.
+> The cost comes from the live on-chain price, not a guess. That's a real 0G fine-tuning
+> provider — an H200 inside an Intel TDX enclave, with its TEE signer acknowledged on chain.
+> Launch.
 
 ---
 
@@ -135,14 +136,20 @@ status, the manifest hash. Every hash rendered with its verification link.
 
 ### 8 · 1:52–2:14 — Verify it without trusting us (22s)
 
-**On screen:** click the dataset hash → `storagescan.0g.ai` showing the upload. Click the
-contract → `chainscan.0g.ai` showing the deployed, verified `Passport.sol` and its mint
-transactions. Then call `verifyManifest(tokenId, hash)` from the explorer's read tab → `true`.
+**On screen:** click the dataset hash → storage scan showing the upload. Click the contract →
+the explorer showing the deployed, source-verified `Passport.sol` and its mint transaction. Then
+call `verifyManifest(tokenId, hash)` from the explorer's read tab → `true`, and again with a
+tampered hash → `false`.
 
 **Voiceover:**
 > And you don't have to trust any of it. The dataset is on 0G Storage — here it is. The contract
-> is deployed and source-verified on 0G mainnet. Recompute the manifest hash yourself, ask the
-> chain whether it matches, and the chain answers. No wallet, no account, no us.
+> is deployed and source-verified on 0G. Recompute the manifest hash yourself, ask the chain
+> whether it matches, and the chain answers. Change one byte and it says no.
+
+> ⚠️ **Film against whichever network is actually deployed.** As of 2026-08-15 that is Galileo
+> testnet (`chainscan-galileo.0g.ai`, contract `0x27087B5b…83C1c7`, verified). If mainnet is
+> deployed before filming, use `chainscan.0g.ai` instead. Do not say "mainnet" over a testnet
+> explorer — that single word is the kind of thing a judge checks.
 
 ---
 

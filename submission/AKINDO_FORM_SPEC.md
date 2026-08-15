@@ -18,9 +18,9 @@ These gate everything else. A finished product that is not registered into the W
 | # | Parameter | Constraint | Status | Acceptance test |
 |---|---|---|---|---|
 | 0.1 | AKINDO account | signed in | ✅ | `Crypto_hg` loads with Manage controls |
-| 0.2 | **GitHub connected on AKINDO** | ⛔ required before a product can be created | ❌ | profile shows the GitHub row as *connected*, not `Connect`. **Only the account owner can do this — it is an OAuth grant** |
+| 0.2 | **GitHub connected on AKINDO** | ⛔ required before a product can be created | ✅ | profile shows the GitHub row connected as `Professional50coder` |
 | 0.3 | Team created | max 3 products per team page | ✅ | `app.akindo.io/communities/nPmazde6Mtdag6vd` |
-| 0.4 | Product created under that team | — | ❌ | product page exists |
+| 0.4 | Product created under that team | — | ❌ | product page exists — **now unblocked by 0.2** |
 | 0.5 | Product **registered into the 3rd Wave** | ⛔ | ❌ | product appears under Submissions → 3rd Wave |
 
 > Known failure mode from the comments thread: if a team page already holds 3 products, the
@@ -76,16 +76,16 @@ From the WaveHack page. Section 3 is new from Wave 3 and is the one that disqual
 |---|---|---|---|---|
 | 3.1 | Project name + one-line description | **max 30 words** | ✅ | word count re-run after any edit |
 | 3.2 | Short summary | what it does · problem · **which 0G components** | ✅ | all three present |
-| 3.3 | Public GitHub repo | public, or shared with judges | ✅ | opens in a logged-out window |
-| 3.4 | **Meaningful commits during the Wave** | dated **8/13 → 8/30** | 🟡 | `git log` shows small described commits across several days, not one dump |
-| 3.5 | README with setup instructions | must actually work | ✅ | fresh clone, follow the quickstart, tests pass |
-| 3.6 | **0G mainnet contract address** | ⛔ chain 16661 | ❌ | address recorded in README + changelog |
+| 3.3 | Public GitHub repo | public, or shared with judges | ✅ | confirmed unauthenticated via the GitHub API: `"private": false` |
+| 3.4 | **Meaningful commits during the Wave** | dated **8/13 → 8/30** | 🟡 | 23 commits, each small and separately described — but **all dated 2026-08-15**. In window, not spread across days |
+| 3.5 | README with setup instructions | must actually work | 🟡 | present; the fresh-clone run has not been done. Two known snags noted in 3.12 |
+| 3.6 | **0G mainnet contract address** | ⛔ chain 16661 | ❌ | address recorded in README + changelog. Needs ~0.0103 0G of gas, not 3 0G |
 | 3.7 | **Explorer link showing on-chain activity** | ⛔ deployment alone is thin — needs a mint | ❌ | `chainscan.0g.ai/address/<contract>` shows transactions |
 | 3.8 | Proof of ≥ 1 0G component integrated | evidenced in 3 places | 🟡 | video + `ARCHITECTURE.md` §5 + README table |
 | 3.9 | Demo video | **≤ 3:00**, public YouTube/Loom | ❌ | plays logged out; runtime checked on the uploaded file |
 | 3.10 | Architecture diagram / technical description | — | ✅ | `docs/diagrams/` + `submission/ARCHITECTURE.md` |
 | 3.11 | Which 0G modules and how | — | ✅ | `ARCHITECTURE.md` §5 covers all four concretely |
-| 3.12 | Local deployment / reproduction steps | — | ✅ | verified from a fresh clone |
+| 3.12 | Local deployment / reproduction steps | — | 🟡 | documented and each suite runs (808 tests, clean `next build`), but **not yet run from a fresh clone**; note root `npm test` reaches only `packages/*` |
 | 3.13 | **Public X post** | ⛔ name + screenshot/clip + `#0GBridge` `#BuildOn0G` + `@0G_labs` `@0G_Builders` `@AKINDO_io`, all in the **root post** | ❌ | opens logged out; under 280 chars |
 | 3.14 | Optional: pitch deck · user feedback · write-up · frontend link | bonus only | ❌ | start only after 3.1–3.13 are done |
 
@@ -99,8 +99,8 @@ the largest weight in the rubric. Source text lives in `submission/WAVE3_CHANGEL
 | Parameter | Constraint | Status |
 |---|---|---|
 | Sectioned format | Core improvements → 0G integration → Agent/AI workflow → Developer & demo improvements | ✅ |
-| Every `PLACEHOLDER_*` replaced | no exceptions | ❌ 3 chain placeholders remain |
-| Every unlanded claim **deleted, not softened** | a judge can check the repo in thirty seconds | 🟡 |
+| Every `PLACEHOLDER_*` replaced | no exceptions | ❌ 2 remain, both blocked on the mainnet deploy |
+| Every unlanded claim **deleted, not softened** | a judge can check the repo in thirty seconds | ✅ audited 2026-08-15; 10 claims removed, each logged with its reason |
 | Renders correctly in the AKINDO preview | their renderer, not a local one | ❌ |
 
 For calibration: of the 7 Wave 3 submissions live on 2026-08-15, three wrote `a` or
@@ -111,7 +111,7 @@ structured changelogs with clickable on-chain evidence. That is the bar.
 
 ## Part 5 · Judging rubric → which artifact answers it
 
-| Weight | Criterion | What the judge actually reads | Our answer |
+| Weight | Criterion | What the judge actually reads | The answer |
 |---|---|---|---|
 | **40%** | Progress & Momentum | the "Updates in this Wave" field + commit history | `WAVE3_CHANGELOG.md`, dated commits |
 | **30%** | 0G Integration | mainnet address, explorer activity, the video, architecture docs | all four components, each load-bearing — **blocked on 3.6/3.7** |
@@ -127,10 +127,10 @@ Architecture · Team & Execution Signal**.
 
 Do not open the submission form until every line here is true.
 
-- [ ] GitHub connected on AKINDO *(owner action)*
-- [ ] `Passport.sol` deployed **and source-verified** on chain 16661
+- [x] GitHub connected on AKINDO — `Professional50coder`
+- [ ] `Passport.sol` deployed **and source-verified** on chain 16661 — ~0.0103 0G of gas
 - [ ] At least one real **mint** transaction on mainnet, linked
-- [ ] A dataset or manifest visible on `storagescan.0g.ai`
+- [x] A dataset or manifest on 0G Storage — dataset root `0xa5051ae7…9e7dbfd`, manifest root `0xc757a7e6…e1140`; the manifest downloads from the indexer and hashes to the anchored value
 - [ ] A real fine-tuning task ID that reached `Finished`, or the changelog says plainly that it did not
 - [ ] Demo video under 3:00, public, no secret in any frame
 - [ ] X post live with all three tags and both hashtags in the root post
@@ -140,6 +140,6 @@ Do not open the submission form until every line here is true.
 - [ ] Nothing anywhere claims a completed end-to-end fine-tune if one has not happened
 - [ ] Submitted with **at least 24 hours** to spare, then screenshot the confirmation
 
-**Stated position:** we would rather submit one complete, verifiable project late in the window
-than an incomplete one early. Resubmission is allowed before the deadline, so the only real
+**Stated position:** better to submit one complete, verifiable project late in the window than an
+incomplete one early. Resubmission is allowed before the deadline, so the only real
 deadline is 8/30 20:30 — but the mainnet deploy must not be the thing left until 8/29.

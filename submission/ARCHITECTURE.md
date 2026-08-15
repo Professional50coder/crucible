@@ -83,7 +83,7 @@ sequenceDiagram
 
     O->>S: uploadDataset(jsonl)
     S-->>O: dataset root hash
-    Note over O,S: a duplicate upload reverts with CALL_EXCEPTION —<br/>expected; the existing root hash is reused
+    Note over O,S: the root hash is persisted before task creation,<br/>so a crash here never costs a second upload
 
     O->>P: createTask(provider, model, datasetHash, config)
     P-->>O: taskId
@@ -168,7 +168,9 @@ error — there is exactly one fine-tuning provider per network and tasks run on
 
 ## 4. The Model Passport
 
-The manifest is the artifact everything else points at.
+The manifest is the artifact everything else points at. The block below is the **schema shape**,
+with illustrative values — it is not passport #1. (Passport #1 is on testnet, its `state` never
+reached `Finished`, and its `adapter.rootHash` is a labelled sentinel; see §4.1.)
 
 ```jsonc
 {
@@ -212,6 +214,37 @@ authorizations are cleared on transfer**; and the same
 `(datasetRootHash, configHash, adapterRootHash)` triple cannot be minted twice — one fine-tune,
 one passport.
 
+### 4.1 Passport #1 — what the one real token actually contains
+
+Passport #1 exists on Galileo testnet and is a **smoke test of the contract, not a completed
+fine-tune.** The distinction matters enough to spell out field by field:
+
+| Field | Value | Real? |
+|---|---|---|
+| `taskId` | `10551604-2664-4516-86cf-269a62f93bfc` | ✅ the actual paid 0G Compute task |
+| `provider` | `0xA02b95Aa…1E31A09` | ✅ the live testnet fine-tuning provider |
+| `datasetRootHash` | `0xa5051ae7…9e7dbfd` | ✅ really uploaded, tx `0xc38e4131…d7da52` |
+| `baseModelHash` | `0xb4f76a88…6c2c75a7` | ✅ read off the task 0G created |
+| `configHash` | `0xe65b3e51…89cca55f1` | ✅ keccak256 of the exact config that task carried |
+| `manifestRootHash` | `0x4f64bfe6…6059890f` | ✅ anchored; `verifyManifest(1, …)` returns `true` |
+| `adapterRootHash` | `0x418e9f5f…8c5ae8eb` | ❌ **a sentinel** |
+
+The adapter hash is `keccak256("crucible:adapter-not-retrieved:<taskId>")`. `mint()` rejects a
+zero adapter hash, so a sentinel is the honest way to record "no adapter here" — and it is
+deliberately *not* a plausible-looking root hash, so anyone who recomputes it learns immediately
+that no adapter exists rather than being misled by something that looks real.
+
+Why there is no adapter: the task reached `Delivered`, then `acknowledgeModel` failed twice over
+(ENOENT on the bundled Linux-ELF `0g-storage-client` under Windows, then HTTP 429 from the TEE
+fallback), and the provider settled the deliverable unacknowledged. The chain still shows it:
+`acknowledged: false`, `settled: true`, `encryptedSecret` empty, and a `FeesSettled` event
+charging exactly 30% of the fee — 0G's documented penalty for a model the user never collected.
+The adapter really was produced, at root hash `0xbd1df54d…`, and without the decryption key it
+is unrecoverable.
+
+That failure is the reason this project exists, and it is why the auto-acknowledge daemon in §1
+is the load-bearing component rather than a convenience.
+
 ---
 
 ## 5. Which 0G modules we use and how
@@ -234,43 +267,80 @@ SDK: `@0gfoundation/0g-compute-ts-sdk@0.9.0`.
   arithmetic matches theirs rather than merely looking plausible.
 - **Task execution.** `createTask` → `getTask` / `getLog` polling → `acknowledgeModel`. The
   orchestrator never calls the deprecated `downloadModelFrom0GStorage` + `decryptModel` pair.
-- **TEE.** The mainnet provider `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` runs Intel TDX via
-  Phala dstack on 1x H200 (8 vCPU, 187 GB RAM, 900 GB disk). Its TEE signer
-  `0x24135b4Bd964872284728F79F5f17eB874C5583A` is acknowledged on-chain, and `verifyService()`
-  checks the attestation. This is why the passport's TEE section is a checkable claim rather
-  than a marketing sentence.
-- **The footgun handling is the product.** Funding is routed explicitly to the fine-tuning
-  sub-account, not the inference one. Duplicate uploads are caught and the existing root hash
-  reused. Decryption waits for `Finished`. Acknowledgement is scheduled the moment `Delivered`
-  is observed.
+- **TEE.** Both providers run Intel TDX via Phala dstack on 1x H200 (8 vCPU, 187 GB RAM, 900 GB
+  disk) and share the TEE signer `0x24135b4Bd964872284728F79F5f17eB874C5583A`, which is
+  acknowledged on-chain; `verifyService()` checks the attestation. This is why the passport's TEE
+  section is a checkable claim rather than a marketing sentence. The task that actually ran used
+  the **testnet** provider `0xA02b95Aa6886b1116C4f334eDe00381511E31A09`; the mainnet provider
+  `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` has been probed read-only but not paid.
+- **The footgun handling is the product.** Acknowledgement is scheduled the moment `Delivered` is
+  observed, and only ever via `acknowledgeModel`. Decryption waits for `Finished`. The dataset
+  root hash is persisted before task creation, so a crash between upload and task creation never
+  costs a second upload.
+  - Not yet implemented, and named here rather than implied: **automatic sub-account funding.**
+    0G's `transfer-fund` silently routes to the *inference* sub-account unless
+    `--service fine-tuning` is passed, surfacing much later as an unexplained
+    `MinimumDepositRequired`. The footgun is documented in `docs/FIELD_NOTES.md` and was handled
+    by hand during the spike; there is no `transferFund` call in this codebase yet.
 
 ### 5.2 0G Storage — where the evidence lives
 
-SDK: `@0gfoundation/0g-storage-ts-sdk@1.2.11`. Indexers: `https://indexer-storage-turbo.0g.ai`
-(mainnet), `https://indexer-storage-testnet-turbo.0g.ai` (testnet).
+Indexers: `https://indexer-storage-turbo.0g.ai` (mainnet),
+`https://indexer-storage-testnet-turbo.0g.ai` (testnet).
 
 - **The dataset** is uploaded before task creation and addressed by its root hash. That root hash
   is what the 0G contract validates the delivered artifact against, and it is what a third party
-  retrieves to check that a passport's training data is what it says it is.
-- **The manifest** is stored the same way, so the passport is not hosted by us. If Crucible's
-  web app disappears, the manifest is still retrievable at its root hash and still hashes to the
-  value anchored on-chain. Provenance that depends on a running server is not provenance.
+  retrieves to check that a passport's training data is what it says it is. Done for real: root
+  `0xa5051ae7…9e7dbfd`, upload tx `0xc38e4131…d7da52`.
+- **The manifest is not yet stored on 0G Storage.** Today only its `keccak256` is anchored
+  on-chain, and the orchestrator serves the manifest body from local files. That is enough to
+  *detect* tampering — `verifyManifest` compares against the anchor — but it means a passport
+  currently depends on this project serving the manifest, which is the weaker property.
+  Storing manifests on 0G Storage is designed and is the first item of the next wave: provenance
+  that depends on a running server is not provenance.
+
+> **Implementation note, so nobody is surprised.** The dataset upload that actually ran used
+> `@0gfoundation/0g-storage-ts-sdk` in a standalone script, because both of the compute SDK's own
+> upload paths are broken on Windows (`uploadDatasetToTEE()` throws `window is not defined`;
+> `uploadDataset()` spawns a bundled `0g-storage-client` that ships as a **Linux ELF**). The
+> orchestrator's code path still calls `broker.uploadDataset()`, so it inherits that limitation
+> on Windows hosts. The storage SDK is not yet a dependency of any package in this repo.
 
 ### 5.3 0G Chain — where the claim becomes checkable
 
-Mainnet chain **16661**, RPC `https://evmrpc.0g.ai`, explorer `https://chainscan.0g.ai`.
-Solidity 0.8.19 with `evmVersion: paris` — 0.8.19 is pinned because newer versions fail explorer
-source verification.
+Two networks, and only one of them currently has a contract on it:
 
-- `Passport.sol` is deployed here and source-verified on chainscan.
+| | Testnet — Galileo **16602** | Mainnet — **16661** |
+|---|---|---|
+| RPC | `https://evmrpc-testnet.0g.ai` | `https://evmrpc.0g.ai` |
+| Explorer | `https://chainscan-galileo.0g.ai` | `https://chainscan.0g.ai` |
+| `Passport.sol` | ✅ `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` | ❌ **not deployed** |
+| Source-verified | ✅ `v0.8.19+commit.7dd6d404`, `paris`, optimizer 200 | — |
+| Mints | ✅ passport #1 | ❌ none |
+
+Solidity 0.8.19 with `evmVersion: paris` — 0.8.19 is pinned because newer versions fail explorer
+source verification, and paris because 0.8.19 cannot emit cancun (that target arrived in 0.8.24).
+Paris verified on the explorer first try, so 0G's docs asking for cancun are advice, not a
+constraint.
+
+- `Passport.sol` is deployed and source-verified on Galileo testnet. **Mainnet is the Wave 3
+  hard requirement and is still open.**
 - `verifyManifest(tokenId, candidateHash)` is a `view` function: anyone can recompute the
-  canonical hash from the manifest they fetched from 0G Storage and ask the chain whether it
-  matches what was anchored at mint time. No wallet, no trust in us.
+  canonical hash from a manifest and ask the chain whether it matches what was anchored at mint
+  time. No wallet, no trust in this project. Demonstrated live on passport #1 —
+  `verifyManifest(1, 0x4f64bfe6…890f)` → `true`, and `false` for a tampered hash.
 - Mints, authorizations and revocations are the on-chain activity the submission points at.
 
-### 5.4 0G Agentic ID (ERC-7857) — where the model gets an identity
+### 5.4 0G Agentic ID (ERC-7857-style) — where the model gets an identity
 
 Patterns studied from `0gfoundation/agenticID-examples` and reimplemented.
+
+> **Scope, stated up front.** `Passport.sol` is **ERC-7857-*style*, not a full implementation.**
+> It implements the identity and authorization surface; it does **not** implement ERC-7857's
+> `transfer()` with oracle re-encryption, nor `clone()`. Passport lineage is public by design —
+> there is no encrypted metadata for an oracle to re-encrypt — so that half of the standard has
+> nothing to act on here. Claiming full compliance would be an overclaim; see
+> `docs/CLAIMS_AUDIT.md`.
 
 - One completed fine-tune mints exactly one Agentic ID token. The lineage hashes are the token's
   data, so the provenance travels with ownership rather than sitting in a database row.
@@ -306,10 +376,20 @@ Patterns studied from `0gfoundation/agenticID-examples` and reimplemented.
 Full setup, environment variables and verification steps are in the root
 [README](../README.md). The short version:
 
+Root workspaces cover `packages/*` only. `packages/ml`, `services/orchestrator`, `apps/web` and
+`contracts` each keep their own lockfile and `node_modules` so their dependency trees cannot
+collide, and are installed and run from inside their own directory:
+
 ```bash
-npm install && npm run build && npm test
-npm run doctor -w @crucible/cli          # live network check, no wallet required
-npm start   -w @crucible/orchestrator    # :8787
-npm run dev -w @crucible/web             # :3000
-cd contracts && npx hardhat test
+npm install && npm run build && npm test   # workspaces = packages/* only
+npm run doctor -w @crucible/cli            # live network check, no wallet required
+
+cd packages/ml           && npm install --no-workspaces && npm test   # 320 tests
+cd services/orchestrator && npm install && npm test && npm start      # 155 tests, then :8787
+cd apps/web              && npm install && npm test && npm run dev    # 158 tests, then :3000
+cd contracts             && npm install && npx hardhat test           #  70 tests
 ```
+
+Total **808 tests**, all re-run 2026-08-15, plus a clean `next build` (7 routes, 88.8 kB shared
+JS). One thing worth knowing before you try: `apps/web` serves an in-memory fixture store unless
+`NEXT_PUBLIC_CRUCIBLE_API_URL` points at a running orchestrator.
