@@ -63,3 +63,37 @@ Re-checkable by anyone with `curl` and a JSON-RPC endpoint.
 | `verifyManifest(1, keccak256("tampered"))` | `false` |
 | Deployer wallet | `0xf4cEE5c1…1FD3EF` — 0.686326 0G, nonce 5 |
 | **Mainnet** | balance 0, nonce 0 — **nothing deployed** |
+
+---
+
+## "Is this really ERC-7857?" — the question a 0G judge will ask
+
+0G's own documentation gives ERC-7857 a core interface of three functions:
+
+| Function | 0G's description | `Passport.sol` |
+|---|---|---|
+| `authorizeUsage()` | grant usage permissions without revealing sensitive data | ✅ implemented, capped at 100 executors, cleared on transfer, with `revokeAuthorization` |
+| `transfer()` | ownership transfer **with metadata re-encryption via an oracle proof** (TEE or ZKP) | ⚠️ standard ERC-721 transfer, authorizations cleared. **No oracle re-encryption** |
+| `clone()` | copy a token while keeping metadata secure | ❌ not implemented |
+
+**So the honest claim is "an ERC-7857-style Agentic ID", not "a compliant ERC-7857 implementation",
+and that is the wording used in the contract's own documentation.**
+
+The reason is not laziness, and it is worth stating plainly because it is a design decision:
+
+> **A passport has nothing to re-encrypt.** ERC-7857's oracle machinery exists to move *encrypted
+> intelligent data* — the model itself — between owners without exposing it. A Model Passport is
+> deliberately the opposite: `manifestRootHash` is public and unencrypted precisely so that a
+> stranger holding no key can verify it. Bolting on a re-encryption oracle to transfer a document
+> whose entire purpose is to be publicly readable would be theatre.
+
+What the passport does take from the standard is the part that matters here: provenance travels
+with ownership as a first-class on-chain object, and delegated use is granted and revoked without
+handing over the asset.
+
+If 0G's verification requires strict compliance, the gap is `iTransferFrom` plus a TEE oracle, and
+the reference implementation to follow is `0gfoundation/0g-agent-nft` rather than the simplified
+contract in `agenticID-examples`. That is a Wave 4 item, and it is on the roadmap as one.
+
+Sources: [0G Builder Hub — Agentic ID](https://build.0g.ai/agentic-id) ·
+[ERC-7857 in 0G's docs](https://docs.0g.ai/developer-hub/building-on-0g/agentic-id/erc7857)

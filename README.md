@@ -111,8 +111,10 @@ already stuck, `acknowledgeDeliverable` is exposed as a one-click unlock.
 
 **2. It keeps the lineage.** The four facts above are assembled into a **Model Passport** — a
 canonical JSON manifest stored on 0G Storage, its keccak256 hash anchored on 0G Chain, and
-minted as an **ERC-7857 Agentic ID** so the model's provenance is a transferable on-chain
-object rather than a claim on someone's website.
+minted as an **ERC-7857-style Agentic ID** so the model's provenance is a transferable on-chain
+object rather than a claim on someone's website. (*Style*, not full compliance: a passport is
+public by design and has no encrypted payload to re-encrypt on transfer, so the standard's oracle
+path does not apply. The gap is stated precisely in [docs/CLAIMS_AUDIT.md](docs/CLAIMS_AUDIT.md).)
 
 ### What Crucible proves — and what it does not
 
@@ -290,7 +292,7 @@ crucible/
 │                           validation, fee estimation, network config, passport manifest +
 │                           canonical hashing, task-state model
 ├── packages/cli/           @crucible/cli — `crucible doctor`, credential-free network preflight
-├── contracts/              Passport.sol (ERC-7857 Agentic ID) + Hardhat tests and deploy scripts
+├── contracts/              Passport.sol (ERC-7857-style Agentic ID) + Hardhat tests + deploy
 ├── services/orchestrator/  job store, 0G task poller, auto-acknowledge daemon, HTTP + SSE API
 ├── apps/web/               Next.js app: upload → configure → launch → live training →
 │                           passport page → public gallery
