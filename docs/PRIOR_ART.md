@@ -114,6 +114,35 @@ how it was made. Combine: dolly for the generic path, 0G-docs for the hero demo.
 
 ---
 
+## 4. Interface prior art — what the frontend borrows, and from where
+
+The passport page and the gallery solve a problem someone else already solved well: presenting a
+public, hash-heavy record so that a stranger can check it. The **Ethereum Attestation Service**
+explorer is the closest working analogue, and two of its ideas are reimplemented here.
+
+| Idea taken | Where it came from | What we did |
+|---|---|---|
+| **The full identifier printed untruncated under the title** | [EAS single-attestation view](https://easscan.org/attestation/view/) — the UID is shown whole, not shortened | `PassportView.tsx` prints the anchored manifest hash in full with a copy control. On a certificate the complete value *is* the content; truncation belongs in tables |
+| **Typed field rows** — a cell carrying the type and field name beside the decoded value | EAS's *Decoded data* table (`STRING · Title`, `UINT64 · Startts`) | `TypedRow` / `TypedRows` in `Hash.tsx`, rendering `BYTES32 · dataset.rootHash`, `ADDRESS · task.provider`, `BOOL · tee.attestationVerified`. Turns a hash dump into a legible schema |
+| **A stat header over a dense index** | [EAS attestations index](https://easscan.org/attestations) — three large figures above a one-line-per-record table with type badges and relative age | The gallery's stat row and passport table, with a provenance column distinguishing on-chain records from fixtures |
+
+**Nothing was copied.** No EAS code, markup, stylesheet or asset is present in this repository.
+These are observed interface patterns, rebuilt against Crucible's own tokens — which is the same
+standard applied to 0G's example repos in §2.
+
+### UI component libraries — evaluated and declined
+
+| Library | Licence | Decision |
+|---|---|---|
+| [radix-ui/primitives](https://github.com/radix-ui/primitives) | MIT, actively maintained | **Permitted, not used.** Every candidate — the verify disclosure, the command palette's focus trap — turned out to need less code than the dependency. The disclosure is a native `<details>`; the trap is nine lines |
+| [web3ui/web3uikit](https://github.com/web3ui/web3uikit) | MIT, last pushed 2025-07 | **Declined.** Built on styled-components; adopting it means a second styling runtime beside Tailwind for wallet components this project does not need |
+| [GBKS/crypto-ux-handbook](https://github.com/GBKS/crypto-ux-handbook) | **No licence file** | Readable for principles only. Absent a licence, nothing may be copied |
+| [goabstract/Awesome-Design-UI-Kits](https://github.com/goabstract/Awesome-Design-Tools/blob/master/Awesome-Design-UI-Kits.md) | catalogue | **Nothing usable.** Read in full: 184 entries, of which 3 are crypto and 3 are code — the rest are Sketch, Adobe XD and Figma files, mostly mobile app concepts from 2017–2020. No React component library in the list |
+
+`framer-motion` (MIT) is a dependency and is used for entrance choreography only.
+
+---
+
 ## Sources
 
 - [Verifiable Fine-Tuning for LLMs: Zero-Knowledge Training Proofs Bound to Data Provenance and Policy (arXiv 2510.16830)](https://arxiv.org/html/2510.16830v1)
