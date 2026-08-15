@@ -125,6 +125,21 @@ export interface AdapterOrigin {
   sentinelPreimage?: string
   /** Why the adapter was never retrieved. Shown verbatim. */
   reason?: string
+  /**
+   * sha256 of the artifact as it landed on disk.
+   *
+   * Distinct from the manifest's `adapter.rootHash`, which is 0G Storage's own
+   * merkle root and is what the provider committed on chain. This is a plain
+   * digest of the received bytes, so a holder of the file can confirm they have
+   * the same one without reimplementing 0G's merkle scheme.
+   */
+  artifactSha256?: string
+  /**
+   * Which download path actually produced the artifact — `0g-storage` or `tee`
+   * — and on what platform. Recorded because on this project the answer was the
+   * entire difference between a retrieved model and a destroyed one.
+   */
+  retrievedVia?: string
 }
 
 /**
