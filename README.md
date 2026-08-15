@@ -173,7 +173,7 @@ All four. Details in [submission/ARCHITECTURE.md](submission/ARCHITECTURE.md#whi
 | Item | Testnet — Galileo (16602) | Mainnet — 0G (16661) |
 |---|---|---|
 | `Passport.sol` | [`0x27087B5b…83C1c7`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7) ✅ deployed | `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` — **open** |
-| Source verified on explorer | ⚠️ `hardhat verify` cannot reach the Blockscout endpoint; verifying through the explorer UI | pending |
+| Source verified on explorer | ✅ [**verified**](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code) — `v0.8.19+commit.7dd6d404`, evmVersion `paris`, optimizer 200 | will verify with the same command |
 | Mint transaction | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) ✅ passport #1 | `PLACEHOLDER_MINT_TX_URL` — **open** |
 | Fine-tuning task | `10551604-2664-4516-86cf-269a62f93bfc` ✅ reached `Delivered` | — |
 | Fine-tuning provider | `0xA02b95Aa6886b1116C4f334eDe00381511E31A09` | `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` |
@@ -320,7 +320,7 @@ Honest status as of **2026-08-15**. Nothing below is claimed as working that has
 | `packages/ml` — dataset analysis + eval harness | ✅ Shipped, 320 tests |
 | Orchestrator + auto-acknowledge daemon | ✅ Shipped, 155 tests, incl. a test asserting the deprecated path is unreachable |
 | Web app + passport gallery | ✅ Shipped, 158 tests, clean `next build` |
-| `Passport.sol` | ✅ **Deployed to testnet** `0x27087B5b…83C1c7`, 70 tests. ⚠️ Source verification on the explorer still open |
+| `Passport.sol` | ✅ **Deployed and source-verified on testnet** `0x27087B5b…83C1c7`, 70 tests |
 | **End-to-end authenticated fine-tune** | ✅ **Completed on testnet** — task `10551604-…f93bfc` ran `Init → Finished`, fee 0.0118528 0G. No adapter artifact is held locally; see [FIELD_NOTES](docs/FIELD_NOTES.md) |
 | First passport minted, `verifyManifest` proven on-chain | ✅ Testnet, passport #1 |
 | **Mainnet deployment + mint** | ❌ **Not done** — wallet is unfunded. The one hard Wave 3 requirement outstanding |

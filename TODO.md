@@ -16,7 +16,7 @@ every form field and its acceptance test.
 |---|---|---|---|
 | 1 | Public GitHub repo, real commit history | ✅ | [Professional50coder/crucible](https://github.com/Professional50coder/crucible) — 18+ commits |
 | 2 | AKINDO team created | ✅ | [communities/nPmazde6Mtdag6vd](https://app.akindo.io/communities/nPmazde6Mtdag6vd) |
-| 3 | `Passport.sol` deployed to testnet | ✅ | `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`, block 49596815 |
+| 3 | `Passport.sol` deployed **and source-verified** on testnet | ✅ | `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`, block 49596815, verified `0.8.19`/`paris` |
 | 4 | First passport minted, `verifyManifest` proven live | ✅ | tx `0xb608a8a5…00b3b1`; true for the real hash, false for a tampered one |
 | 5 | Architecture / lifecycle / verification diagrams | ✅ | [`docs/diagrams/`](docs/diagrams) |
 | 6 | Every AKINDO form field captured as a parameter | ✅ | `submission/AKINDO_FORM_SPEC.md` |
@@ -28,8 +28,9 @@ every form field and its acceptance test.
 
 | # | Item | Status | Note |
 |---|---|---|---|
-| 10 | Source-verify the contract on the explorer | ⏳ | `hardhat verify` fails: the 0G explorer is Blockscout and the Etherscan plugin hits an HTML page. Verify via the explorer UI or Blockscout's API |
-| 11 | Retry the stuck acknowledgement, or unlock the queue | 🔄 | task reached `Delivered` 2026-08-14 11:18 UTC; the 48h window has now passed, so record the outcome honestly either way |
+| 10 | Source-verify the contract on the explorer | ✅ | Root cause: 0G chainscan is a **Conflux-Scan** fork whose Etherscan-compatible API lives at `/open/api`, not `/api` — the old path returned the explorer's HTML shell. Testnet [verified](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code); the mainnet URL is fixed too, so item 13 will verify with the same command |
+| 11 | ~~Retry the stuck acknowledgement~~ — it was never stuck | ✅ | Re-queried the broker: task `10551604-…` reads `Finished`, settled 2026-08-14T17:19Z, fee 0.0118528 0G, zero pending deliverables. The retry loop succeeded ~6h after delivery, inside the window. **The first end-to-end run completed.** No adapter is held locally, which is why passport #1 keeps a sentinel adapter hash |
+| 11b | Second run, keeping the adapter this time | 🔄 | task `3e385c46-f5dc-4e93-b713-63ab7a987ae3` created; watcher acknowledges via the TEE path on arrival. Gives passport #2 a real adapter root hash |
 | 12 | Fund a mainnet wallet | ⛔ | needs real 0G. Owner action |
 | 13 | Deploy + verify `Passport.sol` on mainnet 16661 | ⏳ | blocked by 12. **Hard Wave 3 requirement** |
 | 14 | One real mint on mainnet | ⏳ | blocked by 13. "Explorer link showing on-chain activity" needs more than a deployment |

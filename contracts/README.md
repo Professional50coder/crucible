@@ -181,15 +181,108 @@ npx hardhat verify --network galileo <DEPLOYED_ADDRESS>
 npx hardhat verify --network mainnet <DEPLOYED_ADDRESS>
 ```
 
-If the explorer's API rejects the plugin, fall back to a standard-JSON-input upload in the
-chainscan UI with exactly these settings — they must match the deployment byte for byte:
+**Done for testnet.** `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` is source-verified on
+Galileo — [`#code`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code).
+The explorer reports back exactly what was deployed:
 
-| Setting | Value |
+| Field | Value reported by chainscan |
 |---|---|
-| Compiler | `v0.8.19` |
-| EVM version | `paris` |
-| Optimizer | enabled, **200** runs |
-| License | MIT |
+| `ContractName` | `Passport` |
+| `CompilerVersion` | `v0.8.19+commit.7dd6d404` |
+| `EVMVersion` | `paris` |
+| `OptimizationUsed` / `Runs` | `1` / `200` |
+| `ContractFileName` | `contracts/Passport.sol` |
+
+Confirm it from anywhere, no key needed:
+
+```bash
+curl "https://chainscan-galileo.0g.ai/open/api?module=contract&action=getabi\
+&address=0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7"
+```
+
+`{"status":"1", ...}` with the ABI means verified; `{"status":"0", ... "Contract source code
+not verified"}` means it is not.
+
+#### The endpoint is `/open/api`, not `/api`
+
+This is the one non-obvious thing about verifying on 0G, and it costs an hour if you guess.
+
+0G chainscan is a **Conflux-Scan derivative** — not Etherscan, and not Blockscout, despite
+looking like one. Its Etherscan-compatible API is mounted at **`/open/api`**. The bare `/api`
+path is served by the explorer's single-page app and returns HTML, which is what produces the
+misleading plugin error:
+
+```
+A network request failed. This is an error from the block explorer, not Hardhat.
+Error: Unexpected token '<', "<!doctype "... is not valid JSON
+```
+
+Probed directly:
+
+| Request | Response |
+|---|---|
+| `GET https://chainscan-galileo.0g.ai/api?module=contract&action=getabi&address=…` | `200 text/html` — the SPA shell |
+| `GET https://chainscan-galileo.0g.ai/open/api?module=contract&action=getabi&address=…` | `200 application/json` |
+
+`/open/api` advertises the full Etherscan action set including `verifysourcecode`,
+`checkverifystatus`, `getabi` and `getsourcecode`, so the ordinary `hardhat verify` flow works
+against it unchanged. No API key is issued or required — `hardhat-verify` insists on a
+non-empty string, so `hardhat.config.js` passes the placeholder `"empty"`.
+
+Sourcify is not an option: 0G is not on Sourcify's supported-chain list, so
+`sourcify.enabled` is set to `false` to stop the plugin suggesting it.
+
+Two cosmetic quirks of this explorer, neither of which affects the match:
+
+- `checkverifystatus` answers `Pending in queue` for *any* GUID, including invalid ones, so a
+  failed submission looks identical to a slow one. The authoritative check is `getabi`, above.
+- `LicenseType` comes back `Unknown`/`None`. The standard-JSON-input upload carries no license
+  selector; the SPDX line is present in the verified source itself.
+
+#### Manual fallback — verifying through the chainscan UI
+
+Only needed if the API path is down. Takes about five minutes.
+
+1. Produce the standard JSON input. It is already inside the Hardhat build info:
+
+   ```bash
+   cd contracts
+   npx hardhat compile
+   node -e "const fs=require('fs'),p='artifacts/build-info';const f=fs.readdirSync(p)[0];\
+   fs.writeFileSync('Passport.standard-input.json',\
+   JSON.stringify(JSON.parse(fs.readFileSync(p+'/'+f)).input));\
+   console.log('wrote Passport.standard-input.json')"
+   ```
+
+   That file contains `Passport.sol` **and** its OpenZeppelin imports, which is why the
+   single-file paste route is not worth attempting — flattening ERC-721 by hand invites an
+   SPDX-duplication error.
+
+2. Open the explorer's verification page — **`/contract-verification`**, reachable from the
+   header menu under *Contract Verification*:
+
+   - testnet: <https://chainscan-galileo.0g.ai/contract-verification>
+   - mainnet: <https://chainscan.0g.ai/contract-verification>
+
+   (`/contract/verify` is the backend POST route the page calls, not a page you can open.)
+
+3. Fill the form with exactly these values. They must match the deployment byte for byte —
+   a wrong `EVM Version` is the usual cause of a bytecode mismatch:
+
+   | Field | Value |
+   |---|---|
+   | Contract address | the deployed address |
+   | Compiler type | **Solidity (Standard-JSON-Input)** |
+   | Compiler version | **`v0.8.19+commit.7dd6d404`** |
+   | EVM version | **`paris`** — *not* `cancun`, see the pin note below |
+   | Optimization | **Enabled**, **200** runs |
+   | License | MIT |
+   | Constructor arguments | **leave empty** — the constructor takes none |
+
+4. Upload `Passport.standard-input.json` and submit. The contract name to select, if asked,
+   is `contracts/Passport.sol:Passport`.
+
+5. Confirm with the `getabi` curl above rather than trusting the UI's queue message.
 
 ---
 
@@ -213,6 +306,10 @@ this toolchain:
 `PUSH0` and no cancun-only opcodes, so it executes identically on a cancun-era chain.
 Forward compatibility is the direction that holds. Moving to cancun bytecode would require
 solc >= 0.8.24 and a fresh test of 0G explorer verification first.
+
+0G's docs ask for `cancun`, but that turns out to be advice rather than a constraint: the
+Galileo explorer accepted the `paris` build and reports `EVMVersion: paris` on the verified
+contract. The deployed bytecode matched on the first submission.
 
 **2. OpenZeppelin is v4.9.x, not v5.** Every OZ v5 release requires `^0.8.20` or newer
 (`ERC721.sol` in 5.6 requires `^0.8.24`), so v5 and the 0.8.19 pin are mutually exclusive.

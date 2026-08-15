@@ -62,7 +62,20 @@ module.exports = {
     },
   },
   etherscan: {
-    // 0G chainscan exposes a Blockscout-compatible verification API.
+    // 0G chainscan is a Conflux-Scan derivative, NOT Blockscout and NOT Etherscan.
+    // Its Etherscan-compatible endpoint lives at /open/api, not /api. Hitting
+    // https://chainscan-galileo.0g.ai/api returns the explorer's SPA HTML, which
+    // is what produced:
+    //   Error: Unexpected token '<', "<!doctype "... is not valid JSON
+    // Confirmed live:
+    //   GET /api      -> 200 text/html          (SPA shell)
+    //   GET /open/api -> 200 application/json   ({"status":"0","message":"NOTOK",
+    //                                             "result":"Contract source code
+    //                                              not verified"})
+    // The endpoint enumerates verifysourcecode / checkverifystatus / getabi /
+    // getsourcecode, so the standard hardhat-verify flow works against it.
+    // No API key is issued or required; hardhat-verify insists on a non-empty
+    // string, so a placeholder is supplied.
     apiKey: {
       galileo: "empty",
       mainnet: "empty",
@@ -72,7 +85,7 @@ module.exports = {
         network: "galileo",
         chainId: 16602,
         urls: {
-          apiURL: "https://chainscan-galileo.0g.ai/api",
+          apiURL: "https://chainscan-galileo.0g.ai/open/api",
           browserURL: "https://chainscan-galileo.0g.ai",
         },
       },
@@ -80,11 +93,16 @@ module.exports = {
         network: "mainnet",
         chainId: 16661,
         urls: {
-          apiURL: "https://chainscan.0g.ai/api",
+          apiURL: "https://chainscan.0g.ai/open/api",
           browserURL: "https://chainscan.0g.ai",
         },
       },
     ],
+  },
+  sourcify: {
+    // 0G chain is not on Sourcify's supported-chain list, so the Sourcify path is
+    // a dead end here. Disabled explicitly to silence hardhat-verify's nag.
+    enabled: false,
   },
   paths: {
     sources: "./contracts",
