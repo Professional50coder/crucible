@@ -72,6 +72,7 @@ export function CommandPalette() {
 
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const restoreTo = useRef<HTMLElement | null>(null)
   const listId = useId()
 
@@ -122,7 +123,10 @@ export function CommandPalette() {
               group: 'Passports',
               label: p.name,
               detail: `${p.id} · ${p.model}`,
-              href: `/passport/${p.id}`,
+              // Ids come from the orchestrator, so they are not ours. Encoded
+              // before they reach a route, or an id of `../..` or `/evil.com`
+              // turns a list render into a navigation primitive.
+              href: `/passport/${encodeURIComponent(p.id)}`,
               icon: 'shield',
               tone: p.mintStatus === 'minted' ? 'ok' : 'warn',
             }),
@@ -133,7 +137,7 @@ export function CommandPalette() {
               group: 'Runs',
               label: j.name ?? j.id,
               detail: `${j.id} · ${j.state}`,
-              href: `/jobs/${j.id}`,
+              href: `/jobs/${encodeURIComponent(j.id)}`,
               icon: 'adapter',
               tone: j.state === 'Failed' ? 'danger' : j.state === 'Finished' ? 'ok' : 'accent',
             }),
@@ -192,6 +196,39 @@ export function CommandPalette() {
           event.preventDefault()
           go(item)
         }
+        return
+      }
+
+      /**
+       * Keep Tab inside the dialog.
+       *
+       * `aria-modal="true"` is a promise that the rest of the page is inert. It
+       * is only a promise — the browser enforces nothing — so without this a
+       * keyboard user tabs straight out of an "open" modal into the header
+       * behind it and has no way to tell where they are. Hand-rolled rather
+       * than pulled from a primitives package: it is nine lines, and the
+       * candidate set here is small and entirely ours.
+       */
+      if (event.key === 'Tab' && dialogRef.current) {
+        const focusable = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => element.offsetParent !== null || element === document.activeElement)
+
+        if (focusable.length === 0) return
+
+        const first = focusable[0]!
+        const last = focusable[focusable.length - 1]!
+        const active = document.activeElement
+
+        if (event.shiftKey && active === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && active === last) {
+          event.preventDefault()
+          first.focus()
+        }
       }
     },
     [results, cursor, go],
@@ -215,6 +252,7 @@ export function CommandPalette() {
           />
 
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Command palette"

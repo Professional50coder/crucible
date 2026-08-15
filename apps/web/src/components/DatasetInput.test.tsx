@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { DatasetInput } from './DatasetInput'
+import { DatasetInput, MAX_DATASET_BYTES } from './DatasetInput'
 
 describe('<DatasetInput>', () => {
   it('accepts the bundled sample and reports the detected format', async () => {
@@ -86,5 +86,35 @@ describe('<DatasetInput>', () => {
   it('names the three accepted formats up front', () => {
     render(<DatasetInput onChange={vi.fn()} />)
     expect(screen.getByText(/at least 10 examples/i)).toBeInTheDocument()
+  })
+
+  /**
+   * A dataset is held entirely in memory here, so an uncapped read is an
+   * uncapped allocation handed out by a file picker. The refusal has to happen
+   * before the read, and it has to say what it refused.
+   */
+  it('refuses a file larger than the read cap without reading it', async () => {
+    const onChange = vi.fn()
+    render(<DatasetInput onChange={onChange} />)
+
+    // Real JSONL, so nothing but the size can be what gets it refused.
+    const file = new File(['{"text":"one"}\n'], 'enormous.jsonl', { type: 'application/json' })
+    Object.defineProperty(file, 'size', { value: MAX_DATASET_BYTES + 1 })
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await userEvent.upload(input, file)
+
+    const refusal = await screen.findByTestId('dataset-refusal')
+    expect(refusal).toHaveTextContent(/enormous\.jsonl/)
+    expect(refusal).toHaveTextContent(/8\.00 MB/)
+
+    // The contents were never parsed — the file was refused on size alone.
+    expect(onChange).toHaveBeenCalledWith(null)
+    expect(screen.queryByTestId('dataset-analysis')).not.toBeInTheDocument()
+  })
+
+  it('states the read cap up front, so the limit is not a surprise', () => {
+    render(<DatasetInput onChange={vi.fn()} />)
+    expect(screen.getByText(/up to 8\.00 MB/i)).toBeInTheDocument()
   })
 })

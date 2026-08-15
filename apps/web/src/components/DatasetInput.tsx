@@ -6,6 +6,18 @@
  * 0G rejects a malformed dataset *after* the file has been uploaded and *after*
  * funds have moved, and the rejection tells you very little. So everything is
  * checked here first, in the browser, with the line number and the fix.
+ *
+ * Two properties this component is required to hold, and holds deliberately:
+ *
+ *  - **Nothing in an uploaded file is ever executed.** The content is read as
+ *    text and parsed line-by-line with `JSON.parse`. There is no `eval`, no
+ *    `Function`, no `dangerouslySetInnerHTML`, and the file name and contents
+ *    only ever reach the DOM as text children — never as an attribute value,
+ *    never as a URL.
+ *  - **Reads are capped.** A dataset lives entirely in memory here (analysis
+ *    needs the whole document), so an unbounded read is an unbounded allocation
+ *    from a file picker. Anything past the cap is refused before a single byte
+ *    is read, with the actual size named so the refusal is actionable.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -20,17 +32,31 @@ export interface DatasetInputProps {
   onChange: (result: { filename: string; analysis: DatasetAnalysis } | null) => void
 }
 
+/**
+ * The most this component will pull into memory, from a file or a paste.
+ *
+ * 8 MiB is far above any legitimate LoRA fine-tuning set — 0G's own worked
+ * example is a few hundred kilobytes, and this project's real run was 61
+ * examples — and far below the point at which reading it stalls the tab.
+ */
+export const MAX_DATASET_BYTES = 8 * 1024 * 1024
+
 const FORMAT_LABELS: Record<string, string> = {
   chat: 'chat-messages',
   instruction: 'instruction',
   text: 'text-completion',
 }
 
+/** Bytes, not characters: a UTF-8 dataset of CJK text is 3× its length. */
+const byteLength = (text: string) =>
+  typeof TextEncoder === 'undefined' ? text.length : new TextEncoder().encode(text).length
+
 export function DatasetInput({ onChange }: DatasetInputProps) {
   const [source, setSource] = useState('')
   const [filename, setFilename] = useState('')
   const [dragging, setDragging] = useState(false)
   const [reading, setReading] = useState(false)
+  const [refusal, setRefusal] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const analysis = useMemo(
@@ -40,6 +66,21 @@ export function DatasetInput({ onChange }: DatasetInputProps) {
 
   const apply = useCallback(
     (text: string, name: string) => {
+      // The cap applies to pasted text too — a paste is the same allocation as
+      // a file read, and refusing only one of the two paths is not a cap.
+      if (byteLength(text) > MAX_DATASET_BYTES) {
+        setRefusal(
+          `That is ${formatBytes(byteLength(text))}. Crucible reads at most ` +
+            `${formatBytes(MAX_DATASET_BYTES)} into the browser — split it, or upload the root ` +
+            `hash of a set already on 0G Storage.`,
+        )
+        setSource('')
+        setFilename('')
+        onChange(null)
+        return
+      }
+
+      setRefusal(null)
       setSource(text)
       setFilename(name)
 
@@ -54,17 +95,34 @@ export function DatasetInput({ onChange }: DatasetInputProps) {
 
   const readFile = useCallback(
     async (file: File) => {
+      // Checked before the read, not after: `file.text()` on a 2 GB file has
+      // already cost the allocation by the time you could measure the result.
+      if (file.size > MAX_DATASET_BYTES) {
+        setRefusal(
+          `${file.name} is ${formatBytes(file.size)}. Crucible reads at most ` +
+            `${formatBytes(MAX_DATASET_BYTES)} into the browser — split it, or upload the root ` +
+            `hash of a set already on 0G Storage.`,
+        )
+        setSource('')
+        setFilename('')
+        onChange(null)
+        return
+      }
+
       setReading(true)
       try {
         const text = await file.text()
         apply(text, file.name)
       } catch {
-        apply('', '')
+        setRefusal(`Could not read ${file.name}. It may not be a text file.`)
+        setSource('')
+        setFilename('')
+        onChange(null)
       } finally {
         setReading(false)
       }
     },
-    [apply],
+    [apply, onChange],
   )
 
   const errors = analysis?.issues.filter((i) => i.severity === 'error') ?? []
@@ -127,9 +185,23 @@ export function DatasetInput({ onChange }: DatasetInputProps) {
         />
 
         <p className="mt-5 font-mono text-2xs leading-relaxed text-faint">
-          JSONL · UTF-8 · one format throughout · at least {MINIMUM_EXAMPLES} examples
+          JSONL · UTF-8 · one format throughout · at least {MINIMUM_EXAMPLES} examples · up to{' '}
+          {formatBytes(MAX_DATASET_BYTES)}
         </p>
       </div>
+
+      {/* A refused read. Stated where the file was dropped, with the number
+          that caused it, rather than swallowed into a console warning. */}
+      {refusal ? (
+        <div
+          className="mt-3 flex items-start gap-3 rounded-md border border-danger/30 bg-danger/[0.05] px-4 py-3"
+          role="alert"
+          data-testid="dataset-refusal"
+        >
+          <AlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger" />
+          <p className="text-xs leading-relaxed text-danger text-pretty">{refusal}</p>
+        </div>
+      ) : null}
 
       {/* Or paste ---------------------------------------------------- */}
       <details className="mt-3">

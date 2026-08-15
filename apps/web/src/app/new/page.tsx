@@ -113,7 +113,7 @@ export default function NewRunPage() {
           tokenCount: dataset.analysis.tokenCount,
         },
       })
-      router.push(`/jobs/${job.id}`)
+      router.push(`/jobs/${encodeURIComponent(job.id)}`)
     } catch (cause) {
       setLaunchError(cause instanceof Error ? cause.message : 'Could not create the task')
       setLaunching(false)
@@ -321,7 +321,7 @@ export default function NewRunPage() {
 
                   <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-4">
                     <span className="label text-dim">Total</span>
-                    <span className="font-mono text-lg text-phosphor">
+                    <span className="font-mono text-lg tabular-nums text-phosphor">
                       {formatOg(fee.totalNeuron)} 0G
                     </span>
                   </div>
@@ -442,7 +442,7 @@ function Line({ label, value, hint }: { label: string; value: string; hint?: str
         <dt className="label">{label}</dt>
         {hint ? <dd className="mt-0.5 text-2xs text-faint">{hint}</dd> : null}
       </div>
-      <dd className="shrink-0 font-mono text-xs text-fg">{value}</dd>
+      <dd className="shrink-0 font-mono text-xs tabular-nums text-fg">{value}</dd>
     </div>
   )
 }
