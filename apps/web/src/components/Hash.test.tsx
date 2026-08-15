@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Hash, HashRow } from './Hash'
+import { Hash, HashRow, TypedRow, TypedRows } from './Hash'
 
 const HASH = '0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7'
 
@@ -91,5 +91,56 @@ describe('<HashRow>', () => {
     expect(screen.getByText('Dataset root hash')).toBeInTheDocument()
     expect(screen.getByText('Retrievable from 0G Storage by anyone.')).toBeInTheDocument()
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://storagescan.0g.ai/submission/146937')
+  })
+
+  it('prints the whole value when the row is the subject rather than a key', () => {
+    render(<HashRow label="Anchored" value={HASH} full />)
+    expect(screen.getByTestId('hash-value')).toHaveTextContent(HASH)
+  })
+})
+
+describe('<TypedRow>', () => {
+  it('names the type and the field beside the value', () => {
+    render(
+      <TypedRows>
+        <TypedRow type="bytes32" name="datasetRootHash" value={HASH} hash />
+      </TypedRows>,
+    )
+
+    expect(screen.getByText('bytes32')).toBeInTheDocument()
+    expect(screen.getByText('datasetRootHash')).toBeInTheDocument()
+    // Full, not truncated: this row is the record, not an index of it.
+    expect(screen.getByTestId('hash-value')).toHaveTextContent(HASH)
+  })
+
+  it('renders a plain value with no copy affordance it does not need', () => {
+    render(<TypedRow type="bool" name="tee.acknowledged" value="false" tone="warn" />)
+
+    expect(screen.getByText('bool')).toBeInTheDocument()
+    expect(screen.getByText('false')).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('says a value is unverifiable rather than linking nowhere', () => {
+    render(<TypedRow type="bytes32" name="datasetRootHash" value={HASH} unverifiable hash />)
+
+    expect(screen.getByText(/nothing to open at this hash/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('opens an external value safely when there is one to open', () => {
+    render(
+      <TypedRow
+        type="string"
+        name="base.tokenizer"
+        value="Qwen/Qwen2.5-0.5B-Instruct"
+        href="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct"
+      />,
+    )
+
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'))
+    expect(link).toHaveAttribute('target', '_blank')
   })
 })
