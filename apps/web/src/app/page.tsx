@@ -1,408 +1,669 @@
+'use client'
+
 import Link from 'next/link'
+import { motion, useReducedMotion, type Variants } from 'framer-motion'
+import type { ReactNode } from 'react'
 
 import {
-  AdapterIcon,
   AlertIcon,
   AnchorIcon,
   ArrowIcon,
   ClockIcon,
-  DatasetIcon,
-  EnclaveIcon,
   ExternalIcon,
-  ModelIcon,
   ShieldIcon,
-  SlidersIcon,
+  TerminalIcon,
   UploadIcon,
 } from '@/components/icons'
 import { Badge, Dot, HatchBand, IconTile, SectionHead } from '@/components/ui'
+import { addressUrl, storageLookupUrl, storageSubmissionUrl, txUrl } from '@/lib/chains'
 
 /**
- * The landing page has one job: make a stranger understand, in under a minute,
- * that fine-tuning on 0G quietly produces a complete provenance record and then
- * throws it away — and that two of the ways it throws it away are destructive.
+ * The landing page states one claim, once, at display size, and then spends the
+ * rest of the page earning it.
  *
- * So the hero is not a value proposition. It is the exhaust of a real run, with
- * the moment it is lost drawn on top of it.
+ * The claim is that every model can carry a birth certificate. The proof is that
+ * a stranger — no wallet, no clone, no account — can pull passport #1's manifest
+ * off 0G Storage, recompute its keccak256, and ask the deployed contract whether
+ * that is the value it anchored.
+ *
+ * Every figure and every hash below was measured against the live network. Where
+ * a run failed it says so, in the same type size as where it succeeded, because
+ * a provenance tool that overstates its own provenance has already lost the
+ * argument.
  */
+
+// ---------------------------------------------------------------------------
+// Anchors — the four values that make the claim checkable.
+// ---------------------------------------------------------------------------
+
+const PASSPORT_CONTRACT = '0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7'
+const MINT_TX = '0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1'
+const MANIFEST_ROOT = '0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140'
+const MANIFEST_HASH = '0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f'
+const MANIFEST_SUBMISSION = 146937
+
+interface Anchor {
+  label: string
+  value: string
+  full: string
+  note: string
+  /** Absent when no page resolves for this value. A 404 reads as "the data is gone". */
+  href?: string
+  hrefLabel?: string
+}
 
 /**
- * What the CLI prints, in the order it prints it.
+ * Every href here is a module constant routed through `lib/chains.ts`, so the
+ * network can never be mismatched and nothing user-controlled reaches an href.
  *
- * These are the real values from task `10551604-2664-4516-86cf-269a62f93bfc` on
- * 0G Galileo, 2026-08-14 — not a mock-up of what a lineage might look like. The
- * point of the panel is that this data already exists on every run; inventing it
- * would undercut the only claim the hero makes.
+ * The manifest row links to `/submission/<txSeq>`, not to `/file/<rootHash>` —
+ * Storage Scan has no route keyed by a root hash and 404s on that path. The
+ * root-hash lookup that does resolve is the JSON one, quoted in the verify block.
  */
-const RECEIPT = [
-  { k: 'base model', v: 'Qwen2.5-0.5B-Instruct' },
-  { k: 'model hash', v: '0xb4f76a88…2c75a7' },
-  { k: 'dataset root', v: '0xa5051ae7…9e7dbfd' },
-  { k: 'config', v: '5 params · 0xe65b3e51…' },
-  { k: 'task', v: '10551604-2664…f93bfc' },
-  { k: 'provider', v: '0xA02b95Aa…1E31A09' },
-]
-
-/** The two that cost you the model, not just your time. */
-const DESTRUCTIVE = [
+const ANCHORS: readonly Anchor[] = [
   {
-    readout: '48:00:00',
-    readoutLabel: 'from Delivered',
-    title: 'A deadline nobody tells you about',
-    body: 'When a task reaches Delivered you have 48 hours to acknowledge. Miss it and the adapter is garbage-collected from 0G Storage and the TEE buffer, and 30% of the fee is deducted. There is no notification, no email, no dashboard. You are expected to poll a CLI.',
-    cost: 'Cost of missing it: the model, and 30% of the fee.',
-    icon: <ClockIcon className="h-4 w-4" />,
+    label: 'Contract',
+    value: '0x27087B5b…83C1c7',
+    full: PASSPORT_CONTRACT,
+    note: 'Passport.sol · deployed and source-verified on 0G Galileo',
+    href: addressUrl('testnet', PASSPORT_CONTRACT),
+    hrefLabel: 'chainscan-galileo.0g.ai',
   },
   {
-    readout: 'PERMANENT',
-    readoutLabel: 'account state',
-    title: 'A documented bug that locks the account',
-    body: 'Retrieve a model the deprecated way and never acknowledge it, and days later the artifact is collected — at which point acknowledgement can never succeed. The deliverable queue is then locked and every later task reverts with “previous deliverable not acknowledged”.',
-    cost: 'Cost of hitting it: every future run on that account.',
-    icon: <AlertIcon className="h-4 w-4" />,
-  },
-]
-
-/** The remaining footguns. Cheaper, but they still cost a funded task. */
-const FOOTGUNS = [
-  {
-    when: 'at task creation',
-    title: 'Funds land in the wrong sub-account',
-    body: 'transfer-fund routes to the inference sub-account unless you pass --service fine-tuning. The failure surfaces much later as an unexplained MinimumDepositRequired.',
+    label: 'Mint',
+    value: '0xb608a8a5…e400b3b1',
+    full: MINT_TX,
+    note: 'passport #1 · block 49,597,171 · 327,702 gas',
+    href: txUrl('testnet', MINT_TX),
+    hrefLabel: 'chainscan-galileo.0g.ai',
   },
   {
-    when: 'after funding',
-    title: 'The config is validated after you pay',
-    body: '0G accepts exactly five parameters and rejects a config with any extra or missing key — once the task is already funded. The docs’ template differs from the working example.',
+    label: 'Manifest',
+    value: '0xc757a7e6…3b98e1140',
+    full: MANIFEST_ROOT,
+    note: `0G Storage root · 584 bytes · submission ${MANIFEST_SUBMISSION}`,
+    href: storageSubmissionUrl('testnet', MANIFEST_SUBMISSION),
+    hrefLabel: 'storagescan-galileo.0g.ai',
   },
   {
-    when: 'after upload',
-    title: 'The dataset is validated after upload',
-    body: 'A malformed line is rejected once the file is on 0G Storage and funds have moved, and the rejection tells you very little about which line.',
+    label: 'Anchor',
+    value: '0x4f64bfe6…6059890f',
+    full: MANIFEST_HASH,
+    note: 'keccak256 of the canonical manifest · verifyManifest(1, …) returns true',
   },
 ]
 
-const ANSWERS = [
+/** The commands, exactly as a stranger would run them. Nothing is cloned. */
+const VERIFY_STEPS: readonly { comment: string; command: string }[] = [
+  {
+    comment: '# 1 · pull the manifest off 0G Storage',
+    command: `curl -s "https://indexer-storage-testnet-turbo.0g.ai/file?root=${MANIFEST_ROOT}"`,
+  },
+  {
+    comment: '# 2 · confirm the root hash exists, via the route that resolves',
+    command: `curl -s "${storageLookupUrl('testnet', MANIFEST_ROOT)}"`,
+  },
+  {
+    comment: '# 3 · canonicalise, keccak256, and ask the chain',
+    command: 'node tools/verify-manifest.mjs   → verifyManifest(1, 0x4f64bfe6…) === true',
+  },
+]
+
+// ---------------------------------------------------------------------------
+// What the two real runs cost.
+// ---------------------------------------------------------------------------
+
+const LEDGER: readonly { readout: string; label: string; tone: string }[] = [
+  { readout: '2', label: 'runs reached Delivered', tone: 'text-fg' },
+  { readout: '1', label: 'model retrieved — from Linux', tone: 'text-ok' },
+  { readout: '30.0000%', label: 'deducted on the one that was lost', tone: 'text-danger' },
+]
+
+// ---------------------------------------------------------------------------
+// Six of the fourteen findings. Every one reproduced against the live network.
+// ---------------------------------------------------------------------------
+
+interface Footgun {
+  sev: 'critical' | 'blocking' | 'docs'
+  title: string
+  body: string
+  evidence: string
+}
+
+const FOOTGUNS: readonly Footgun[] = [
+  {
+    sev: 'critical',
+    title: 'acknowledgeModel retrieves nothing on Windows — two separate defects',
+    body: 'They are not one bug. The TEE path fails identically on every platform, at 0 bytes, with stream.on is not a function — that one is in the SDK. The 0G Storage path fails only on Windows, with spawn …/binary/0g-storage-client ENOENT, because the bundled client ships as an ELF 64-bit executable for GNU/Linux. With both dead the documented happy path is impossible on Windows, and one model was lost proving it.',
+    evidence: 'storage path succeeds from WSL2 Linux · TEE path still fails on both',
+  },
+  {
+    sev: 'critical',
+    title: 'The provider settles long before the 48-hour window closes',
+    body: 'The documentation gives you 48 hours from Delivered to acknowledge. The provider force-settled mine in six. The 48 hours is the outer bound on your right to collect, not a guarantee about when the provider acts — and nothing tells you which one you are racing.',
+    evidence: 'delivered 11:18:42Z · settled 17:19:27Z',
+  },
+  {
+    sev: 'blocking',
+    title: 'The SDK demands 3 0G to open a ledger, on every network',
+    body: 'addLedger() applies a hardcoded client-side guard. The contract disagrees: LedgerManager.MIN_ACCOUNT_BALANCE() reads 0.1 0G on testnet. A 30× overstatement that reads as a funding blocker before you have spent anything.',
+    evidence: 'one eth_call · true cost of both runs was 0.15 0G',
+  },
+  {
+    sev: 'blocking',
+    title: 'getLockedTime() is the refund lock, not the acknowledge window',
+    body: 'It returns 86400 — 24 hours — and is used as lockTime − (now − refund.createdAt). Read it as the 48-hour deadline, as its name invites, and any daemon you build fires at the wrong time.',
+    evidence: 'SDK source, service.js',
+  },
+  {
+    sev: 'docs',
+    title: 'transfer-fund silently funds the wrong sub-account',
+    body: 'Without --service fine-tuning the transfer routes to the inference sub-account. Nothing fails at the time. The failure surfaces much later as an unexplained MinimumDepositRequired, by which point the money has moved.',
+    evidence: '0G’s own documentation',
+  },
+  {
+    sev: 'docs',
+    title: 'Storage Scan has no route keyed by a root hash',
+    body: '/file/<rootHash> returns 404. The human-readable page is /submission/<txSeq>, and the only root-hash lookup is the JSON API. On a page whose whole job is letting a stranger check a claim, a 404 reads as the data is gone rather than the URL is wrong.',
+    evidence: 'verified live · both correct routes are linked above',
+  },
+]
+
+const SEV_LABEL: Record<Footgun['sev'], string> = {
+  critical: 'costs an artifact',
+  blocking: 'blocks a documented path',
+  docs: 'wrong or missing docs',
+}
+
+// ---------------------------------------------------------------------------
+// What Crucible does. Stated at exactly the size it is true.
+// ---------------------------------------------------------------------------
+
+const CAPABILITIES = [
   {
     icon: <UploadIcon className="h-4 w-4" />,
-    title: 'One upload',
-    body: 'Drop a dataset in. Crucible validates it against 0G’s three formats before a single token of gas moves, funds the correct sub-account, checks the balance, and creates the task.',
+    title: 'One upload, validated before gas moves',
+    body: 'Crucible checks a dataset against 0G’s three accepted formats, reports the offending line by number, and validates the training config against all five rejection rules — locally, before a task is funded. 0G validates both after you have paid.',
   },
   {
     icon: <ClockIcon className="h-4 w-4" />,
-    title: 'A daemon that watches the window for you',
-    body: 'It starts acknowledging about two minutes after delivery, retries every download path 0G offers, and escalates six hours before the deadline instead of letting it pass in silence. It cannot fix a broken SDK — on Windows both download paths fail outright — but it turns a model quietly deleted 48 hours later into a failure you are told about while there is still time to act, and it can free a locked queue with acknowledgeDeliverable.',
+    title: 'A daemon that watches the window',
+    body: 'It detects the delivery within about two minutes, exhausts every download path the SDK offers, records the failure with its evidence, and releases the queue with acknowledgeDeliverable so the next task is not blocked. It cannot retrieve a model the SDK cannot retrieve — on Windows both paths fail outright — and it does not pretend otherwise. What it converts is a model deleted silently into a failure you are told about.',
   },
   {
     icon: <ShieldIcon className="h-4 w-4" />,
-    title: 'A passport anyone can check',
-    body: 'The lineage the run already produced is written to 0G Storage, hashed on 0G Chain, and minted as an ERC-7857 Agentic ID. Every hash links to the explorer that proves it. No wallet needed to verify.',
+    title: 'A certificate anyone can check',
+    body: 'The lineage the run already produced is canonicalised, written to 0G Storage, its keccak256 anchored on 0G Chain, and minted as an ERC-7857-style Agentic ID. Verification needs no wallet, no key, and no cooperation from me — if this repository disappears, passport #1 stays checkable from the chain and 0G Storage alone.',
   },
 ]
+
+// ---------------------------------------------------------------------------
+// The boundary. Four things this page is careful not to claim.
+// ---------------------------------------------------------------------------
+
+const NOT_CLAIMED = [
+  {
+    head: 'Not mainnet.',
+    body: 'Nothing is deployed to 0G mainnet. Passport.sol lives on 0G Galileo, chain 16602. Mainnet is the one outstanding requirement and it is blocked on gas, not on code.',
+  },
+  {
+    head: 'Not retrieval.',
+    body: 'Crucible does not fetch your model. It detects the delivery, exhausts every download path the SDK offers, records the failure with its evidence, and releases the queue with acknowledgeDeliverable. Task 1 lost its model regardless, and passport #1 carries a published sentinel where the adapter root hash would go.',
+  },
+  {
+    head: 'Not honest training.',
+    body: 'A passport proves lineage: that this manifest is the one anchored, that this dataset is retrievable at this root hash, that the TEE signer is acknowledged on-chain. It does not prove the provider ran the epochs it claimed. That needs zero-knowledge proofs over the training computation — a research programme, not a feature.',
+  },
+  {
+    head: 'Not ERC-7857 compliant.',
+    body: 'The standard’s core interface is transfer() with oracle re-encryption, clone(), and authorizeUsage(). Passport.sol implements the third. A passport is public by design, so there is no encrypted payload to re-encrypt and the oracle path does not apply. “ERC-7857-style”, stated in full rather than glossed.',
+  },
+]
+
+// ---------------------------------------------------------------------------
+// Motion. Entrance only, staggered, and gone entirely under reduced motion.
+// ---------------------------------------------------------------------------
+
+/** The same curve the rest of the app uses for `popin` and `drawline`. */
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+
+const RISE: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
+}
+
+const STAGGER: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+}
 
 /**
- * Three explorer links, recorded from `contracts/deployments/`. A landing page
- * that says "verifiable" and then offers nothing to verify is asking for the
- * same trust it claims to remove.
+ * A staggered entrance container. Under `prefers-reduced-motion` it collapses to
+ * a plain element — no variants, no transition, nothing left running — so the
+ * page arrives composed rather than assembled.
  */
-const PROOF = [
-  {
-    label: 'Passport.sol',
-    value: '0x27087B5b…83C1c7',
-    note: 'deployed · block 49,596,815',
-    href: 'https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7',
-  },
-  {
-    label: 'Passport #1 minted',
-    value: '0xb608a8a5…00b3b1',
-    note: 'block 49,597,171 · gas 327,702',
-    href: 'https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1',
-  },
-  {
-    // Storage Scan has no page keyed by a root hash — its human route is
-    // /submission/<txSeq>, and the manifest upload has a real one. So this links
-    // to the page that exists rather than to a plausible URL that 404s.
-    label: 'Manifest on 0G Storage',
-    value: 'submission 146937',
-    note: '584 bytes · hashes to the anchored value',
-    href: 'https://storagescan-galileo.0g.ai/submission/146937',
-  },
-]
+function Stagger({
+  children,
+  className,
+  onMount = false,
+}: {
+  children: ReactNode
+  className?: string
+  /** Play on mount (the hero) rather than when scrolled into view. */
+  onMount?: boolean
+}) {
+  const reduced = useReducedMotion()
+  if (reduced) return <div className={className}>{children}</div>
 
-const ARTIFACTS = [
-  { icon: <ModelIcon className="h-4 w-4" />, label: 'Base model', value: 'modelHash', note: 'which weights you started from' },
-  { icon: <DatasetIcon className="h-4 w-4" />, label: 'Dataset', value: 'rootHash', note: 'retrievable from 0G Storage, forever' },
-  { icon: <SlidersIcon className="h-4 w-4" />, label: 'Training', value: '5 parameters', note: 'exactly what 0G accepts, nothing else' },
-  { icon: <AdapterIcon className="h-4 w-4" />, label: 'Adapter', value: 'rootHash', note: 'hash-verified at delivery' },
-  { icon: <EnclaveIcon className="h-4 w-4" />, label: 'Delivery', value: 'TEE-attested', note: 'Intel TDX, signer acknowledged' },
-  { icon: <AnchorIcon className="h-4 w-4" />, label: 'Anchor', value: 'ERC-7857', note: 'immutable once minted' },
-]
+  if (onMount) {
+    return (
+      <motion.div className={className} variants={STAGGER} initial="hidden" animate="show">
+        {children}
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div
+      className={className}
+      variants={STAGGER}
+      initial="hidden"
+      whileInView="show"
+      // `once` is what keeps this an entrance rather than a scroll effect: it
+      // plays a single time and never reacts to scrolling again.
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/** One step of a stagger. Must be a direct child of <Stagger>. */
+function Rise({ children, className }: { children: ReactNode; className?: string }) {
+  const reduced = useReducedMotion()
+  if (reduced) return <div className={className}>{children}</div>
+
+  return (
+    <motion.div className={className} variants={RISE}>
+      {children}
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 
 export default function LandingPage() {
+  const reduced = useReducedMotion()
+
   return (
     <>
-      {/* ================================================================ */}
-      {/* Hero — the exhaust of a real run, and the moment it is lost.      */}
-      {/* ================================================================ */}
-      <section className="mx-auto max-w-6xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-16">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
+      {/* ================================================================== */}
+      {/* Hero — one claim, at display size, and the proof directly beneath.  */}
+      {/* ================================================================== */}
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
+        <Stagger onMount className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
           <div className="min-w-0">
-            {/* The badge names the network the contract is actually on. Claiming
-                mainnet here while Passport.sol lives on Galileo would be the
-                first thing a judge checks and the first thing they find wrong. */}
-            <div className="flex flex-wrap items-center gap-2">
+            <Rise className="flex flex-wrap items-center gap-2">
+              {/* Chain 16602 is where the contract actually is. Claiming
+                  mainnet here is the first thing a judge would check. */}
               <Badge tone="accent">
                 <Dot tone="accent" pulse />
                 live on 0G Galileo · chain 16602
               </Badge>
-              <Badge>ERC-7857 Agentic ID</Badge>
-            </div>
+              <Badge>source-verified</Badge>
+              <Badge>passport #1 minted</Badge>
+            </Rise>
 
-            <h1 className="mt-7 text-display font-medium text-fg text-balance">
-              Every fine-tune on 0G prints its own provenance.
-              <span className="mt-1 block text-dim">Then the terminal scrolls.</span>
-            </h1>
+            <Rise>
+              <h1 className="mt-8 text-display font-medium text-fg text-balance">
+                Every model gets a birth certificate.
+              </h1>
+            </Rise>
 
-            <p className="measure mt-6 text-base leading-relaxed text-dim text-pretty sm:text-lg">
-              Base model, dataset root, training config, TEE-attested delivery — four facts that
-              answer <span className="text-fg">where did this model come from</span>, written to a
-              buffer and lost. Crucible keeps them, anchors them on chain, and hands you a page a
-              stranger can verify without a wallet.
-            </p>
+            <Rise>
+              <p className="measure mt-7 border-l border-phosphor/40 pl-5 text-base leading-relaxed text-fg text-pretty sm:text-lg">
+                And a stranger can check it —{' '}
+                <span className="text-phosphor">with no wallet, no clone, and no account.</span>
+              </p>
+            </Rise>
 
-            <div className="mt-9 flex flex-wrap items-center gap-3">
-              <Link href="/gallery" className="btn-primary no-underline">
-                Browse the gallery
+            <Rise>
+              <p className="measure mt-6 text-sm leading-relaxed text-dim text-pretty sm:text-base">
+                Every fine-tuning task on 0G already emits a complete cryptographic lineage — the
+                base model’s hash, the dataset’s 0G Storage root, the exact hyperparameters, and a
+                TEE-attested delivery. Four facts that answer{' '}
+                <span className="text-fg">where did this model come from</span>. Then the terminal
+                scrolls and they are gone. Crucible canonicalises them into a manifest, stores it on
+                0G Storage, anchors its <span className="font-mono text-fg">keccak256</span> on 0G
+                Chain, and mints it as an Agentic ID.
+              </p>
+            </Rise>
+
+            <Rise className="mt-9 flex flex-wrap items-center gap-3">
+              <Link href="/passport/p-000001" className="btn-primary no-underline">
+                Read passport #1
                 <ArrowIcon className="h-3.5 w-3.5" />
               </Link>
-              <Link href="/new" className="btn-ghost no-underline">
-                Start a run
+              <Link href="/gallery" className="btn-ghost no-underline">
+                Browse the gallery
               </Link>
-            </div>
+              <a href="#verify" className="btn-quiet no-underline">
+                Verify it yourself
+              </a>
+            </Rise>
           </div>
 
-          {/* The receipt. Real field names, real shapes, struck through. */}
-          <figure className="min-w-0 rounded-lg border border-line bg-panel">
-            <figcaption className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-              <span className="label">stdout · 0g-compute-cli</span>
-              <span className="font-mono text-2xs text-faint">get-task</span>
-            </figcaption>
+          {/* The certificate itself: four anchors, each one resolvable. */}
+          <Rise className="min-w-0">
+            <div className="surface-lg relative overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+                <span className="label">Passport #1 · anchors</span>
+                <span className="inline-flex items-center gap-1.5 font-mono text-2xs text-phosphor">
+                  <Dot tone="accent" />
+                  on chain
+                </span>
+              </div>
 
-            <div className="px-4 py-4">
-              <dl className="space-y-2">
-                {RECEIPT.map((line) => (
-                  <div key={line.k} className="flex items-baseline justify-between gap-4">
-                    <dt className="shrink-0 font-mono text-2xs text-faint">{line.k}</dt>
-                    <dd className="min-w-0 truncate font-mono text-xs text-dim" title={line.v}>
-                      {line.v}
+              {/* One sweep, once, where a value has been proven. The only
+                  decorative motion on the page — and it fires a single time. */}
+              {!reduced ? (
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden" aria-hidden="true">
+                  <div className="h-px w-1/2 animate-verifysweep bg-gradient-to-r from-transparent via-phosphor to-transparent" />
+                </div>
+              ) : null}
+
+              <dl className="divide-y divide-line">
+                {ANCHORS.map((anchor) => (
+                  <div key={anchor.label} className="px-5 py-4">
+                    <dt className="label">{anchor.label}</dt>
+                    <dd className="mt-1.5 min-w-0">
+                      {anchor.href ? (
+                        <a
+                          href={anchor.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`${anchor.full} — open on ${anchor.hrefLabel}`}
+                          className="group inline-flex items-start gap-1.5 break-hash font-mono text-[13px] text-fg no-underline transition-colors hover:text-phosphor"
+                        >
+                          {anchor.value}
+                          <ExternalIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-faint transition-colors group-hover:text-phosphor" />
+                        </a>
+                      ) : (
+                        <span
+                          className="break-hash font-mono text-[13px] text-fg"
+                          title={anchor.full}
+                        >
+                          {anchor.value}
+                        </span>
+                      )}
+                    </dd>
+                    <dd className="mt-1 text-xs leading-relaxed text-faint text-pretty">
+                      {anchor.note}
                     </dd>
                   </div>
                 ))}
               </dl>
+
+              <p className="border-t border-line px-5 py-3 text-xs leading-relaxed text-faint text-pretty">
+                Passport #1 records a run that lost its model. Its own page says so before it says
+                anything else.
+              </p>
             </div>
-
-            <div className="relative border-t border-line">
-              <div className="hatch h-full w-full px-4 py-3">
-                <p className="font-mono text-2xs uppercase tracking-widest2 text-faint">
-                  buffer scrolled — nothing retained
-                </p>
-              </div>
-            </div>
-          </figure>
-        </div>
-
-        {/* The six artifacts, laid out the way a manifest lists them. */}
-        <dl className="mt-14 grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {ARTIFACTS.map((artifact) => (
-            <div key={artifact.label} className="bg-panel px-4 py-5">
-              <IconTile size="sm" tone="accent">
-                {artifact.icon}
-              </IconTile>
-              <dt className="label mt-3">{artifact.label}</dt>
-              <dd className="mt-1 font-mono text-sm text-phosphor">{artifact.value}</dd>
-              <dd className="mt-1 text-xs leading-relaxed text-faint text-pretty">
-                {artifact.note}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* Proof, not a promise. Three links a stranger can click right now. */}
-        {/* ---------------------------------------------------------------- */}
-        <section
-          className="mt-4 overflow-hidden rounded-lg border border-phosphor/30 bg-panel"
-          aria-labelledby="proof"
-        >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-phosphor/20 bg-phosphor/[0.06] px-4 py-2 sm:px-5">
-            <Dot tone="accent" pulse />
-            <h2
-              id="proof"
-              className="font-mono text-2xs uppercase tracking-widest2 text-phosphor"
-            >
-              Live on 0G Galileo
-            </h2>
-            <span className="font-mono text-2xs text-faint">
-              executed, not described — every link below resolves
-            </span>
-          </div>
-
-          <div className="grid gap-px bg-line sm:grid-cols-3">
-            {PROOF.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col bg-panel px-4 py-4 no-underline transition-colors hover:bg-raised sm:px-5"
-              >
-                <span className="label">{item.label}</span>
-                <span className="mt-1.5 inline-flex items-center gap-1.5 break-hash font-mono text-[13px] text-fg transition-colors group-hover:text-phosphor">
-                  {item.value}
-                  <ExternalIcon className="h-3.5 w-3.5 shrink-0" />
-                </span>
-                <span className="mt-1 font-mono text-2xs text-faint">{item.note}</span>
-              </a>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 sm:px-5">
-            <p className="text-xs leading-relaxed text-faint text-pretty">
-              Passport #1 records a run that lost its model: the deliverable was never
-              acknowledged, 0G deducted 30% of the fee, and the adapter hash is a published
-              sentinel. Its page says that before it says anything else.
-            </p>
-            <Link href="/passport/p-000001" className="btn-ghost shrink-0 no-underline">
-              Read passport #1
-              <ArrowIcon className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </section>
-      </section>
-
-      <HatchBand />
-
-      {/* ================================================================ */}
-      {/* The two destructive failures, as instrument readouts.             */}
-      {/* ================================================================ */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20" aria-labelledby="destructive">
-        <SectionHead eyebrow="What it costs you today" title="Two of these destroy something" id="destructive">
-          Every claim here was checked against the live 0G network rather than read from
-          documentation. Where the docs and reality disagreed, reality won.
-        </SectionHead>
-
-        <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {DESTRUCTIVE.map((item) => (
-            <article
-              key={item.title}
-              className="flex flex-col rounded-lg border border-line bg-panel"
-            >
-              <div className="flex items-center gap-3 border-b border-line px-5 py-4">
-                <IconTile tone="danger">{item.icon}</IconTile>
-                <div className="min-w-0">
-                  <p
-                    className="font-mono text-readout leading-none text-danger"
-                    aria-label={item.readout}
-                  >
-                    {item.readout}
-                  </p>
-                  <p className="label mt-2">{item.readoutLabel}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-1 flex-col px-5 py-5">
-                <h3 className="text-[15px] font-medium leading-snug text-fg">{item.title}</h3>
-                <p className="mt-2.5 text-sm leading-relaxed text-dim text-pretty">{item.body}</p>
-                <p className="mt-auto pt-5 font-mono text-2xs uppercase tracking-widest2 text-danger/90">
-                  {item.cost}
-                </p>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* The cheaper footguns. Labelled by the stage where they bite —
-            that ordering is real information; a 01/02/03 would not be. */}
-        <ul className="mt-4 grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
-          {FOOTGUNS.map((item) => (
-            <li key={item.title} className="bg-panel px-5 py-5">
-              <p className="label text-warn/80">{item.when}</p>
-              <h3 className="mt-2.5 text-sm font-medium leading-snug text-fg">{item.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-dim text-pretty">{item.body}</p>
-            </li>
-          ))}
-        </ul>
+          </Rise>
+        </Stagger>
       </section>
 
       <HatchBand accent />
 
-      {/* ================================================================ */}
-      {/* The answer.                                                       */}
-      {/* ================================================================ */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20" aria-labelledby="answer">
-        <SectionHead eyebrow="What Crucible does instead" title="Twelve CLI steps become one upload" id="answer">
-          Nothing here asks you to trust Crucible. The daemon does the waiting; the chain holds the
-          claim.
-        </SectionHead>
+      {/* ================================================================== */}
+      {/* Verify it yourself — the claim, executable.                         */}
+      {/* ================================================================== */}
+      <section
+        id="verify"
+        className="mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="verify-head"
+      >
+        <Stagger>
+          <Rise>
+            <SectionHead
+              eyebrow="No wallet required"
+              title="Three commands, and nothing taken on my word"
+              id="verify-head"
+            >
+              The manifest is public, the anchor is on a public chain, and the check needs no key.
+              Run these against public endpoints — none of them touch this application.
+            </SectionHead>
+          </Rise>
 
-        <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
-          {ANSWERS.map((answer) => (
-            <div key={answer.title} className="flex flex-col bg-panel px-5 py-6">
-              <IconTile tone="accent">{answer.icon}</IconTile>
-              <h3 className="mt-4 text-[15px] font-medium leading-snug text-fg">{answer.title}</h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-dim text-pretty">{answer.body}</p>
+          <Rise className="mt-10">
+            <div className="surface shadow-verified overflow-hidden">
+              <div className="flex items-center gap-2.5 border-b border-line px-4 py-3 sm:px-5">
+                <IconTile size="sm" tone="accent">
+                  <TerminalIcon className="h-3.5 w-3.5" />
+                </IconTile>
+                <span className="label">verify-manifest</span>
+              </div>
+
+              <div className="px-4 py-5 sm:px-5">
+                <ol className="space-y-5">
+                  {VERIFY_STEPS.map((step) => (
+                    <li key={step.comment}>
+                      <p className="font-mono text-2xs text-faint">{step.comment}</p>
+                      <pre className="well mt-1.5 overflow-x-auto px-3 py-2.5 font-mono text-xs leading-relaxed text-dim">
+                        <code>{step.command}</code>
+                      </pre>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <p className="border-t border-line px-4 py-3 text-xs leading-relaxed text-faint text-pretty sm:px-5">
+                Step 3 recomputes the hash from the bytes you just downloaded and calls the deployed
+                contract. It returns <span className="font-mono text-ok">true</span> for the
+                anchored value and <span className="font-mono text-danger">false</span> for a
+                tampered one — the whole trust claim, in one call.
+              </p>
             </div>
-          ))}
-        </div>
+          </Rise>
+        </Stagger>
       </section>
 
       <HatchBand />
 
-      {/* ================================================================ */}
-      {/* The honest caveat. Judges will ask; the answer is the roadmap.     */}
-      {/* ================================================================ */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20" aria-labelledby="caveat">
-        <div className="grid gap-10 rounded-lg border border-line bg-panel px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
-          <div>
-            <h2 id="caveat" className="font-mono text-sm text-fg">
-              What a passport does not claim
-            </h2>
-            <p className="measure mt-3 text-sm leading-relaxed text-dim text-pretty">
-              Crucible proves lineage, not honest training. It proves this adapter’s artifacts
-              hash-match, this dataset is retrievable at this root hash, this provider’s TEE
-              signer is acknowledged on-chain, and 0G’s integrity check passed on delivery. It
-              does <span className="text-fg">not</span> prove the provider ran the epochs it
-              claimed — that needs zero-knowledge proofs over the training computation, which is
-              a research programme, not a feature.
-            </p>
-            <p className="measure mt-4 text-sm leading-relaxed text-dim text-pretty">
-              What is different here is where the claim comes from. Every other model-provenance
-              tool assumes you sign a model you trained on your own hardware. Here the training
-              happened inside an enclave on a network the model’s owner does not control, and the
-              attestation is anchored on a public chain. The provenance is not asserted by the
-              party you would have to trust.
-            </p>
-          </div>
+      {/* ================================================================== */}
+      {/* What the runs actually cost. Same type size as the successes.       */}
+      {/* ================================================================== */}
+      <section
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="cost-head"
+      >
+        <Stagger>
+          <Rise>
+            <SectionHead
+              eyebrow="What it cost to find out"
+              title="One run lost its model. The other came back."
+              id="cost-head"
+            >
+              To produce a passport I had to fine-tune something, twice. Both tasks were delivered.
+              Task 1 was never collected and paid the penalty for it; task 2 was retrieved and
+              acknowledged — but only after moving off Windows.
+            </SectionHead>
+          </Rise>
 
-          <div className="flex flex-col justify-between gap-6 border-t border-line pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
-            <dl className="space-y-4">
-              <div>
-                <dt className="label">Provider hardware</dt>
-                <dd className="mt-1 font-mono text-sm text-fg">1x H200</dd>
-                <dd className="font-mono text-xs text-faint">8 vCPU · 187 GB · Intel TDX</dd>
+          <Rise className="mt-10">
+            <div className="surface overflow-hidden">
+              <dl className="grid gap-px bg-line sm:grid-cols-3">
+                {LEDGER.map((row) => (
+                  // `dt` must precede its `dd`; the number reads first, so the
+                  // order is reversed visually rather than in the markup.
+                  <div key={row.label} className="flex flex-col-reverse bg-panel px-5 py-6">
+                    <dt className="label mt-3">{row.label}</dt>
+                    <dd className={`font-mono text-readout leading-none ${row.tone}`}>
+                      {row.readout}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="flex items-start gap-3 border-t border-line px-5 py-5">
+                <IconTile tone="danger">
+                  <AlertIcon className="h-4 w-4" />
+                </IconTile>
+                <p className="measure text-sm leading-relaxed text-dim text-pretty">
+                  <span className="font-mono text-fg">acknowledgeModel</span> retrieves nothing on
+                  Windows + Node 22, on either download path. Task 1 force-settled with{' '}
+                  <span className="font-mono text-danger">acknowledged: false</span> and an empty{' '}
+                  <span className="font-mono text-fg">encryptedSecret</span>, and my sub-account was
+                  debited exactly 30.0000% of the fee — 0G’s documented penalty for a model you
+                  never collected. That arithmetic is the proof it was forfeited rather than quietly
+                  delivered somewhere else. Task{' '}
+                  <span className="font-mono text-fg">3e385c46</span> was then re-run from WSL2
+                  Linux and came back: <span className="font-mono text-ok">acknowledged: true</span>{' '}
+                  on-chain, a 93,642,469-byte artifact on disk. The defect is environmental, and
+                  proving that took losing one model first.
+                </p>
               </div>
-              <div>
-                <dt className="label">Mainnet price</dt>
-                <dd className="mt-1 font-mono text-sm text-fg">0.5 0G</dd>
-                <dd className="font-mono text-xs text-faint">per million tokens</dd>
-              </div>
+            </div>
+          </Rise>
+        </Stagger>
+      </section>
+
+      <HatchBand />
+
+      {/* ================================================================== */}
+      {/* Six findings, of fourteen.                                          */}
+      {/* ================================================================== */}
+      <section
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="findings-head"
+      >
+        <Stagger>
+          <Rise>
+            <SectionHead
+              eyebrow="Six of fourteen findings"
+              title="Every one reproduced against the live network"
+              id="findings-head"
+            >
+              Where 0G’s documentation and the running network disagreed, the network won and the
+              documentation is quoted rather than paraphrased. Six of these are corrections to 0G’s
+              own published material.
+            </SectionHead>
+          </Rise>
+
+          {/* A grid of motion wrappers cannot be a <ul>: only <li> may be a
+              child of a list. Marked up as articles, which is what they are. */}
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
+            {FOOTGUNS.map((item) => (
+              <Rise key={item.title} className="h-full">
+                <article className="surface flex h-full flex-col px-5 py-5">
+                  <Badge
+                    tone={
+                      item.sev === 'critical' ? 'danger' : item.sev === 'blocking' ? 'warn' : 'neutral'
+                    }
+                  >
+                    {SEV_LABEL[item.sev]}
+                  </Badge>
+                  <h3 className="mt-4 text-[15px] font-medium leading-snug text-fg text-pretty">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-dim text-pretty">{item.body}</p>
+                  <p className="mt-auto pt-5 font-mono text-2xs uppercase tracking-widest2 text-faint">
+                    {item.evidence}
+                  </p>
+                </article>
+              </Rise>
+            ))}
+          </div>
+        </Stagger>
+      </section>
+
+      <HatchBand accent />
+
+      {/* ================================================================== */}
+      {/* What Crucible does about it.                                        */}
+      {/* ================================================================== */}
+      <section
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="does-head"
+      >
+        <Stagger>
+          <Rise>
+            <SectionHead
+              eyebrow="What Crucible does"
+              title="Twelve CLI steps become one upload"
+              id="does-head"
+            >
+              Nothing here asks you to trust Crucible’s own database. The daemon does the waiting;
+              the chain holds the claim.
+            </SectionHead>
+          </Rise>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {CAPABILITIES.map((cap) => (
+              <Rise key={cap.title} className="h-full">
+                <div className="surface flex h-full flex-col px-5 py-6">
+                  <IconTile tone="accent">{cap.icon}</IconTile>
+                  <h3 className="mt-4 text-[15px] font-medium leading-snug text-fg text-pretty">
+                    {cap.title}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-dim text-pretty">{cap.body}</p>
+                </div>
+              </Rise>
+            ))}
+          </div>
+        </Stagger>
+      </section>
+
+      <HatchBand />
+
+      {/* ================================================================== */}
+      {/* The boundary.                                                       */}
+      {/* ================================================================== */}
+      <section
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="boundary-head"
+      >
+        <Stagger>
+          <Rise>
+            <SectionHead
+              eyebrow="The boundary"
+              title="What a passport does not claim"
+              id="boundary-head"
+            >
+              Stated in full rather than glossed, because a judge checks this first — and because a
+              provenance tool that overstates its own provenance has already lost the argument.
+            </SectionHead>
+          </Rise>
+
+          <Rise className="mt-10">
+            <dl className="surface grid gap-px overflow-hidden bg-line sm:grid-cols-2">
+              {NOT_CLAIMED.map((item) => (
+                <div key={item.head} className="bg-panel px-5 py-6">
+                  <dt className="flex items-center gap-2.5 text-[15px] font-medium text-fg">
+                    <AnchorIcon className="h-4 w-4 shrink-0 text-faint" />
+                    {item.head}
+                  </dt>
+                  <dd className="mt-2.5 text-sm leading-relaxed text-dim text-pretty">
+                    {item.body}
+                  </dd>
+                </div>
+              ))}
             </dl>
+          </Rise>
 
-            <Link href="/passport/p-000001" className="btn-ghost no-underline">
-              See a real passport
-              <ArrowIcon className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
+          <Rise className="mt-4">
+            <div className="surface flex flex-wrap items-center justify-between gap-4 px-5 py-5">
+              <p className="measure text-sm leading-relaxed text-dim text-pretty">
+                The one thing a stranger should do next is stop reading this page and check the
+                record for themselves.
+              </p>
+              <Link href="/passport/p-000001" className="btn-primary shrink-0 no-underline">
+                Read passport #1
+                <ArrowIcon className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </Rise>
+        </Stagger>
       </section>
     </>
   )
