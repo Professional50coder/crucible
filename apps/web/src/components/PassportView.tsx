@@ -69,7 +69,9 @@ import {
 } from '@/lib/manifest'
 import { DEPLOYMENT_BLOCKS, isDeployed, passportAddress } from '@/lib/passport-contract'
 import type { PassportRecord } from '@/lib/types'
+import { Disclosure } from './Disclosure'
 import { CopyButton, Hash, TypedRow, TypedRows } from './Hash'
+import { LineageGraph } from './LineageGraph'
 import {
   AdapterIcon,
   AlertIcon,
@@ -87,6 +89,12 @@ import { Badge, Dot, IconTile, NetworkBadge, Note, Panel, PanelHeader, Stat } fr
 
 /** The result of the one check the reader performs without leaving the page. */
 type Integrity = 'verified' | 'mismatch' | 'demo'
+
+/**
+ * How many typed rows the decoded-manifest section renders. Stated here so the
+ * closed summary can count them; if a row is added below, this changes with it.
+ */
+const DECODED_FIELDS = 16
 
 export function PassportView({ record }: { record: PassportRecord }) {
   const { manifest, mint } = record
@@ -144,6 +152,57 @@ export function PassportView({ record }: { record: PassportRecord }) {
     : mint.contractAddress
 
   const serial = mint.tokenId ? `#${mint.tokenId}` : '—'
+
+  /**
+   * The verdicts the collapsed sections carry on their summary lines.
+   *
+   * A collapsed section may never hide a negative finding. Each of these is
+   * derived from the record rather than written once and left to rot, so a
+   * passport whose adapter survived says so and a passport whose adapter was
+   * destroyed says *that* — while shut, before anyone clicks.
+   */
+  const manifestFindings: string[] = []
+  if (sentinel) manifestFindings.push('adapter.rootHash holds a sentinel, not an artifact')
+  if (!manifest.tee.attestationVerified) manifestFindings.push('tee.attestationVerified is false')
+  if (!manifest.tee.acknowledged) manifestFindings.push('tee.acknowledged is false')
+  if (!configMatches) manifestFindings.push('configHash disagrees with the chain')
+  if (lost) manifestFindings.push('task.state is provider-reported only')
+
+  const manifestVerdict =
+    manifestFindings.length === 0
+      ? `${DECODED_FIELDS} fields, all consistent`
+      : `${DECODED_FIELDS} fields · ${manifestFindings.join(' · ')}`
+
+  const manifestTone: 'default' | 'ok' | 'warn' | 'danger' =
+    sentinel || lost || !configMatches ? 'danger' : manifestFindings.length > 0 ? 'warn' : 'ok'
+
+  const custodyVerdict = lost
+    ? 'six links · the fifth is broken — no adapter was ever retrieved'
+    : sentinel
+      ? 'six links · the fifth carries a sentinel, not an artifact'
+      : `six links, unbroken${
+          manifest.adapter.sizeBytes ? ` · ${formatBytes(manifest.adapter.sizeBytes)} adapter` : ''
+        } · every hash beside the thing that proves it`
+
+  const custodyTone: 'default' | 'ok' | 'warn' | 'danger' = lost || sentinel ? 'danger' : 'ok'
+
+  const anchorVerdict = !onChain
+    ? 'demo record · nothing anchored, so nothing here links to an explorer'
+    : mint.status !== 'minted'
+      ? 'written to 0G Storage, not yet anchored on chain'
+      : `token ${serial} · block ${
+          mint.blockNumber ? formatCount(mint.blockNumber) : '—'
+        } on ${network.explorerLabel}${
+          deployed ? '' : ` · Passport.sol is not deployed on ${network.label}`
+        }`
+
+  const anchorTone: 'default' | 'ok' | 'warn' | 'danger' = !onChain
+    ? 'default'
+    : mint.status !== 'minted' || !deployed
+      ? 'warn'
+      : integrity === 'mismatch'
+        ? 'danger'
+        : 'ok'
 
   return (
     <article className="passport mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
@@ -336,6 +395,14 @@ export function PassportView({ record }: { record: PassportRecord }) {
       />
 
       {/* ================================================================ */}
+      {/* The lineage, drawn. Always open, never collapsible: the graph is   */}
+      {/* the shape of the argument, not a detail of it.                     */}
+      {/* ================================================================ */}
+      <div className="mt-4">
+        <LineageGraph record={record} />
+      </div>
+
+      {/* ================================================================ */}
       {/* What a stranger can check, and its result                         */}
       {/* ================================================================ */}
       <section
@@ -450,17 +517,14 @@ export function PassportView({ record }: { record: PassportRecord }) {
       {/* ================================================================ */}
       {/* Chain of custody — the narrative                                  */}
       {/* ================================================================ */}
-      <Panel className="mt-4" as="section">
-        <PanelHeader
-          title="Chain of custody"
-          icon={<ShieldIcon className="h-3.5 w-3.5" />}
-          aside={
-            <span className="font-mono text-2xs text-faint">
-              six links · every hash beside the thing that proves it
-            </span>
-          }
-        />
-
+      <Disclosure
+        className="mt-4"
+        id={`custody-${record.id}`}
+        title="Chain of custody"
+        verdict={custodyVerdict}
+        tone={custodyTone}
+        icon={<ShieldIcon className="h-3.5 w-3.5" />}
+      >
         <ol className="px-4 py-6 sm:px-6">
           <ChainLink
             icon={<ModelIcon className="h-4 w-4" />}
@@ -589,22 +653,19 @@ export function PassportView({ record }: { record: PassportRecord }) {
             last
           />
         </ol>
-      </Panel>
+      </Disclosure>
 
       {/* ================================================================ */}
       {/* Decoded manifest — the record format, not a hash dump             */}
       {/* ================================================================ */}
-      <Panel className="mt-4" as="section">
-        <PanelHeader
-          title="Decoded manifest"
-          icon={<TerminalIcon className="h-3.5 w-3.5" />}
-          aside={
-            <span className="font-mono text-2xs text-faint">
-              v{manifest.version} schema · {canonicalDocument.length} bytes canonical
-            </span>
-          }
-        />
-
+      <Disclosure
+        className="mt-4"
+        id={`decoded-${record.id}`}
+        title={`Decoded manifest · v${manifest.version} schema`}
+        verdict={manifestVerdict}
+        tone={manifestTone}
+        icon={<TerminalIcon className="h-3.5 w-3.5" />}
+      >
         <TypedRows>
           <TypedRow type="string" name="task.id" value={manifest.task.id} />
           <TypedRow
@@ -707,13 +768,13 @@ export function PassportView({ record }: { record: PassportRecord }) {
             }
           />
         </TypedRows>
-      </Panel>
+      </Disclosure>
 
       {/* ================================================================ */}
       {/* Training configuration + cost                                     */}
       {/* ================================================================ */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Panel as="section">
+        <Panel as="section" hover>
           <PanelHeader
             title="Training configuration"
             icon={<SlidersIcon className="h-3.5 w-3.5" />}
@@ -765,7 +826,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
           </div>
         </Panel>
 
-        <Panel as="section">
+        <Panel as="section" hover>
           <PanelHeader
             title="Cost"
             aside={
@@ -833,17 +894,14 @@ export function PassportView({ record }: { record: PassportRecord }) {
       {/* ================================================================ */}
       {/* On-chain anchor                                                   */}
       {/* ================================================================ */}
-      <Panel className="mt-4" as="section">
-        <PanelHeader
-          title="On-chain anchor"
-          icon={<AnchorIcon className="h-3.5 w-3.5" />}
-          aside={
-            <span className="font-mono text-2xs text-faint">
-              chain {manifest.chainId} · {network.explorerLabel}
-            </span>
-          }
-        />
-
+      <Disclosure
+        className="mt-4"
+        id={`anchor-${record.id}`}
+        title="On-chain anchor"
+        verdict={anchorVerdict}
+        tone={anchorTone}
+        icon={<AnchorIcon className="h-3.5 w-3.5" />}
+      >
         {!onChain ? (
           <div className="border-b border-line px-4 py-4 sm:px-5">
             <Note>
@@ -1003,12 +1061,12 @@ export function PassportView({ record }: { record: PassportRecord }) {
             </Note>
           </div>
         ) : null}
-      </Panel>
+      </Disclosure>
 
       {/* ================================================================ */}
       {/* Verify it yourself                                                */}
       {/* ================================================================ */}
-      <Panel className="mt-4" as="section">
+      <Panel className="mt-4" as="section" hover>
         <PanelHeader
           title="Verify this yourself"
           icon={<CheckIcon className="h-3.5 w-3.5" />}
@@ -1105,6 +1163,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
       {/* ================================================================ */}
       {record.anchoredManifest ? (
         <RawDocument
+          id={`anchored-doc-${record.id}`}
           title="Anchored document"
           subtitle="the exact bytes this token’s hash commits to"
           document={record.anchoredManifest}
@@ -1112,6 +1171,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
       ) : null}
 
       <RawDocument
+        id={`raw-manifest-${record.id}`}
         title={record.anchoredManifest ? 'Full manifest (v1)' : 'Raw manifest'}
         subtitle={
           record.anchoredManifest
@@ -1383,19 +1443,20 @@ function VerificationHero({
         ) : null}
 
         {/* ---- verify it yourself ---- */}
-        <details className="group mt-5 rounded-md border border-line bg-sub/60">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5">
-            <span className="inline-flex items-center gap-2">
-              <TerminalIcon className="h-3.5 w-3.5 text-faint" />
-              <span className="label text-dim">Verify it yourself — no wallet, no clone</span>
-            </span>
-            <span className="shrink-0 font-mono text-2xs text-faint group-open:hidden">show</span>
-            <span className="hidden shrink-0 font-mono text-2xs text-faint group-open:inline">
-              hide
-            </span>
-          </summary>
-
-          <div className="space-y-3 border-t border-line px-4 py-4">
+        {/* Tier three: nested inside the section it explains. */}
+        <Disclosure
+          className="mt-5"
+          id={`redo-the-check-${tokenId ?? 'record'}`}
+          title="Verify it yourself"
+          verdict={
+            manifestRootHash
+              ? 'two commands, no wallet, no clone'
+              : 'no stored document to fetch — the check runs on the JSON printed below'
+          }
+          tone={manifestRootHash ? 'default' : 'warn'}
+          icon={<TerminalIcon className="h-3.5 w-3.5" />}
+        >
+          <div className="space-y-3 px-4 py-4">
             {manifestRootHash ? (
               <Command
                 caption="1 · fetch the exact document that was hashed, from 0G Storage"
@@ -1431,7 +1492,7 @@ function VerificationHero({
               </div>
             </div>
           </div>
-        </details>
+        </Disclosure>
       </div>
     </section>
   )
@@ -1659,8 +1720,10 @@ function ChainLink({
 
       <div className={`min-w-0 ${last ? '' : 'pb-4'}`}>
         <div
-          className={`rounded-lg border px-4 py-4 ${
-            danger ? 'border-danger/30 bg-danger/[0.04]' : 'border-line bg-sub'
+          className={`rounded-lg border px-4 py-4 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-panel ${
+            danger
+              ? 'border-danger/30 bg-danger/[0.04] hover:border-danger/50'
+              : 'border-line bg-sub hover:border-line-bright'
           }`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -1869,7 +1932,7 @@ function VerifyStep({
   code: string
 }) {
   return (
-    <li className="flex gap-4 px-4 py-5 sm:px-5">
+    <li className="group flex gap-4 px-4 py-5 transition-colors duration-150 ease-out hover:bg-raised/40 sm:px-5">
       <span className="mt-0.5 font-mono text-xs text-faint">{String(n).padStart(2, '0')}</span>
       <div className="min-w-0 flex-1">
         <h3 className="font-mono text-[13px] text-fg">{title}</h3>
@@ -1884,10 +1947,12 @@ function VerifyStep({
 }
 
 function RawDocument({
+  id,
   title,
   subtitle,
   document,
 }: {
+  id: string
   title: string
   subtitle: string
   document: Record<string, unknown> | object
@@ -1895,19 +1960,13 @@ function RawDocument({
   const canonical = canonicalize(document)
 
   return (
-    <details className="group mt-4 rounded-lg border border-line bg-panel">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <span className="min-w-0">
-          <span className="label text-dim">{title}</span>
-          <span className="ml-2 font-mono text-2xs text-faint">{subtitle}</span>
-        </span>
-        <span className="shrink-0 font-mono text-2xs text-faint group-open:hidden">show</span>
-        <span className="hidden shrink-0 font-mono text-2xs text-faint group-open:inline">
-          hide
-        </span>
-      </summary>
-
-      <div className="border-t border-line">
+    <Disclosure
+      className="mt-4"
+      id={id}
+      title={title}
+      verdict={`${canonical.length} bytes canonical — ${subtitle}`}
+    >
+      <div>
         <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5">
           <span className="font-mono text-2xs text-faint">{canonical.length} bytes canonical</span>
           <div className="flex items-center gap-1">
@@ -1921,6 +1980,6 @@ function RawDocument({
           </pre>
         </div>
       </div>
-    </details>
+    </Disclosure>
   )
 }

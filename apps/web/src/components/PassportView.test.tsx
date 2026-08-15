@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { buildPassports } from '@/lib/mock/fixtures'
 import type { PassportRecord } from '@/lib/types'
@@ -253,6 +254,106 @@ describe('<PassportView> — a demo record', () => {
     expect(
       screen.getByText(/no document on 0G Storage to fetch/i),
     ).toBeInTheDocument()
+  })
+})
+
+describe('<PassportView> — progressive disclosure', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear()
+  })
+
+  it('leaves the three things a reader must not miss permanently open', () => {
+    // If someone collapses everything else and walks away, the verification, the
+    // identity block and the settlement are what they should still have seen.
+    const { container } = render(<PassportView record={real} />)
+
+    const hero = container.querySelector('[aria-labelledby="verification"]')!
+    const identity = container.querySelector('header')!
+    const settlement = container.querySelector('[aria-labelledby="settlement"]')!
+
+    for (const node of [hero, identity, settlement]) {
+      expect(node).not.toBeNull()
+      expect(node.closest('details')).toBeNull()
+    }
+  })
+
+  it('collapses the four dense sections by default', () => {
+    const { container } = render(<PassportView record={real} />)
+
+    const ids = [
+      `custody-${real.id}`,
+      `decoded-${real.id}`,
+      `anchor-${real.id}`,
+      `raw-manifest-${real.id}`,
+    ]
+
+    for (const id of ids) {
+      const section = container.querySelector<HTMLDetailsElement>(`details[data-disclosure="${id}"]`)
+      expect(section, id).not.toBeNull()
+      expect(section!.open, id).toBe(false)
+    }
+  })
+
+  it('never lets a collapsed section hide a negative finding', () => {
+    // The whole risk of progressive disclosure on this page: a neutral label
+    // over bad news. Each closed summary states the finding it is sitting on.
+    const { container } = render(<PassportView record={real} />)
+
+    const custody = container.querySelector(
+      `details[data-disclosure="custody-${real.id}"] summary`,
+    )!
+    expect(custody.textContent).toMatch(/no adapter was ever retrieved/i)
+
+    const decoded = container.querySelector(
+      `details[data-disclosure="decoded-${real.id}"] summary`,
+    )!
+    expect(decoded.textContent).toMatch(/sentinel, not an artifact/i)
+    expect(decoded.textContent).toMatch(/tee\.attestationVerified is false/i)
+  })
+
+  it('states the verdict of a section that carries good news too', () => {
+    const { container } = render(<PassportView record={demo} />)
+
+    const anchor = container.querySelector(`details[data-disclosure="anchor-${demo.id}"] summary`)!
+    expect(anchor.textContent).toMatch(/demo record/i)
+    expect(anchor.textContent).toMatch(/nothing here links to an explorer/i)
+  })
+
+  it('deletes no facts — a collapsed section still carries every one of them', () => {
+    // Progressive disclosure hides, it does not remove. Every load-bearing value
+    // stays in the document so find-in-page, print and screen readers reach it.
+    render(<PassportView record={real} />)
+
+    expect(screen.getByText('dataset.rootHash')).toBeInTheDocument()
+    expect(screen.getByText('adapter.rootHash — SENTINEL')).toBeInTheDocument()
+    expect(screen.getByText('manifestRootHash (anchored)')).toBeInTheDocument()
+  })
+
+  it('remembers an opened section so following a link does not lose the place', async () => {
+    const user = userEvent.setup()
+    const { container, unmount } = render(<PassportView record={real} />)
+
+    await user.click(
+      container.querySelector(`details[data-disclosure="decoded-${real.id}"] summary`)!,
+    )
+    await waitFor(() =>
+      expect(
+        container.querySelector<HTMLDetailsElement>(
+          `details[data-disclosure="decoded-${real.id}"]`,
+        )!.open,
+      ).toBe(true),
+    )
+
+    unmount()
+
+    const again = render(<PassportView record={real} />)
+    await waitFor(() =>
+      expect(
+        again.container.querySelector<HTMLDetailsElement>(
+          `details[data-disclosure="decoded-${real.id}"]`,
+        )!.open,
+      ).toBe(true),
+    )
   })
 })
 
