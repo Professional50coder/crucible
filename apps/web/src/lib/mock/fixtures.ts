@@ -275,6 +275,170 @@ export function realPassport(): PassportRecord {
   }
 }
 
+/**
+ * Passport #2 — the same pipeline, run again, with one variable changed.
+ *
+ * Task `3e385c46` used the identical contract, wallet, dataset, base model,
+ * training config and provider as passport #1. The only difference was the
+ * machine the acknowledgement ran on: Windows for #1, WSL2 Linux for #2.
+ *
+ * #1 lost its model and paid 0G's 30% penalty. #2 retrieved 93,642,469 bytes,
+ * had them validated against the provider's on-chain root hash, and settled
+ * `acknowledged: true`.
+ *
+ * The two records sit side by side so that comparison is something a reader can
+ * see rather than something this project has to assert.
+ */
+export const REAL2 = {
+  taskId: '3e385c46-f5dc-4e93-b713-63ab7a987ae3',
+  provider: TESTNET_PROVIDER,
+  model: 'Qwen2.5-0.5B-Instruct',
+  baseModelHash: REAL.baseModelHash,
+  datasetRootHash: REAL.datasetRootHash,
+  /** Read from FineTuningServing.getDeliverables() at mint time, not from notes. */
+  adapterRootHash: '0x40a5f256ff464106f6be38ef146614bd78d5ddfe07af16b156d3efcddb561b4d',
+  /** sha256 of the bytes that landed on disk. */
+  artifactSha256: '0x9f78876467e409cdcf4b95fbb3aacb6958d6cd487295c31d208996838026ae1d',
+  artifactSizeBytes: 93_642_469,
+  acknowledgeTx: '0x0911a1326338fc260a237c3c27baf8a697ffa193f2aec7c876c7d43207c15aeb',
+  manifestRootHash: '0x0f46406e90c548205a0f59481f6c8c35e4a91a8ad5139cb8332382acd23b93a7',
+  tokenId: '2',
+  mintTx: '0x60094f63813827391266d7f77c02649342b435d86d297964d499d2deae420324',
+  mintBlock: 49612106,
+  mintedAt: '2026-08-16T00:57:00.000Z',
+  owner: REAL.owner,
+  training: REAL.training,
+  exampleCount: REAL.exampleCount,
+  tokenCount: REAL.tokenCount,
+  totalNeuron: REAL.totalNeuron,
+  storageReserveNeuron: REAL.storageReserveNeuron,
+  trainingNeuron: REAL.trainingNeuron,
+} as const
+
+export const ADAPTER_RETRIEVED_VIA =
+  "downloadMethod '0g-storage', from WSL2 Linux (Node 22.23.2). The same call had already failed " +
+  'twice on Windows: the storage path with spawn 0g-storage-client ENOENT, because the bundled ' +
+  'binary is an ELF 64-bit executable built for GNU/Linux, and the TEE path at 0 bytes with ' +
+  '"stream.on is not a function" before surfacing HTTP 429. Nothing about the code, wallet, task ' +
+  'or SDK version changed between the failure and the success — only the operating system. The ' +
+  "SDK validated the 93,642,469 bytes against the provider's on-chain root hash before " +
+  'acknowledging, so the integrity guarantee is real; it is simply unreachable on Windows.'
+
+/** The document whose keccak256 is anchored for token #2. Keys already sorted. */
+export const REAL2_ANCHORED_MANIFEST: Record<string, unknown> = {
+  adapterRootHash: REAL2.adapterRootHash,
+  artifactSha256: REAL2.artifactSha256,
+  artifactSizeBytes: REAL2.artifactSizeBytes,
+  baseModelHash: REAL2.baseModelHash,
+  chainId: 16602,
+  configHash: configHash(REAL2.training),
+  datasetRootHash: REAL2.datasetRootHash,
+  network: 'testnet',
+  note:
+    'Adapter retrieved and acknowledged. Downloaded via the 0g-storage path from WSL2 Linux ' +
+    "after both paths failed on Windows; the SDK validated the artifact against the provider's " +
+    'on-chain root hash before acknowledging.',
+  provider: REAL2.provider,
+  retrievalPlatform: 'wsl2-linux',
+  taskId: REAL2.taskId,
+  version: 1,
+}
+
+/** Passport #2, assembled from the values above and nothing else. */
+export function realPassport2(): PassportRecord {
+  const manifest: PassportManifest = {
+    version: 1,
+    network: 'testnet',
+    chainId: 16602,
+    createdAt: REAL2.mintedAt,
+    task: {
+      id: REAL2.taskId,
+      provider: REAL2.provider,
+      state: 'Finished',
+    },
+    base: {
+      model: REAL2.model,
+      modelHash: REAL2.baseModelHash,
+      tokenizer: TOKENIZERS[REAL2.model]!,
+    },
+    dataset: {
+      rootHash: REAL2.datasetRootHash,
+      format: 'chat',
+      exampleCount: REAL2.exampleCount,
+      tokenCount: REAL2.tokenCount,
+    },
+    training: REAL2.training,
+    adapter: {
+      rootHash: REAL2.adapterRootHash,
+      sizeBytes: REAL2.artifactSizeBytes,
+    },
+    fee: {
+      trainingNeuron: REAL2.trainingNeuron,
+      storageReserveNeuron: REAL2.storageReserveNeuron,
+      totalNeuron: REAL2.totalNeuron,
+    },
+    tee: {
+      signerAddress: TEE_SIGNER,
+      acknowledged: true,
+      // Still false, and for the same reason as #1: verifyService() is not
+      // called anywhere in this codebase. Retrieving the artifact does not
+      // verify the enclave quote, and conflating the two would be the exact
+      // sort of rounding-up this project exists to replace.
+      attestationVerified: false,
+    },
+  }
+
+  return {
+    id: 'p-000002',
+    name: 'sentiment-retrieved-02',
+    summary:
+      'The same pipeline as passport #1, run a second time, with one variable changed: the ' +
+      'acknowledgement ran on Linux instead of Windows. This one kept its model — 93,642,469 ' +
+      'bytes, validated against the on-chain root hash, and acknowledged on chain.',
+    provenance: 'chain',
+    manifest,
+    anchoredManifest: REAL2_ANCHORED_MANIFEST,
+    adapterOrigin: {
+      kind: 'retrieved',
+      artifactSha256: REAL2.artifactSha256,
+      retrievedVia: ADAPTER_RETRIEVED_VIA,
+    },
+    settlement: {
+      acknowledged: true,
+      note:
+        'getDeliverables returns acknowledged: true for this task. The full fee was paid and no ' +
+        'penalty was deducted — the deliverable was collected rather than forfeited. Acknowledge ' +
+        'transaction ' + REAL2.acknowledgeTx + '.',
+    },
+    caveat: {
+      title: 'This run kept its model. Passport #1 did not. Nothing else about them differed.',
+      body:
+        'Same contract, same wallet, same dataset, same base model, same training config, same ' +
+        'provider, same SDK version. The acknowledgement for #1 ran on Windows and failed on ' +
+        'both download paths, so the deliverable was force-settled unacknowledged and 30% of the ' +
+        'fee was taken. The acknowledgement for this task ran from WSL2 Linux, the 0G Storage ' +
+        'path worked, the artifact was validated against the root hash the provider committed on ' +
+        'chain, and the deliverable reads acknowledged: true. Both outcomes are permanently ' +
+        'recorded on the same contract, which is the point: the difference is diagnosable rather ' +
+        'than anecdotal. What this passport still does not claim is that the provider ran the ' +
+        'epochs it said it did — that needs proofs over the training itself, and no amount of ' +
+        'hashing establishes it.',
+    },
+    mint: {
+      status: 'minted',
+      manifestRootHash: REAL2.manifestRootHash,
+      configHash: configHash(REAL2.training),
+      contractAddress: '0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7',
+      tokenId: REAL2.tokenId,
+      txHash: REAL2.mintTx,
+      owner: REAL2.owner,
+      blockNumber: REAL2.mintBlock,
+      mintedAt: REAL2.mintedAt,
+    },
+    hardware: HARDWARE,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
@@ -633,7 +797,7 @@ export function buildPassports(now: number = Date.now()): PassportRecord[] {
 
   // Newest first, and the real one keeps its true issue date rather than being
   // floated to the top by fiat. The gallery features it explicitly instead.
-  return [realPassport(), ...demo].sort(
+  return [realPassport(), realPassport2(), ...demo].sort(
     (a, b) =>
       new Date(b.manifest.createdAt).getTime() - new Date(a.manifest.createdAt).getTime(),
   )
