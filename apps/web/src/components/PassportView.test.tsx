@@ -7,7 +7,8 @@ import type { PassportRecord } from '@/lib/types'
 import { PassportView } from './PassportView'
 
 const records = buildPassports(Date.parse('2026-08-20T00:00:00.000Z'))
-const real = records.find((r) => r.provenance === 'chain')!
+const real = records.find((r) => r.id === 'p-000001')!
+const retrieved = records.find((r) => r.id === 'p-000002')!
 const demo = records.find((r) => r.provenance === 'demo' && r.mint.status === 'minted')!
 
 describe('<PassportView> — the record that is real', () => {
@@ -373,5 +374,64 @@ describe('<PassportView> — a tampered record', () => {
     expect(container.querySelector('[data-state="mismatch"]')).not.toBeNull()
     // The contract's answer for this hash is false, and is shown as false.
     expect(screen.getByTestId('verify-manifest-return')).toHaveTextContent('false')
+  })
+})
+
+describe('<PassportView> — the two outcomes, side by side', () => {
+  // Passports #1 and #2 are the same pipeline run twice. Everything about them
+  // matched except the machine the acknowledgement ran on. These tests exist so
+  // that comparison cannot silently rot: if a fixture is edited such that the
+  // two runs stop differing in exactly one way, this fails.
+
+  it('is a second real on-chain record, not a demo', () => {
+    expect(retrieved.provenance).toBe('chain')
+    expect(retrieved.mint.status).toBe('minted')
+    expect(retrieved.mint.tokenId).toBe('2')
+  })
+
+  it('differs from passport #1 only in how the deliverable settled', () => {
+    // The inputs are identical by construction — that is the whole argument.
+    expect(retrieved.manifest.base.modelHash).toBe(real.manifest.base.modelHash)
+    expect(retrieved.manifest.dataset.rootHash).toBe(real.manifest.dataset.rootHash)
+    expect(retrieved.manifest.task.provider).toBe(real.manifest.task.provider)
+    expect(retrieved.manifest.training).toEqual(real.manifest.training)
+    expect(retrieved.mint.contractAddress).toBe(real.mint.contractAddress)
+
+    // And the outcome is the one thing that does not match.
+    expect(real.settlement?.acknowledged).toBe(false)
+    expect(retrieved.settlement?.acknowledged).toBe(true)
+    expect(real.adapterOrigin?.kind).toBe('sentinel')
+    expect(retrieved.adapterOrigin?.kind).toBe('retrieved')
+  })
+
+  it('carries a real adapter root hash rather than a sentinel', () => {
+    expect(retrieved.adapterOrigin?.sentinelPreimage).toBeUndefined()
+    expect(retrieved.manifest.adapter.rootHash).toMatch(/^0x[0-9a-f]{64}$/)
+    expect(retrieved.manifest.adapter.rootHash).not.toBe(real.manifest.adapter.rootHash)
+    expect(retrieved.manifest.adapter.sizeBytes).toBe(93_642_469)
+  })
+
+  it('takes no penalty, because the deliverable was collected', () => {
+    expect(real.settlement?.penaltyNeuron).toBeTruthy()
+    expect(retrieved.settlement?.penaltyNeuron).toBeUndefined()
+  })
+
+  it('still refuses to claim the enclave quote was verified', () => {
+    // Retrieving the artifact does not verify the attestation. verifyService()
+    // is not called anywhere in this codebase, and holding the bytes does not
+    // change that.
+    expect(retrieved.manifest.tee.attestationVerified).toBe(false)
+  })
+
+  it('renders the retrieved run without the lost-model language', () => {
+    render(<PassportView record={retrieved} />)
+
+    // The page talks about acknowledgement in several places; what matters is
+    // that none of passport #1's loss language leaks onto a run that kept its
+    // model. These three strings are the ones that would be actively false.
+    expect(screen.getAllByText(/acknowledged/i).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/30\.0000%/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/the model is gone/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/never retrieved/i)).not.toBeInTheDocument()
   })
 })

@@ -108,7 +108,7 @@ describe('fixture passports', () => {
     // contracts/deployments/galileo-mints.json, written by a transaction on 0G
     // Galileo. If this ever fails, the page is showing a claim the chain does
     // not support.
-    const real = buildPassports().find((p) => p.provenance === 'chain')!
+    const real = buildPassports().find((p) => p.id === 'p-000001')!
 
     expect(real.mint.txHash).toBe(
       '0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1',
@@ -125,7 +125,7 @@ describe('fixture passports', () => {
   it('carries a recomputable sentinel rather than a plausible adapter hash', () => {
     // The honesty constraint, pinned: passport #1's adapter field must be
     // provably not an adapter, and provably so from the published preimage.
-    const real = buildPassports().find((p) => p.provenance === 'chain')!
+    const real = buildPassports().find((p) => p.id === 'p-000001')!
 
     expect(real.adapterOrigin?.kind).toBe('sentinel')
     expect(real.manifest.adapter.rootHash).toBe(hashUtf8(real.adapterOrigin!.sentinelPreimage!))
@@ -149,7 +149,7 @@ describe('fixture passports', () => {
     // A demo hash rendered beside a live explorer link teaches the reader that
     // the links are decorative. The UI keys off this flag to refuse that.
     const passports = buildPassports()
-    expect(passports.filter((p) => p.provenance === 'chain')).toHaveLength(1)
+    expect(passports.filter((p) => p.provenance === 'chain')).toHaveLength(2)
     expect(passports.every((p) => p.provenance === 'chain' || p.provenance === 'demo')).toBe(true)
   })
 
