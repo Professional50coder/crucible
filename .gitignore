@@ -17,10 +17,14 @@ coverage/
 
 # Secrets — contains a plaintext private key. NEVER commit.
 CREDENTIALS.local.md
+MAINNET_WALLET.local.md
 *.local.md
 secrets/
 *.pem
 *.key
+*.keystore
+mnemonic*
+wallet-*.json
 
 # Fine-tuning artifacts
 models/
