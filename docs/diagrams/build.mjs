@@ -165,7 +165,7 @@ const write = (name, s) => { writeFileSync(join(OUT, name), s); console.log(`  $
   b += plane(cols[2], py, cw, ph, '0G plane · the network', [
     { title: '0G Compute', sub: 'fine-tuning provider · 1× H200 in an Intel TDX enclave · 500 neuron/token' },
     { title: '0G Storage', sub: 'dataset root hash and manifest root hash — what the passport commits to' },
-    { title: '0G Chain', sub: 'Passport.sol · Solidity 0.8.19 / paris · chain 16661' },
+    { title: '0G Chain', sub: 'Passport.sol deployed + verified · 0.8.19 / paris · chain 16602' },
     { title: 'Agentic ID · ERC-7857', sub: 'one token per fine-tune, carrying the lineage hashes' },
   ], 'All four components. Each load-bearing.', 'green')
 
@@ -200,7 +200,7 @@ const write = (name, s) => { writeFileSync(join(OUT, name), s); console.log(`  $
     { kind: 'dash', color: C.crimson, label: 'Verification boundary — nothing right of here is taken on our word' },
   ])
 
-  b += text(40, H - 20, 'Verified live on 2026-08-14: testnet ledger tx 0x36b4f848… at block 49369251 · task 10551604-2664 reached Delivered · actual fee 0.0118528 0G · 808 tests green. Passport.sol is not yet deployed to mainnet.',
+  b += text(40, H - 20, 'Verified on-chain 2026-08-16: Passport.sol deployed and source-verified on Galileo at 0x27087B5b…83C1c7 · passport #1 minted · manifest on 0G Storage at 0xc757a7e6…8e1140, hashing to the anchored value. Task 10551604 force-settled UNACKNOWLEDGED — 30% penalty, model lost. Nothing is deployed to mainnet.',
     { size: 10.5, fill: C.faint })
 
   write('architecture.svg', svg(W, H, b))
