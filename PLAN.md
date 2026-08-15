@@ -10,31 +10,45 @@ Owner: **me** = the assistant · **you** = account or funds required · **agent*
 
 ---
 
-## RUNNING RIGHT NOW
+## DONE — the things that are now true
 
-| What | Owner | Gate it must pass |
+Each of these is checkable, not asserted.
+
+| | Evidence |
+|---|---|
+| `Passport.sol` deployed **and source-verified** on 0G Galileo | `0x27087B5b…83C1c7` · `v0.8.19+commit.7dd6d404` / `paris` / 200 runs / 78,649 chars |
+| **Passport #1** minted — the run that lost its model | block 49597171 · sentinel adapter · `acknowledged: false` · 30.0000% debited |
+| **Passport #2** minted — the run that kept it | block 49612106 · real adapter root `0x40a5f256…` read off-chain at mint time |
+| **Model retrieved** | 93,642,469 bytes · sha256 `0x9f788764…` · validated against the provider's on-chain root hash · `acknowledged: true` |
+| Manifest on 0G Storage, and the verification loop closes | root `0xc757a7e6…` · submission 146937 · hashes to the anchored value |
+| DEFECT-01 isolated to **two** distinct defects | identical code, Windows vs WSL2 — TEE path fails on both, storage path only on Windows |
+| Frontend redesigned | motion register · landing hero · passport certificate · gallery · run views · progressive disclosure · **lineage graph with a trace that visibly fails on #1** |
+| **271 tests, 20 files, 0 failures**; `next build` green, 7 routes | up from 174 at the start of the redesign |
+| Docs | README rewritten around what is provable · claims audit · changelog recording corrections · prior art with interface citations · field notes · delegation rules |
+| AKINDO | GitHub connected · team `Crucible` created |
+
+## REMAINING — in the order I would do it
+
+### Blocked on you
+| # | What | Size |
 |---|---|---|
-| Motion system + landing hero | agent | backdrop renders with reduced-motion fallback → landing rebuilt → tests + `next build` green |
-| Passport certificate redesign | agent | verification hero → typed rows + full hashes → tests + build green |
-| Gallery, runs, chrome | agent | first screen earns itself → network pill calmed → run views → tests + build green |
-| Adapter retrieval from WSL Linux | me | `acknowledged: true` on-chain, or a named reason it failed |
+| 1 | **~0.05 0G mainnet gas** → `0xD68235F859f3756c87f50619b165F68b80FDdFD4` | one Telegram message, drafted in `docs/OUTREACH.md` |
+| 2 | Post the X thread | 5 min, drafts in `submission/X_POST.md` |
+| 3 | Record the demo video | 30 min, after the script is rewritten |
 
-## NEXT, IN ORDER
+### Mine, and short
+| # | What | Why now |
+|---|---|---|
+| 4 | **Passport #2 as a fixture in the web app** | The app currently only shows #1. The two-outcomes comparison — the strongest thing we have — is not yet visible in the UI. The graph already supports it via its `compare` prop |
+| 5 | **Screenshots, wallet disconnected** | A judge sees the quiet chip, not the amber warning. Unblocks the AKINDO gallery, which needs 1–5 images |
+| 6 | **Register the AKINDO product** | Everything else is ready; the form spec is written |
+| 7 | **Rewrite `DEMO_SCRIPT.md` against reality** | It currently films three things that do not exist: a mint button, a live daemon acknowledgement, and a mainnet address |
 
-1. **Screenshots** of the redesigned app — gallery, passport, run view. Blocked on the three agents.
-2. **Register the AKINDO product.** GitHub is connected, team exists, form spec written. Needs the screenshots for the 1–5 image gallery.
-3. **Mainnet deploy + mint** the moment gas lands. One command; already configured and proven on Galileo.
-4. **Demo video** ≤ 3:00, per `submission/DEMO_SCRIPT.md` — but the script currently films three things that do not exist (a mint button, a live daemon acknowledgement, a mainnet address). Rewrite it against reality first.
-5. **X post** with both hashtags and all three tags in the root post.
-6. **Finalise the "Updates in this Wave" changelog** — the field carrying 40% of the score.
-
-## BLOCKED ON YOU
-
-| # | What | Why it needs you | Size |
-|---|---|---|---|
-| 1 | **~0.05 0G on mainnet** to `0xD68235F859f3756c87f50619b165F68b80FDdFD4` | No mainnet faucet exists. Deploy + mint costs 0.0103 0G at 4 gwei | one Telegram message, drafted in `docs/OUTREACH.md` |
-| 2 | Post the X thread | Your account | 5 min, drafts in `submission/X_POST.md` |
-| 3 | Record the demo video | Your voice and face | 30 min once the app is final |
+### Mine, once gas lands
+| # | What |
+|---|---|
+| 8 | Deploy + verify `Passport.sol` on mainnet 16661, then one mint. Both commands already proven on Galileo |
+| 9 | Fill the last `PLACEHOLDER_*` tokens and finalise the Wave 3 changelog — the field carrying 40% of the score |
 
 ## THE AUDIT BACKLOG
 
@@ -62,8 +76,8 @@ it would read to a judge:
 |---|---|---|
 | 1 | **No mint path in the UI.** Passport #1 was minted by a Hardhat script | The demo should not film a button that does not exist |
 | 2 | **`verifyService()` is never called**, so `attestationVerified` is `false` | We record the TEE signer without checking the attestation. That field should be earned |
-| 3 | **The daemon has never performed a real acknowledgement** | Well-tested against fakes. One real run through it makes the headline feature true |
-| 4 | **No adapter retrieved** | In progress from WSL right now. A real adapter root hash replaces passport #1's sentinel |
+| 3 | **The daemon has never performed a real acknowledgement** | Both acknowledgements were done by scripts. It is well-tested against fakes; one real run through the daemon makes the headline feature true rather than argued |
+| 4 | ~~No adapter retrieved~~ | **Done.** 93.6 MB retrieved from WSL2 Linux; passport #2 carries its real root hash |
 | 5 | No `transferFund` in the codebase | Already deleted from the changelog. Build it or keep it deleted |
 
 ## MAINTAIN — the standing rules
@@ -82,8 +96,8 @@ These are what keep the project defensible. They are not one-off tasks.
 - **Reused code is open source and cited** in `docs/PRIOR_ART.md`. Patterns are reimplemented, not
   pasted. Radix (MIT) is permitted; `web3uikit` and anything unlicensed is not.
 - **Every agent reports gates**, and names what it did not attempt.
-- **The honest version always ships.** Two runs lost their models. That is the finding, and it is
-  worth more than a clean demo.
+- **The honest version always ships.** One run lost its model, the other was retrieved by changing
+  nothing but the operating system. That comparison is worth more than a clean demo would have been.
 
 ## DELEGATION RULES — learned the hard way
 
