@@ -1,0 +1,61 @@
+{"messages":[{"role":"user","content":"The config uses {\"mode\":\"fast\"} and it genuinely is fast."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Shipping took two days and everything was packed with care."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Great, another crash."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Works perfectly."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Pros:\n- quiet\n- light\nCons:\n- expensive\n- short cable"},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The app crashes every time I open the settings page, and there has been no fix in three releases despite dozens of reports on the forum."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Clean interface, sensible defaults, and it did not try to sell me anything."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Amazing that a $2000 laptop cannot survive a single sneeze."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The quality has fallen off a cliff since the redesign."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Love how it silently loses my settings every update. Very thoughtful design."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Ugh, now I have to admit my friend was right about this thing. It is excellent."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Error: cannot find path C:\\Users\\me\\Documents — every single launch."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Wow, a whole 4% battery after ten minutes. Incredible engineering."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Do not buy this."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Slow, buggy, and overpriced."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Well, it turns out the \"gimmicky\" feature everyone mocked is the one I use daily."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"After the update, the crashes stopped completely and it has been rock solid for a month."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Loud, hot, and the fan never stops."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"产品质量很差，我很失望。"},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The instructions were wrong, the parts did not fit, and the helpline put me on hold for fifty minutes before disconnecting."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The documentation says the flag is optional. It is not. I lost an afternoon to that."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Honestly? Delighted."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"I have spent more time troubleshooting it than using it."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Fast and reliable, though the price increase this year stings."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"Five stars, no notes."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Fantastic!"},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"I was fully prepared to hate this. Annoyingly, it is very good."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The manual literally says \"insert widget A into slot B\" — there is no slot B."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Absolutely loved it."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Beautiful hardware, dreadful software."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"The team clearly cared, but the deadline beat them and it shows."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"Cheap, cheerful, and it will probably break by spring."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"I have no strong feelings either way."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"Brilliant idea putting the delete button right next to save. Truly inspired."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Perfect 🎉"},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"It arrived."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"这个产品非常好用。"},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"I hate that I love it."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Deeply disappointing."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Es war ausgezeichnet — sehr zu empfehlen."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The food was outstanding but the service was painfully slow."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"Fine."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"Great battery life. Terrible camera. I use it for work so I can live with that, but if photos matter to you, look elsewhere."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"It leaks. Every single time. I have replaced the seal twice."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Café was lovely ☕ — the barista remembered my order from last week."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Half the features are excellent and half are unfinished."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"user","content":"The staff were kind and patient with my endless questions."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Cancelled after one month."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Not bad at all, actually."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Comfortable, well made, and far too expensive for what it is."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The support team was wonderful about a problem that should never have existed."},{"role":"assistant","content":"mixed"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"The refund was processed the same day I asked. That is how it should work."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Exceeded every expectation I had."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"What a treat, the update removed the one feature I actually used."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Ne fonctionne pas du tout. Très déçu."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"It printed {} instead of my data. Twice."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Perfect timing for the server to go down — right in the middle of the demo. 👏"},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"system","content":"Classify the sentiment of the text as exactly one word: positive, negative, or mixed."},{"role":"user","content":"Great value for money."},{"role":"assistant","content":"positive"}]}
+{"messages":[{"role":"user","content":"Regret it. 😞"},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Support never replied."},{"role":"assistant","content":"negative"}]}
+{"messages":[{"role":"user","content":"Charged me twice and then argued about it."},{"role":"assistant","content":"negative"}]}
