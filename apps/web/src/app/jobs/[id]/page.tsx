@@ -170,7 +170,10 @@ export default function JobPage({ params }: { params: { id: string } }) {
           <NetworkBadge network={job.network} />
           <StateBadge state={job.state} queued={job.queued} />
           {job.passportId ? (
-            <Link href={`/passport/${job.passportId}`} className="btn-primary no-underline">
+            <Link
+              href={`/passport/${encodeURIComponent(job.passportId)}`}
+              className="btn-primary no-underline"
+            >
               View passport
               <ArrowIcon className="h-3.5 w-3.5" />
             </Link>

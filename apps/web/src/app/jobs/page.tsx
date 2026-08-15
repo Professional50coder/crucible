@@ -47,9 +47,11 @@ export default function JobsPage() {
           <p className="label">Managed by the daemon</p>
           <h1 className="mt-3 text-title font-medium text-fg">Runs</h1>
           <p className="measure mt-4 text-sm leading-relaxed text-dim text-pretty">
-            Every fine-tuning task Crucible is managing. The daemon watches each 48-hour
-            acknowledgement window, retries every download path 0G offers, and escalates before
-            the deadline rather than after it — so nothing here needs you polling a CLI.
+            Every fine-tuning task Crucible is managing. The daemon detects delivery, exhausts
+            every download path 0G offers, records the outcome — including the failure, when it
+            fails — and releases the queue with{' '}
+            <span className="font-mono text-dim">acknowledgeDeliverable</span>. It cannot repair a
+            broken retrieval path; what it guarantees is notice, not the artifact.
           </p>
         </div>
         <Link href="/new" className="btn-primary no-underline">
@@ -58,9 +60,45 @@ export default function JobsPage() {
         </Link>
       </header>
 
+      {/*
+        Contact lost mid-poll.
+        A list that silently stops updating is worse than one that says it has
+        stopped: the reader goes on trusting stale states. The rows stay — they
+        were true a moment ago — with a band above them saying how they should
+        now be read.
+      */}
+      {error && jobs ? (
+        <div
+          className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warn/30 bg-warn/[0.05] px-4 py-3"
+          role="status"
+        >
+          <p className="text-xs leading-relaxed text-warn/90 text-pretty">
+            Lost contact with the orchestrator — {error}. The runs below are the last state
+            Crucible read and are no longer updating.
+          </p>
+          <button type="button" onClick={load} className="btn-ghost h-7 shrink-0 px-2.5 py-0">
+            Retry now
+          </button>
+        </div>
+      ) : null}
+
       <div className="mt-8">
         {error && !jobs ? (
-          <ErrorState title="Could not load runs" body={error} onRetry={load} />
+          <ErrorState
+            title="Could not reach the orchestrator"
+            body={
+              <>
+                {error}
+                <span className="mt-2 block text-faint">
+                  Crucible reads runs from the orchestrator at{' '}
+                  <span className="font-mono">NEXT_PUBLIC_CRUCIBLE_API_URL</span>. With none
+                  configured the app serves fixture data instead, so this usually means the value
+                  is set but the service is not running.
+                </span>
+              </>
+            }
+            onRetry={load}
+          />
         ) : !jobs ? (
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
@@ -82,7 +120,7 @@ export default function JobsPage() {
               return (
                 <li key={job.id}>
                   <Link
-                    href={`/jobs/${job.id}`}
+                    href={`/jobs/${encodeURIComponent(job.id)}`}
                     className="flex flex-wrap items-center gap-x-5 gap-y-3 bg-panel px-4 py-4 no-underline transition-colors hover:bg-raised sm:px-5"
                   >
                     <IconTile tone={failed ? 'danger' : job.state === 'Finished' ? 'ok' : 'accent'}>
@@ -105,7 +143,7 @@ export default function JobsPage() {
                           style={{ width: `${percent}%` }}
                         />
                       </div>
-                      <div className="mt-1.5 font-mono text-2xs text-faint">
+                      <div className="mt-1.5 font-mono text-2xs tabular-nums text-faint">
                         {failed ? 'halted' : `${percent}%`}
                       </div>
                     </div>

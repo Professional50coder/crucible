@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * The 48-hour acknowledgement window — the product's core promise, made visible.
+ * The 48-hour acknowledgement window — the product's reason to exist, made
+ * legible.
  *
  * On 0G, reaching `Delivered` starts a 48-hour clock. Miss it and you lose the
  * adapter *and* 30% of the fee. There is no notification, no dashboard, no
@@ -11,20 +12,34 @@
  * the first: it shows the deadline, and it shows that Crucible is already
  * handling it, with the timestamp at which it will act.
  *
- * What it must not do is promise the model back. On this project's own first run
- * both of `acknowledgeModel`'s download paths failed and the deliverable went
- * unacknowledged, which cost the model and 30% of the fee. So the copy here
- * claims only what is true: the daemon tries every path, keeps trying, and
- * escalates before the window closes instead of after.
+ * What it must not do is promise the model back. On this project's first run both
+ * of `acknowledgeModel`'s download paths failed on Windows, the deliverable went
+ * unacknowledged, and exactly 30% of the fee was deducted; the second run was
+ * only retrieved by moving to Linux. So the copy claims only what is true: the
+ * daemon detects delivery, exhausts every download path, records the outcome,
+ * and releases the queue with `acknowledgeDeliverable`.
  *
- * The window strip at the bottom is what makes "the deadline is being watched" a
- * thing you can see rather than a thing you are told. Crucible's mark sits hard
- * against the left edge of a 48-hour bar; the deadline is the whole width away,
- * with the last six hours shaded as the zone nothing is allowed to reach
- * unattended. Every mark on that strip carries a printed label — a tick you can
- * only read by hovering is a tick a judge watching a recording never reads.
+ * Legibility rules this panel is built to, all of them learned from watching it
+ * on a recording rather than on a desk:
+ *
+ *  - **Every mark on the strip is printed.** The markers used to be `sr-only`,
+ *    which meant a judge watching a video read none of them. A tick whose
+ *    meaning lives in a `title` attribute is a tick nobody reads.
+ *  - **Colour is never the only carrier.** Each urgency has a word — `in hand`,
+ *    `under a day left`, `inside the escalation margin` — set next to the clock.
+ *  - **Every digit is tabular.** A countdown in proportional figures reflows on
+ *    every tick; the eye reads the movement as instability rather than as time.
+ *  - **The ticking clock is not a live region.** An `aria-live` wrapper around a
+ *    one-second counter announces itself once a second forever. The polite
+ *    region here is the urgency word alone, which changes three times in
+ *    forty-eight hours.
+ *  - **Motion is entrance and transition only.** framer-motion moves the panel
+ *    in once and cross-fades the urgency word when it changes; the bars use a
+ *    plain CSS transition because they are values, not events. Nothing loops on
+ *    data, and `useReducedMotion()` collapses all of it to zero.
  */
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 import {
@@ -88,6 +103,7 @@ export function AckCountdown({
   totalNeuron,
   now: fixedNow,
 }: AckCountdownProps) {
+  const reduced = useReducedMotion()
   const [tick, setTick] = useState(() => fixedNow ?? Date.now())
 
   useEffect(() => {
@@ -115,17 +131,21 @@ export function AckCountdown({
   /** The unattended zone: nothing is ever allowed past here silently. */
   const marginWidth = 100 - escalationPercent
 
+  const alarmed = !done && (status.urgency === 'critical' || status.urgency === 'expired')
+
   return (
-    <section
+    <motion.section
       className={`overflow-hidden rounded-lg border ${
         done
           ? 'border-ok/30 bg-ok/[0.04]'
-          : status.urgency === 'critical' || status.urgency === 'expired'
+          : alarmed
             ? 'border-danger/40 bg-danger/[0.05]'
             : 'border-warn/30 bg-warn/[0.035]'
       }`}
       data-testid="ack-countdown"
-      aria-live="polite"
+      initial={reduced ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={reduced ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-inherit px-4 py-3 sm:px-5">
         <div className="flex items-center gap-2">
@@ -142,7 +162,7 @@ export function AckCountdown({
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest2 text-phosphor">
-            <Dot tone="accent" pulse />
+            <Dot tone="accent" pulse={!reduced} />
             Daemon armed
           </span>
         )}
@@ -168,22 +188,37 @@ export function AckCountdown({
               {done ? 'Acknowledged' : formatDuration(status.remainingMs)}
             </div>
 
+            {/*
+              The one polite live region on the panel. It holds the urgency word
+              and nothing else, so a screen reader is told "under a day left"
+              when that becomes true instead of being read the clock every
+              second for two days.
+            */}
             {!done ? (
-              <div
-                className={`mt-2 inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest2 ${
-                  urgencyText[status.urgency]
-                }`}
-              >
-                {status.urgency === 'safe' ? (
-                  <Dot tone="ok" />
-                ) : (
-                  <AlertIcon className="h-3 w-3" />
-                )}
-                {urgencyWord[status.urgency]}
+              <div className="mt-2 h-4" aria-live="polite" data-testid="ack-urgency">
+                <AnimatePresence initial={false} mode="wait">
+                  <motion.span
+                    key={status.urgency}
+                    className={`inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest2 ${
+                      urgencyText[status.urgency]
+                    }`}
+                    initial={reduced ? false : { opacity: 0, y: 2 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduced ? { opacity: 0 } : { opacity: 0, y: -2 }}
+                    transition={reduced ? { duration: 0 } : { duration: 0.2 }}
+                  >
+                    {status.urgency === 'safe' ? (
+                      <Dot tone="ok" />
+                    ) : (
+                      <AlertIcon className="h-3 w-3" />
+                    )}
+                    {urgencyWord[status.urgency]}
+                  </motion.span>
+                </AnimatePresence>
               </div>
             ) : null}
 
-            <div className="mt-2.5 font-mono text-2xs text-faint">
+            <div className="mt-2.5 font-mono text-2xs tabular-nums text-faint">
               deadline {formatTimestamp(status.deadline.toISOString())}
             </div>
 
@@ -196,7 +231,7 @@ export function AckCountdown({
                 data-testid="ack-bar"
               />
             </div>
-            <p className="mt-2 font-mono text-2xs text-faint">
+            <p className="mt-2 font-mono text-2xs tabular-nums text-faint">
               {done
                 ? 'window closed with time to spare'
                 : `${Math.round(status.percentRemaining)}% of the window still available`}
@@ -213,12 +248,12 @@ export function AckCountdown({
             {done ? (
               <>
                 <div
-                  className="mt-1.5 font-mono text-lg leading-tight text-ok"
+                  className="mt-1.5 font-mono text-lg leading-tight tabular-nums text-ok"
                   data-testid="ack-scheduled"
                 >
                   Done
                 </div>
-                <div className="mt-2 font-mono text-2xs text-faint">
+                <div className="mt-2 font-mono text-2xs tabular-nums text-faint">
                   {formatTimestamp(acknowledgedAt!)}
                 </div>
               </>
@@ -237,12 +272,12 @@ export function AckCountdown({
             ) : (
               <>
                 <div
-                  className="mt-1.5 font-mono text-lg leading-tight text-phosphor"
+                  className="mt-1.5 font-mono text-lg leading-tight tabular-nums text-phosphor"
                   data-testid="ack-scheduled"
                 >
                   {scheduledIn > 0 ? `in ${formatDuration(scheduledIn)}` : 'now — attempt in flight'}
                 </div>
-                <div className="mt-2 font-mono text-2xs text-faint">
+                <div className="mt-2 font-mono text-2xs tabular-nums text-faint">
                   {formatTimestamp(acknowledgeScheduledFor!)}
                 </div>
               </>
@@ -251,7 +286,7 @@ export function AckCountdown({
             <p className="mt-3 text-xs leading-relaxed text-dim text-pretty">{AUTO_ACK_POLICY}</p>
 
             {!done ? (
-              <p className="mt-3 font-mono text-2xs text-faint">
+              <p className="mt-3 font-mono text-2xs tabular-nums text-faint">
                 escalation at {formatTimestamp(autoAcknowledgeBackstop(deliveredAt).toISOString())}
               </p>
             ) : null}
@@ -262,10 +297,10 @@ export function AckCountdown({
         {/* The window, to scale. Crucible acts in the first pixel of it.     */}
         {/* ---------------------------------------------------------------- */}
         <div className="mt-6 border-t border-line pt-5">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <span className="label">The window, to scale</span>
-            <span className="font-mono text-2xs text-faint">
-              0h → {ACK_WINDOW_HOURS}h · one pixel ≈ {(ACK_WINDOW_HOURS * 60) / 100} minutes
+            <span className="font-mono text-2xs tabular-nums text-faint">
+              0h → {ACK_WINDOW_HOURS}h · one percent ≈ {(ACK_WINDOW_HOURS * 60) / 100} minutes
             </span>
           </div>
 
@@ -278,16 +313,18 @@ export function AckCountdown({
               className="absolute inset-x-0 top-3 h-1.5 overflow-hidden rounded-full bg-line"
               aria-hidden="true"
             >
-              {/* The last six hours: the zone the daemon escalates rather than enter. */}
+              {/* The last six hours: the zone the daemon escalates rather than
+                  enter. Shaded, not merely bounded by a tick, because the point
+                  is that it is territory and not a line. */}
               <div
-                className="absolute inset-y-0 right-0 bg-danger/25"
+                className="absolute inset-y-0 right-0 bg-danger/30"
                 style={{ width: `${marginWidth}%` }}
               />
             </div>
 
             {/* Consumed so far. */}
             <div
-              className={`absolute left-0 top-3 h-1.5 rounded-full ${
+              className={`absolute left-0 top-3 h-1.5 rounded-full transition-all duration-1000 ${
                 done ? 'bg-ok/60' : 'bg-line-bright'
               }`}
               style={{ width: `${nowPercent}%` }}
@@ -306,7 +343,7 @@ export function AckCountdown({
             {/* Now. */}
             {!done ? (
               <div
-                className="absolute top-0 h-7 w-px bg-fg/70"
+                className="absolute top-0 h-7 w-px bg-fg/70 transition-all duration-1000"
                 style={{ left: `${nowPercent}%` }}
                 aria-hidden="true"
               />
@@ -361,7 +398,7 @@ export function AckCountdown({
             {penalty ? (
               <>
                 {' '}
-                — <span className="font-mono text-fg">{formatOg(penalty)} 0G</span> —
+                — <span className="font-mono tabular-nums text-fg">{formatOg(penalty)} 0G</span> —
               </>
             ) : (
               ' '
@@ -373,7 +410,7 @@ export function AckCountdown({
           </p>
         ) : null}
       </div>
-    </section>
+    </motion.section>
   )
 }
 
@@ -434,7 +471,7 @@ function TickLabel({
       }`}
       style={{ left: `${percent}%`, transform, paddingLeft: indent ? '0.375rem' : undefined }}
     >
-      <span className={`font-mono text-2xs leading-tight ${tone}`}>{k}</span>
+      <span className={`font-mono text-2xs leading-tight tabular-nums ${tone}`}>{k}</span>
       <span className="whitespace-nowrap font-mono text-[10px] leading-tight text-faint">{v}</span>
     </span>
   )
@@ -446,7 +483,7 @@ function Legend({ tone, k, v }: { tone: string; k: string; v: string }) {
       <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${tone}`} aria-hidden="true" />
       <div className="min-w-0">
         <dt className="label truncate">{k}</dt>
-        <dd className="truncate font-mono text-2xs text-dim">{v}</dd>
+        <dd className="truncate font-mono text-2xs tabular-nums text-dim">{v}</dd>
       </div>
     </div>
   )
