@@ -109,7 +109,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 | Build Crucible, not the provider-SLA layer | 0G already ships an official Compute Router with failover and latency/price routing — we'd be rebuilding their first-party product |
 | Run the real flow on **mainnet**, not testnet | Verified: mainnet fine-tuning is live, unoccupied, and 37.5% cheaper (500 vs 800 neuron/token). Also satisfies Wave 3's mainnet requirement with genuine activity |
 | Use `@0gfoundation/*` SDKs (0.9.0 / 1.2.11) | Current packages; the official example still pins the older `@0glabs/*`. All ISC |
-| Solidity 0.8.19 + `evmVersion: cancun`, pinned | Newer EVM versions fail explorer verification per 0G docs |
+| Solidity 0.8.19 + `evmVersion: paris`, pinned | 0G's docs ask for 0.8.19 *and* cancun; those are mutually exclusive — solc only added the cancun target in 0.8.24. Paris is the highest 0.8.19 can emit and runs identically on a cancun-era chain |
 | Read, don't copy, the 0G example repos | `agenticID-examples` and `0g-deployment-scripts` ship **no LICENSE file**; only `fine-tuning-example` declares MIT. Reimplementing also protects the originality score |
 | Claim lineage, not honest training | Prior art (vouch, OpenSSF, Cisco, VFT paper) is real and citable; overclaiming would be caught by technical judges |
 | Plan / roadmap / state kept in `.paul/` | Lightweight project-tracking convention, MIT. Keeps the phase plan and the running state in the repo where a reader can check them against the code |

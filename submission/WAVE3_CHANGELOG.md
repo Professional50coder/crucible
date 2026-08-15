@@ -79,8 +79,10 @@ breaks a specific guarantee.
   the value anchored on-chain. Duplicate uploads (which revert with a bare `CALL_EXCEPTION`) are
   caught and the existing root hash reused.
 - **0G Chain.** `Passport.sol` deployed and source-verified on **0G mainnet, chain 16661**.
-  Solidity 0.8.19 with `evmVersion: cancun`, pinned because newer EVM versions fail explorer
-  verification.
+  Solidity 0.8.19 with `evmVersion: paris`. 0G's docs ask for 0.8.19 *and* cancun; solc only
+  added the cancun target in 0.8.24, so the two are mutually exclusive. Paris is the highest
+  target 0.8.19 can emit, and its bytecode contains no `PUSH0` or cancun-only opcodes, so it
+  runs identically on a cancun-era chain. Probed and documented in `contracts/README.md`.
   - Contract: `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS`
   - Explorer: `PLACEHOLDER_CHAINSCAN_CONTRACT_URL`
   - On-chain activity (deployment + mints): `PLACEHOLDER_CHAINSCAN_ACTIVITY_URL`

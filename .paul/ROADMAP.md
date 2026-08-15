@@ -105,7 +105,7 @@ same UI, same pitch. Decision must be made by end of day 2.
 - ERC-7857 Agentic ID contract: one token per completed fine-tune
 - Lineage hashes in metadata; manifest root hash public for verification without decryption
 - `authorizeUsage` / `revokeAuthorization` (max 100 per token)
-- Hardhat, Solidity **0.8.19**, `evmVersion: cancun` (newer fails explorer verification)
+- Hardhat, Solidity **0.8.19**, `evmVersion: paris` (0.8.19 cannot emit cancun; see `contracts/README.md`)
 - Deploy to mainnet 16661, verify on chainscan.0g.ai
 
 **Plans:**

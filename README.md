@@ -145,11 +145,22 @@ asks for.
 Requires **Node.js ≥ 22**. No GPU and no wallet are needed for the discovery and validation path.
 
 ```bash
-git clone PLACEHOLDER_REPO_URL
+git clone https://github.com/Professional50coder/crucible.git
 cd crucible
-npm install
+npm install        # root workspaces: @crucible/core, @crucible/cli
 npm run build
 npm test
+```
+
+`packages/ml`, `services/orchestrator`, `apps/web` and `contracts` each keep their own
+lockfile and `node_modules` so their dependency trees cannot collide. Install and test them
+from inside their own directory:
+
+```bash
+cd packages/ml          && npm install --no-workspaces && npm test   # 320 tests
+cd services/orchestrator && npm install && npm test                  # 155 tests
+cd apps/web              && npm install && npm test                  # 158 tests
+cd contracts             && npm install && npx hardhat test          #  70 tests
 ```
 
 ### Check the live network — no wallet, no funds
@@ -166,7 +177,7 @@ run, and — if a key is configured — wallet readiness.
 ### Configure a wallet (only needed to actually train)
 
 ```bash
-cp .env.example .env      # PLACEHOLDER_ENV_EXAMPLE — not committed yet; commit it or drop this line
+cp .env.example .env
 ```
 
 | Variable | Meaning |
@@ -180,8 +191,8 @@ Never commit `.env`. Never paste a private key into a terminal you are recording
 ### Run the stack locally
 
 ```bash
-npm start -w @crucible/orchestrator     # job API + auto-acknowledge daemon, :8787
-npm run dev -w @crucible/web            # Next.js app, :3000
+cd services/orchestrator && npm start    # job API + auto-acknowledge daemon, :8787
+cd apps/web && npm run dev               # Next.js app, :3000
 ```
 
 ### Deploy the contract
@@ -192,8 +203,11 @@ npx hardhat test
 npx hardhat run scripts/deploy.js --network og-testnet   # then og-mainnet
 ```
 
-Solidity is pinned to **0.8.19** with `evmVersion: cancun` — newer EVM versions fail source
-verification on the 0G explorer.
+Solidity is pinned to **0.8.19** because newer versions fail source verification on the 0G
+explorer, and `evmVersion` is **`paris`** because solc 0.8.19 cannot emit `cancun` — that
+target arrived in 0.8.24. 0G's docs ask for both; the two are mutually exclusive. Paris
+bytecode contains no `PUSH0` and no cancun-only opcodes, so it executes identically on a
+cancun-era chain. Probed on this toolchain and written up in `contracts/README.md`.
 
 ---
 

@@ -63,7 +63,7 @@ Judging weights, for prioritisation when time runs short:
 This is the one that disqualifies a submission if it is missing. Everything here is on **mainnet**.
 
 - [ ] `Passport.sol` **deployed to 0G mainnet, chain 16661**
-- [ ] Contract **source-verified** on `chainscan.0g.ai` (Solidity 0.8.19, `evmVersion: cancun` — newer EVM versions fail verification)
+- [ ] Contract **source-verified** on `chainscan.0g.ai` (Solidity 0.8.19, `evmVersion: paris` — 0.8.19 cannot emit cancun; see `contracts/README.md`)
 - [ ] Mainnet contract address recorded: `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS`
 - [ ] Explorer link recorded: `PLACEHOLDER_CHAINSCAN_CONTRACT_URL`
 - [ ] **Explorer link shows real on-chain activity** — a deployment transaction alone is thin. At least one mint. Recorded: `PLACEHOLDER_MINT_TX_URL`

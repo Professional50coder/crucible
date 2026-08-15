@@ -259,7 +259,7 @@ SDK: `@0gfoundation/0g-storage-ts-sdk@1.2.11`. Indexers: `https://indexer-storag
 ### 5.3 0G Chain — where the claim becomes checkable
 
 Mainnet chain **16661**, RPC `https://evmrpc.0g.ai`, explorer `https://chainscan.0g.ai`.
-Solidity 0.8.19 with `evmVersion: cancun` — pinned because newer EVM versions fail explorer
+Solidity 0.8.19 with `evmVersion: paris` — 0.8.19 is pinned because newer versions fail explorer
 source verification.
 
 - `Passport.sol` is deployed here and source-verified on chainscan.
