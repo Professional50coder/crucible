@@ -17,8 +17,8 @@ it use 0G deeply, can it reach mainnet in 16 days, and does it survive past the 
 | Candidate | Killed by |
 |---|---|
 | Compute provider SLA + routing SDK | 0G already ships an official **Compute Router** with automatic failover and *"route by lowest latency, lowest price"*. We'd be rebuilding their first-party product. |
-| Agent memory layer | 0G ships an official `0g-memory` SDK. Plus Aevum, RecallMesh and SoulVault already exist. |
-| Agent identity / marketplace | 8+ shipped projects; Axiom Protocol holds the buildathon's joint-top score at 28 points. |
+| Agent memory layer | 0G ships an official `0g-memory` SDK, and several community projects already cover this ground. |
+| Agent identity / marketplace | Well covered already — several shipped projects, including some of the highest-scoring entries in this buildathon. |
 
 **Fine-tuning provenance survived all four filters:**
 
@@ -112,9 +112,9 @@ We lost hours to this. Every 0G builder loses the same hours.
 |---|---|
 | Lineage discarded | Captures it into a signed, public **Model Passport** — manifest on 0G Storage, hash anchored on 0G Chain, minted as an ERC-7857 Agentic ID |
 | Bug #4 queue lock | Only ever calls `acknowledgeModel`; exposes `acknowledgeDeliverable` as a one-click unlock for already-stuck accounts |
-| 48-hour deadline | A daemon acknowledges automatically. Structurally impossible to miss. |
-| Funding footgun | Funds the correct sub-account, verifies balance before creating a task |
-| LoRA assembly | Ships a ready-to-run loader + hosted inference against the fine-tuned adapter |
+| 48-hour deadline | A daemon acknowledges on arrival rather than at the buzzer. It cannot retrieve a model the SDK cannot retrieve — see DEFECT-01 — but it never lets the window lapse unnoticed |
+| Funding footgun | Documented with its exact failure mode in FIELD_NOTES. Automatic sub-account funding is not implemented |
+| LoRA assembly | Documents the assembly steps. A loader and hosted inference are roadmap, not shipped |
 | Docs vs reality | [FIELD_NOTES.md](FIELD_NOTES.md) — published, verified, dated |
 
 **In one sentence:** Crucible turns a 12-step CLI flow with five documented footguns into one
@@ -127,8 +127,8 @@ upload, and turns the cryptographic exhaust it already produces into a permanent
 ### Layer 1 — Ecosystem value (why 0G should care)
 
 0G's Compute Network has **one fine-tuning provider and 21 inference providers**. Fine-tuning
-is the underused half of their own product. Crucible makes it usable, and every Crucible run is
-a paid task on 0G's mainnet. We are demand generation for the component 0G most needs adopted.
+is the underused half of their own product. Crucible makes it usable, and every Crucible run is a
+paid task on 0G Compute. We are demand generation for the component 0G most needs adopted.
 
 ### Layer 2 — Builder value (immediate users)
 
@@ -190,12 +190,13 @@ Saying this plainly is deliberate. Technical judges will ask, and the answer is 
 
 | Weight | Criterion | How Crucible scores |
 |---|---|---|
-| **40%** | Progress & Momentum | Built inside the Wave window with daily commits; a sectioned changelog, where three of four current Wave 3 entries wrote `a` or one sentence |
-| **30%** | 0G Integration | **All four components.** The only project in 173 using fine-tuning provenance. Runs on mainnet, not testnet. |
+| **40%** | Progress & Momentum | Built inside the Wave window, committed feature by feature, with a sectioned changelog that records corrections as well as additions |
+| **30%** | 0G Integration | **All four components**, each load-bearing. Runs against the live network on Galileo testnet; the mainnet `Passport.sol` deployment is the outstanding Wave 3 requirement. |
 | **20%** | Technical Quality | TDD from commit one, real contract with tests, verified on chainscan, field notes correcting the official docs |
 | **10%** | Traction & Communication | Public passport gallery; FIELD_NOTES is directly useful to every other 0G builder |
 
-**The asymmetry worth naming:** as of 2026-08-14, Wave 3 has **4 submissions out of 44 projects,
-all at 0 points**, and only one (Kavro Protocol) is a serious entry. The pool is $15,000 — the
-largest of the program. A finished, mainnet-deployed, well-documented project is not competing
-against 44 rivals. It is competing against one.
+**On the field:** Wave 3 carries the largest pool of the programme, and several strong entries are
+already in it. That is not a reason to handicap anyone else's work — this document is public, and
+the people building those projects will read it. The only competitive claim worth making is about
+our own coverage: fine-tuning provenance is a gap we found empty when we looked, and the honest way
+to hold that position is to keep the evidence checkable rather than to rate the competition.
