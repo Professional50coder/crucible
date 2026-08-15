@@ -1,0 +1,63 @@
+{
+  "tokenId": "1",
+  "network": "testnet",
+  "chainId": 16602,
+  "contract": "0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7",
+  "manifestFile": "runs/manifest-1.json",
+  "manifestBytes": 584,
+  "manifestHash": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
+  "anchoredManifestHash": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
+  "anchorMatches": true,
+  "storage": {
+    "rootHash": "0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140",
+    "uploadTx": "0x3988a3ff1fdae9dbff086532bd9709b3491277652be07cd4e9922c502d9a1520",
+    "txSeq": "146937",
+    "alreadyStored": true,
+    "indexerUrl": "https://indexer-storage-testnet-turbo.0g.ai",
+    "storageScanSubmission": "https://storagescan-galileo.0g.ai/submission/146937",
+    "storageScanByRootHash": "https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140",
+    "storageScanUploader": "https://storagescan-galileo.0g.ai/address/0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF",
+    "chainScanTx": "https://chainscan-galileo.0g.ai/tx/0x3988a3ff1fdae9dbff086532bd9709b3491277652be07cd4e9922c502d9a1520",
+    "submissions": [
+      {
+        "txSeq": "146937",
+        "txHash": "0x3988a3ff1fdae9dbff086532bd9709b3491277652be07cd4e9922c502d9a1520",
+        "blockNumber": 49600319,
+        "dataSize": 584,
+        "uploadedAt": "2026-08-15T18:04:45.000Z",
+        "storageScan": "https://storagescan-galileo.0g.ai/submission/146937"
+      },
+      {
+        "txSeq": "146938",
+        "txHash": "0x8372e7de2dcb5494aff6d502bc80c3e04f4d532ae78cdd6c2a8c516b7bf6ca10",
+        "blockNumber": 49600488,
+        "dataSize": 584,
+        "uploadedAt": "2026-08-15T18:06:07.000Z",
+        "storageScan": "https://storagescan-galileo.0g.ai/submission/146938"
+      }
+    ]
+  },
+  "trainingConfig": {
+    "learning_rate": 0.0002,
+    "max_steps": 10,
+    "neftune_noise_alpha": 5,
+    "num_train_epochs": 3,
+    "per_device_train_batch_size": 2
+  },
+  "runContextNotCoveredByManifestHash": {
+    "taskState": "Finished",
+    "settledAt": "2026-08-14T17:19:27.516Z",
+    "fee": {
+      "totalNeuron": "11852800000000000",
+      "total0G": "0.0118528"
+    },
+    "tee": {
+      "signerAddress": "0x24135b4Bd964872284728F79F5f17eB874C5583A",
+      "acknowledged": true
+    },
+    "datasetUploadTx": "0xc38e41315c97911bda12bdea3c0387eecf70d86fbae9cf78a1fc66ff09d7da52",
+    "mintTx": "0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1",
+    "adapter": "never retrieved — adapterRootHash in the manifest is a sentinel, not a root hash"
+  },
+  "recordedAt": "2026-08-15T18:11:59.018Z"
+}

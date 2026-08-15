@@ -12,5 +12,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.11"
   }
 }
