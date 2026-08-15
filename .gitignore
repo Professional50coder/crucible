@@ -1,0 +1,37 @@
+# Third-party repos cloned for study only — never shipped, never copied wholesale.
+# See docs/PRIOR_ART.md for what was learned and how each source is attributed.
+reference/
+
+# Local editor / tooling configuration. Not part of the project.
+.claude/
+
+node_modules/
+dist/
+.next/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+
+# Secrets — contains a plaintext private key. NEVER commit.
+CREDENTIALS.local.md
+*.local.md
+secrets/
+*.pem
+*.key
+
+# Fine-tuning artifacts
+models/
+*.safetensors
+encrypted_model.bin
+model_output.zip
+lora_adapter/
+
+# Hardhat / Foundry
+artifacts/
+cache/
+out/
+typechain-types/
+broadcast/
