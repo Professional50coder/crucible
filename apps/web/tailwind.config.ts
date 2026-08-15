@@ -85,6 +85,13 @@ const config: Config = {
         lg: '0.625rem',
         xl: '0.875rem',
       },
+      boxShadow: {
+        /** Raised panel. One soft shadow, one hairline. Nothing else. */
+        panel: '0 1px 0 0 rgba(255,255,255,0.055) inset, 0 18px 40px -24px rgba(0,0,0,0.9)',
+        'panel-lg': '0 1px 0 0 rgba(255,255,255,0.07) inset, 0 32px 70px -32px rgba(0,0,0,0.95)',
+        /** Used only where a value has been proven, never decoratively. */
+        verified: '0 0 0 1px rgba(200,240,80,0.28), 0 0 44px -12px rgba(200,240,80,0.35)',
+      },
       spacing: {
         // Vertical rhythm anchors: section padding steps.
         section: '4.5rem',
@@ -113,6 +120,25 @@ const config: Config = {
           from: { transform: 'scaleX(0)' },
           to: { transform: 'scaleX(1)' },
         },
+        /** The backdrop's slow drift. Deliberately long: motion you notice is
+            motion that competes with the data. */
+        drift: {
+          '0%': { transform: 'translate3d(0,0,0) scale(1)' },
+          '50%': { transform: 'translate3d(-2%, 1.5%, 0) scale(1.06)' },
+          '100%': { transform: 'translate3d(0,0,0) scale(1)' },
+        },
+        driftalt: {
+          '0%': { transform: 'translate3d(0,0,0) scale(1.04)' },
+          '50%': { transform: 'translate3d(2.5%, -2%, 0) scale(1)' },
+          '100%': { transform: 'translate3d(0,0,0) scale(1.04)' },
+        },
+        /** A single scan that crosses the verification panel when a hash matches. */
+        verifysweep: {
+          '0%': { transform: 'translateX(-120%)', opacity: '0' },
+          '15%': { opacity: '1' },
+          '85%': { opacity: '1' },
+          '100%': { transform: 'translateX(120%)', opacity: '0' },
+        },
       },
       animation: {
         pulseline: 'pulseline 1.8s ease-in-out infinite',
@@ -120,6 +146,9 @@ const config: Config = {
         fadeup: 'fadeup 220ms ease-out both',
         popin: 'popin 160ms cubic-bezier(0.16, 1, 0.3, 1) both',
         drawline: 'drawline 600ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        drift: 'drift 34s ease-in-out infinite',
+        driftalt: 'driftalt 44s ease-in-out infinite',
+        verifysweep: 'verifysweep 1100ms cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

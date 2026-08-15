@@ -342,3 +342,79 @@
     text-decoration: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The motion register.
+
+   A continuous, slow render sits behind the whole application. Two rules keep
+   it from costing legibility, and they are not negotiable:
+
+     1. It renders BEHIND content, never under a hash. Every surface carrying a
+        hash, an address or a number sits on an opaque panel.
+     2. It respects prefers-reduced-motion by falling back to the same gradient,
+        static. The composition is identical; only the drift stops.
+
+   Implemented as composited transforms on blurred radial gradients rather than
+   WebGL: no shader compile, no canvas, no extra bytes, and it degrades to a
+   still image on a machine that cannot afford it.
+   --------------------------------------------------------------------------- */
+
+.backdrop-field {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: #131414;
+}
+
+.backdrop-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+  opacity: 0.55;
+}
+
+/* The accent is allowed to glow only here, where it carries no data. */
+.backdrop-orb--phosphor {
+  background: radial-gradient(circle at 50% 50%, rgba(200, 240, 80, 0.20), transparent 66%);
+}
+.backdrop-orb--deep {
+  background: radial-gradient(circle at 50% 50%, rgba(64, 132, 168, 0.20), transparent 68%);
+}
+.backdrop-orb--warm {
+  background: radial-gradient(circle at 50% 50%, rgba(232, 163, 61, 0.13), transparent 70%);
+}
+
+/* A hairline grid, far enough back to read as engineering paper rather than
+   decoration. Masked so it fades before it reaches the content column. */
+.backdrop-grid {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    linear-gradient(to right, rgba(236, 237, 234, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(236, 237, 234, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop-orb {
+    animation: none !important;
+  }
+}
+
+/* Any surface that carries data sits on this: opaque, lifted, hairlined. It is
+   what keeps the render behind and the hashes readable. */
+.surface {
+  @apply rounded-lg border border-line bg-panel shadow-panel;
+}
+.surface-lg {
+  @apply rounded-xl border border-line bg-panel shadow-panel-lg;
+}
+/* Recessed: inputs, code, anything that reads as "inside" the instrument. */
+.well {
+  @apply rounded-md border border-line bg-sub;
+}
