@@ -202,6 +202,13 @@ This is precisely the failure Crucible's daemon exists to prevent — and on thi
 delivery immediately, exhaust every download path, record the failure with evidence, and release the
 queue with `acknowledgeDeliverable`. Claiming more than that would be a lie a judge could check.
 
+**On Linux it does prevent it, and that is no longer an argument.** On 2026-08-16 the daemon ran a
+third task end to end with no script involved and no setting changed: delivered 08:53:57Z,
+acknowledgement scheduled for 09:53:57Z, 93,642,471 bytes pulled from 0G Storage, acknowledged
+on-chain at 09:56:05Z. `getDeliverables` reads `acknowledged: true` for task `b1807e85…`. The same
+daemon, the same default `downloadMethod: 'auto'`, the same 0G Storage path that ENOENTs on Windows —
+one variable changed, and the model came back. See `runs/run3-daemon.json`.
+
 ---
 
 ## SECTION 05 · DEFECTS
@@ -310,9 +317,15 @@ that way.
    **0.0103 0G**, about a cent. It is the one hard Wave 3 requirement outstanding, and it is
    blocked on acquiring gas, not on code: the same command that verified on Galileo is already
    configured for 16661.
-2. ~~Retrieve one adapter~~ — **done**, from WSL2 Linux, and passport #2 carries its real root hash.
-   What remains is to run that retrieval *through the orchestrator's daemon* rather than a script,
-   so the headline feature is demonstrated by the component that claims it.
+2. ~~Retrieve one adapter~~ ~~and run it through the daemon~~ — **both done.** Passport #2 carries a
+   real root hash retrieved from WSL2 Linux, and on 2026-08-16 the orchestrator daemon ran a third
+   task end to end on its own: submitted through `POST /jobs`, tracked by the poller, and
+   acknowledged by the acknowledger at delivery + 1h with 47 hours of margin — download 93,642,471
+   bytes from 0G Storage, then tx
+   [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa),
+   block 49716408. `getDeliverables` reads `acknowledged: true`. The headline feature is now
+   demonstrated by the component that claims it, on the daemon's own default settings rather than
+   a configuration chosen to make it work. Recorded in `runs/run3-daemon.json`.
 3. **Call `verifyService()` and put the result in the passport.** The manifest carries
    `attestationVerified: false` today because I record the TEE signer without checking the
    attestation myself. That field should be earned.
