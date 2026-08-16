@@ -156,17 +156,17 @@ const write = (name, s) => { writeFileSync(join(OUT, name), s); console.log(`  $
   ], 'No CLI. No twelve-step flow.', 'slate')
 
   b += plane(cols[1], py, cw, ph, 'Crucible plane · your machine', [
-    { title: '@crucible/core', sub: 'validate · convert · estimate · canonicalise — 105 tests, no network', edge: C.amber },
-    { title: 'services/orchestrator', sub: 'job store · poller · SSE stream · restart-safe — 155 tests' },
+    { title: '@crucible/core', sub: 'validate · convert · estimate · canonicalise — 147 tests, no network', edge: C.amber },
+    { title: 'services/orchestrator', sub: 'job store · poller · SSE stream · restart-safe — 174 tests' },
     { title: 'Acknowledge daemon', sub: 'acts on arrival, never at the buzzer. Only ever calls acknowledgeModel', edge: C.crimson },
-    { title: 'apps/web', sub: 'upload → configure → launch → watch → passport — 158 tests' },
+    { title: 'apps/web', sub: 'upload → configure → launch → watch → passport — 310 tests' },
   ], 'Every footgun caught before funds move.', 'amber')
 
   b += plane(cols[2], py, cw, ph, '0G plane · the network', [
-    { title: '0G Compute', sub: 'fine-tuning provider · 1× H200 in an Intel TDX enclave · 500 neuron/token' },
+    { title: '0G Compute', sub: 'fine-tuning provider · 1× H200 in an Intel TDX enclave · 800 neuron/token' },
     { title: '0G Storage', sub: 'dataset root hash and manifest root hash — what the passport commits to' },
     { title: '0G Chain', sub: 'Passport.sol deployed + verified · 0.8.19 / paris · chain 16602' },
-    { title: 'Agentic ID · ERC-7857', sub: 'one token per fine-tune, carrying the lineage hashes' },
+    { title: 'Agentic ID · ERC-7857-style', sub: 'one token per fine-tune, carrying the lineage hashes' },
   ], 'All four components. Each load-bearing.', 'green')
 
   b += plane(cols[3], py, cw, ph, 'Surface plane · what a stranger sees', [
@@ -200,7 +200,7 @@ const write = (name, s) => { writeFileSync(join(OUT, name), s); console.log(`  $
     { kind: 'dash', color: C.crimson, label: 'Verification boundary — nothing right of here is taken on our word' },
   ])
 
-  b += text(40, H - 20, 'Verified on-chain 2026-08-16: Passport.sol deployed and source-verified on Galileo at 0x27087B5b…83C1c7 · passport #1 minted · manifest on 0G Storage at 0xc757a7e6…8e1140, hashing to the anchored value. Task 10551604 force-settled UNACKNOWLEDGED — 30% penalty, model lost. Nothing is deployed to mainnet.',
+  b += text(40, H - 20, 'Verified on-chain 2026-08-16 (Galileo, chain 16602): Passport.sol deployed and source-verified at 0x27087B5b…83C1c7 · passports #1 and #2 minted · manifest on 0G Storage at 0xc757a7e6…8e1140, hashing to the anchored value. Three paid fine-tuning runs. Task 10551604 force-settled UNACKNOWLEDGED — 30% penalty, model lost; task b1807e85 was acknowledged by the daemon itself at delivery+1h and its 93.6 MB adapter retrieved. Nothing is deployed to mainnet.',
     { size: 10.5, fill: C.faint })
 
   write('architecture.svg', svg(W, H, b))

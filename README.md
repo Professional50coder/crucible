@@ -51,7 +51,7 @@ The second time, I retrieved it. The only thing I changed was the operating syst
 
 The planes are separated by *what a reader has to take on trust*. The property that matters: **everything to the right of the dashed line is checkable by someone who has never met me** — the manifest is public, the hash is on a public chain, and the verification needs no key.
 
-![Crucible reference architecture](docs/diagrams/architecture.png)
+![Crucible reference architecture](docs/diagrams/architecture.svg)
 
 <sub>**Fig. 1** — Four-plane reference architecture. Crimson edges mark the 48-hour acknowledgement path, the one place where a delay costs you the artifact. The dashed boundary is the line past which nothing is taken on my word. Every figure in the footer is measured on-chain, not specified — see § 03.</sub>
 
@@ -67,10 +67,10 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
 + PASS  Dataset conversion + validation         3 formats, mixed-format detection by line
 + PASS  Fee estimation from live on-chain price reproduces 0G's own worked example exactly
 + PASS  Canonical manifest + keccak256          deterministic; the anchor depends on it
-+ PASS  crucible doctor                         live preflight, no wallet, no private key
++ PASS  crucible doctor · validate · convert    live preflight + dataset tooling, no key
 
   ## the chain
-+ PASS  Passport.sol — 70 tests                 incl. lineage immutable through transfer
++ PASS  Passport.sol — 104 tests                incl. lineage immutable through transfer
 + PASS  Deployed to 0G Galileo                  block 49596815 · 2,238,586 gas
 + PASS  Source-verified on the explorer         0.8.19 / paris / 200 runs · 78,649 chars
 + PASS  Passport #1 minted                      block 49597171 · 327,702 gas
@@ -80,12 +80,13 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
   ## the network, with real money
 + PASS  Ledger + sub-account funded             true cost 0.15 0G, not the 3 0G the SDK demands
 + PASS  Dataset uploaded to 0G Storage          root 0xa5051ae7…9e7dbfd
-+ PASS  Fine-tuning task created, twice         Init → SettingUp → … → Delivered, ~4 min
++ PASS  Fine-tuning task created, three times   Init → SettingUp → … → Delivered, ~4 min
 + PASS  Manifest uploaded to 0G Storage         584 B · submission 146937
 + PASS  Manifest hash == on-chain anchor        the whole verification loop closes
 - FAIL  Model retrieval — task 1, on Windows    both download paths broken · model lost, 30% taken
 + PASS  Model retrieval — task 2, from Linux    93,642,469 bytes · validated · acknowledged=true
 + PASS  Passport #2 minted from the real adapter  adapter hash read off-chain, not from our notes
++ PASS  Run 3 acknowledged by the daemon itself   tx 0x4e2c81e2…7e4cfa · no script involved
 
   ## what I am not claiming
 - NONE  Passport #1's adapter was never retrieved  it carries an explicit sentinel, not a hash
@@ -173,7 +174,7 @@ node tools/task-status.mjs
 
 ## SECTION 04 · THE 48-HOUR BUDGET
 
-![The task lifecycle and its two failure modes](docs/diagrams/lifecycle.png)
+![The task lifecycle and its two failure modes](docs/diagrams/lifecycle.svg)
 
 <sub>**Fig. 2** — 0G's task lifecycle, mirrored exactly rather than re-invented. The clock starts at `Delivered`. `Finished` means the *provider* settled — it does not mean you were paid out or that you hold anything.</sub>
 
@@ -241,7 +242,7 @@ builder loses the days I did.
 
 ## SECTION 06 · WHAT IT PROVES, AND WHAT IT DOES NOT
 
-![What a stranger can verify](docs/diagrams/verification.png)
+![What a stranger can verify](docs/diagrams/verification.svg)
 
 <sub>**Fig. 3** — The verification path, and its boundary. Everything on the left is checkable by a stranger with no wallet. The right-hand panel is the part no amount of hashing can establish.</sub>
 
@@ -268,14 +269,16 @@ Stated in full rather than glossed, because a 0G judge checks this first.
 ## SECTION 07 · REPOSITORY
 
 ```
-packages/core/           @crucible/core — validation, conversion, fee estimation, canonical
-                         manifest + keccak256, task-state model.  106 tests, no network
-packages/cli/            crucible doctor — live preflight with no private key
+packages/core/           @crucible/core — validation, format conversion, fee estimation,
+                         canonical manifest + keccak256, task-state, model card.  147 tests
+packages/cli/            crucible doctor · validate · convert · config — no private key  62 tests
 packages/ml/             dataset analysis (balance, leakage, PII) + eval harness.  320 tests
-services/orchestrator/   job store, poller, SSE, auto-acknowledge daemon.  155 tests
-apps/web/                Next.js: upload → configure → launch → watch → passport → gallery
-contracts/               Passport.sol + deploy, mint and verification scripts.  70 tests
-tools/                   read-only diagnostics: task status, manifest upload, verification
+services/orchestrator/   job store, poller, SSE, auto-acknowledge daemon.  174 tests
+apps/web/                Next.js: upload → configure → launch → watch → passport → gallery.
+                         Self-verifying export, per-passport OG card.  310 tests
+contracts/               Passport.sol + deploy, generic mint and verification scripts.  104 tests
+tools/                   read-only diagnostics: task status, deliverable state, dataset
+                         identification, manifest upload, TEE attestation, verification
 datasets/                614 records across 6 files, plus 11 deliberately invalid fixtures
 docs/                    field notes · claims audit · interfaces · prior art · diagrams
 submission/              architecture, demo script, changelog, checklist, form spec
