@@ -119,3 +119,37 @@ and "use directly" from the second, with *"Check repo"* sitting in the licence c
 code was in fact copied — the contract and the Hardhat config are written here — but the plan of
 record rested on a licence nobody had looked up. Both entries are now read-only, and this row
 exists so the question is not asked again from memory.
+
+---
+
+## ERC-8004 on 0G — resolved by `eth_call`, 2026-08-16
+
+0G's Agentic ID page states that Agentic IDs are *"compatible with ERC-8004, the Trustless Agent
+standard that 0G officially supports"*, and that an Agentic ID *"can carry a corresponding
+ERC-8004 registration"*. Neither that page nor the EIP publishes a deployed address, so this was
+settled against the chain rather than against documentation.
+
+| Claim | Verdict | Source |
+|---|---|---|
+| ERC-8004 registries are deployed on 0G | ✅ **Identity and Reputation, on both networks.** Galileo `0x8004A818…BD9e` / `0x8004B663…8713`; mainnet `0x8004A169…a432` / `0x8004BAa1…9b63`. All four carry bytecode | `eth_getCode` on both RPCs |
+| Those are really ERC-8004 registries, not lookalikes | ✅ mainnet identity `name()` returns **`AgentIdentity`**; each reputation registry's `getIdentityRegistry()` points back at its identity registry | `eth_call`, 2026-08-16 |
+| A Validation Registry exists to attest to | ❌ **No.** None on 0G and none published for any chain. The ERC-8004 contracts repository states the Validation Registry portion *"is still under active update and discussion with the TEE community"* | [erc-8004/erc-8004-contracts](https://github.com/erc-8004/erc-8004-contracts) |
+| ERC-8004 is a finished standard | ❌ **Draft**, created 2025-08-13. Several EIP-specified getters revert on the deployed Galileo implementation, which is an EIP-1967 proxy tracking a moving draft — an ABI must be built from bytecode, not from the spec | [eips.ethereum.org/EIPS/eip-8004](https://eips.ethereum.org/EIPS/eip-8004) |
+
+**Why this matters to Crucible, stated honestly.** A Model Passport is structurally a *validation*
+attestation — a third party's checkable claim about an agent — so the registry it fits is the one
+that does not exist, and the two that do exist fit worst. The Validation Registry's response field
+is a `uint8` scored 0–100, and a lineage record has no honest value to put in it. Full analysis and
+the recommendation in [`ERC8004.md`](ERC8004.md).
+
+## TEE attestation — `verifyService()` run, 2026-08-16
+
+| Claim | Verdict | Source |
+|---|---|---|
+| The provider's TEE signer matches the address registered on-chain | ✅ both read `0x24135b4Bd964872284728F79F5f17eB874C5583A` | `node tools/verify-attestation.mjs` |
+| The provider's compose hash matches its own event log | ✅ `8779f38c…5bee` on both sides | same run |
+| The Intel TDX quote has been cryptographically validated | ❌ **Not by us.** Full verification is three steps — quote validation via `dcap-qvl`, RTMR event-log replay, OS image measurement via `dstack-mr` — behind an external `dstack-verifier` service the SDK tells you to run. We have not run it | the SDK's own instructions, printed in the run output |
+| Therefore `tee.attestationVerified` should read `true` | ❌ **Deliberately still `false`.** It can now be earned, but only for a stated meaning. Asserting it on two passing checks while the quote is unvalidated would repeat this project's most expensive mistake in a new place | — |
+
+The full 55 KB report is committed at `runs/attestation-testnet/fine_tuning_attestation_report.json`
+so that this account of it can be checked rather than believed.
