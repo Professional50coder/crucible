@@ -13,11 +13,38 @@ so a demo trained on invented facts would refute its own thesis.
 
 ## At a glance
 
+> **Which token estimate this is, and why the numbers changed — 2026-08-16.** Every figure below
+> now comes from `approximateTokenCount` in `@crucible/core`, because that is the number the
+> orchestrator quotes a user and the number a funded run was actually priced against: run 3 was
+> quoted 2,893 tokens for `sentiment/train.jsonl` and charged on that basis.
+>
+> They changed because this repository had **three estimators that disagree**, and this table was
+> publishing a mixture of two of them. Measured on the same files:
+>
+> | file | `@crucible/core` | `datasets/validate.mjs` | `tools/verify-datasets.mjs` |
+> |---|---|---|---|
+> | `sentiment/train.jsonl` | **2,893** | 1,792 | 1,732 |
+> | `0g-expert/train.jsonl` | **19,095** | 15,055 | 14,854 |
+> | `dolly-slice/train.jsonl` | **69,422** | 67,006 | 67,006 |
+>
+> The gap is the JSON envelope. Core counts the serialised record; the other two count only the
+> natural-language payload. On short chat records the envelope is most of the bytes, which is why
+> `sentiment` diverges by 1.6x while `dolly-slice`, whose records are long prose, barely moves.
+>
+> The two smaller estimators are **not** being changed to match. `tools/verify-datasets.mjs` is
+> deliberately a second, independent implementation of 0G's dataset rules — two implementations
+> agreeing is evidence, and collapsing them into one would destroy the only thing that check
+> exists for. They stay independent, and the disagreement is now documented rather than silent.
+>
+> **All three overstate.** The authoritative count is the broker's `calculateToken()`, and this
+> repository's own changelog records the local estimator running ~2.3x high on short chat records.
+> Treat every number here as a ceiling for budgeting, never as a bill.
+
 | Dataset | Format | Train | Test | Train tokens | Est. mainnet cost @3 epochs | Provenance |
 |---|---|---|---|---|---|---|
-| `0g-expert/` | chat | 249 | 44 | ~14,944 | **0.0324 0G** | Authored here from 0G docs + `docs/FIELD_NOTES.md` |
-| `sentiment/` | chat | 61 | 20 | ~1,792 | **0.0127 0G** | Authored here, synthetic |
-| `dolly-slice/` | instruction | 200 | 40 | ~67,006 | **0.1105 0G** | `databricks/databricks-dolly-15k`, **CC BY-SA 3.0** |
+| `0g-expert/` | chat | 249 | 44 | ~19,095 | **0.0386 0G** | Authored here from 0G docs + `docs/FIELD_NOTES.md` |
+| `sentiment/` | chat | 61 | 20 | ~2,893 | **0.0143 0G** | Authored here, synthetic |
+| `dolly-slice/` | instruction | 200 | 40 | ~69,422 | **0.1141 0G** | `databricks/databricks-dolly-15k`, **CC BY-SA 3.0** |
 | `edge-cases/invalid/` | (broken on purpose) | — | 11 files | — | — | Authored here as test fixtures |
 
 All six valid files pass both `datasets/validate.mjs` and the repo's own
