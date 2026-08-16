@@ -1,5 +1,18 @@
 import type { TaskState } from './states.js'
+import type { JobQuality } from './quality.js'
 import type { Job, JobDataset, JobFee, NetworkName, TrainingConfig } from './types.js'
+
+/**
+ * Dataset quality findings on the wire.
+ *
+ * Identical to the stored `JobQuality` except for `analyzedAt`, which follows
+ * the same rule as every other timestamp here: an ISO 8601 string, never an
+ * epoch number. Advisory only — a `fail` severity describes the DATASET and
+ * says nothing about the model or the training run.
+ */
+export interface WireQuality extends Omit<JobQuality, 'analyzedAt'> {
+  analyzedAt: string
+}
 
 /** One entry of the job's state history, with the timestamp as an ISO string. */
 export interface WireTransition {
@@ -66,6 +79,11 @@ export interface WireJob {
   /** Strings, never bigint — they must survive the JSON hop. */
   fee?: JobFee
   dataset?: JobDataset
+  /**
+   * Pre-flight dataset findings. Optional like the four panel fields above: a
+   * job whose dataset was never analysed simply omits the key.
+   */
+  quality?: WireQuality
 }
 
 export function toWireJob(job: Job): WireJob {
@@ -99,6 +117,9 @@ export function toWireJob(job: Job): WireJob {
     ...(job.trainingConfig !== undefined ? { config: job.trainingConfig } : {}),
     ...(job.fee !== undefined ? { fee: job.fee } : {}),
     ...(job.dataset !== undefined ? { dataset: job.dataset } : {}),
+    ...(job.quality !== undefined
+      ? { quality: { ...job.quality, analyzedAt: iso(job.quality.analyzedAt)! } }
+      : {}),
   }
 }
 

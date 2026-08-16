@@ -168,6 +168,50 @@ describe('wire Job — docs/INTERFACES.md section 5', () => {
     })
   })
 
+  describe('quality — the pre-flight dataset panel', () => {
+    const quality = {
+      severity: 'fail' as const,
+      analyzedAt: T0,
+      recordsAnalyzed: 220,
+      truncated: false,
+      duplicates: { exactGroups: 1, redundantRecords: 12, nearPairs: 0, redundantFraction: 0.05 },
+      leakage: {
+        clean: false,
+        testExampleCount: 40,
+        contaminatedTestCount: 3,
+        contaminatedTestLines: [4, 9, 11],
+      },
+      pii: { total: 1, highSeverity: 1, byType: { 'credit-card': 1 }, affectedLines: [6] },
+      issues: [{ code: 'secrets-detected', severity: 'fail' as const, message: '1 secret found.' }],
+      recommendations: ['Remove the secret and rotate the credential.'],
+    }
+
+    it('is absent on a job whose dataset was never analysed', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      expect(toWireJob(job).quality).toBeUndefined()
+      expect(Object.keys(toWireJob(job))).not.toContain('quality')
+    })
+
+    it('renders analyzedAt as ISO, like every other timestamp on the wire', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const wire = toWireJob(store.update(job.id, { quality }))
+      expect(wire.quality!.analyzedAt).toBe('2026-08-14T12:00:00.000Z')
+      expect(typeof wire.quality!.analyzedAt).toBe('string')
+    })
+
+    it('carries the three findings a user needs before paying', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const round = JSON.parse(JSON.stringify(toWireJob(store.update(job.id, { quality }))))
+      expect(round.quality.duplicates.redundantRecords).toBe(12)
+      expect(round.quality.leakage.contaminatedTestCount).toBe(3)
+      expect(round.quality.pii.highSeverity).toBe(1)
+      // Advisory: a 'fail' severity here is about the DATASET. It does not put
+      // the job into an error state.
+      expect(round.quality.severity).toBe('fail')
+      expect(round.error).toBeNull()
+    })
+  })
+
   describe('transitions — the state history the client renders a timeline from', () => {
     it('carries the seeded Init transition on a brand-new job', () => {
       const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })

@@ -5,6 +5,7 @@ import { errorMessage, isOccupiedError, isQueueLockedError, type FineTuningPort 
 import { Emitter } from './events.js'
 import { analyzeDatasetFile } from './dataset.js'
 import { estimateFee } from './fee.js'
+import { analyzeDatasetQuality, qualityHeadline } from './quality.js'
 import type { JobStore } from './store.js'
 import type { Job, JobPatch } from './types.js'
 
@@ -88,6 +89,17 @@ export class Submitter {
 
     const dataset = job.dataset ?? (job.datasetPath ? analyzeDatasetFile(job.datasetPath) : undefined)
     if (dataset && !job.dataset) patch.dataset = dataset
+
+    // Pre-flight quality, once per job, before any money moves. Advisory: it
+    // never rejects and never throws (see quality.ts), and the headline logs
+    // counts only — never a matched secret.
+    if (job.quality === undefined && job.datasetPath) {
+      const quality = await analyzeDatasetQuality(job.datasetPath, { now: this.#clock.now() })
+      if (quality) {
+        patch.quality = quality
+        this.#log('info', `job ${job.id}: dataset quality — ${qualityHeadline(quality)}`)
+      }
+    }
 
     if (job.fee !== undefined) return patch
     if (!dataset || !job.model || !job.trainingConfig) return patch

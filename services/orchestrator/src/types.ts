@@ -1,4 +1,5 @@
 import type { TaskState } from './states.js'
+import type { JobQuality } from './quality.js'
 
 export type NetworkName = 'testnet' | 'mainnet'
 
@@ -56,6 +57,12 @@ export interface Job {
   fee?: JobFee
   /** Format/size summary, supplied by the caller or derived from the file. */
   dataset?: JobDataset
+  /**
+   * Advisory pre-flight findings — duplicates, train/test leakage, PII — from
+   * `@crucible/ml`, computed once at submission. Absent when the analysis could
+   * not run; a `fail` severity never blocks the job. See `src/quality.ts`.
+   */
+  quality?: JobQuality
 
   /** Submission (upload + createTask) retry bookkeeping. */
   submitAttempts: number
