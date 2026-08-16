@@ -15,7 +15,7 @@ so a demo trained on invented facts would refute its own thesis.
 
 | Dataset | Format | Train | Test | Train tokens | Est. mainnet cost @3 epochs | Provenance |
 |---|---|---|---|---|---|---|
-| `0g-expert/` | chat | 249 | 44 | ~14,839 | **0.0323 0G** | Authored here from 0G docs + `docs/FIELD_NOTES.md` |
+| `0g-expert/` | chat | 249 | 44 | ~14,831 | **0.0322 0G** | Authored here from 0G docs + `docs/FIELD_NOTES.md` |
 | `sentiment/` | chat | 61 | 20 | ~1,792 | **0.0127 0G** | Authored here, synthetic |
 | `dolly-slice/` | instruction | 200 | 40 | ~67,006 | **0.1105 0G** | `databricks/databricks-dolly-15k`, Apache-2.0 |
 | `edge-cases/invalid/` | (broken on purpose) | — | 11 files | — | — | Authored here as test fixtures |
@@ -40,7 +40,7 @@ cost (0G) = tokens ÷ 1,000,000 × price-per-million × epochs + storage reserve
 | Epochs | 3 | `fine-tuning-example/config/training_config.json` |
 
 Worked example, `0g-expert/train.jsonl` on mainnet:
-`14,839 ÷ 1e6 × 0.5 × 3 = 0.02226`, plus `0.01` reserve = **0.0323 0G**.
+`14,831 ÷ 1e6 × 0.5 × 3 = 0.02225`, plus `0.01` reserve = **0.0322 0G**.
 
 > **Token counts here are estimates**, computed as natural-language characters ÷ 4.
 > They are for budgeting only. The authoritative number comes from the real Qwen
@@ -66,9 +66,9 @@ of the three that supports multi-turn and a `system` role.
 duplicates. Within 0G's recommended 200–1,000 range for real behaviour change on
 Qwen2.5-0.5B.
 
-**Estimated tokens.** 14,839 (train) + 2,481 (test).
+**Estimated tokens.** 14,831 (train) + 2,462 (test).
 
-**Estimated cost @ 3 epochs.** Testnet 0.0456 0G · Mainnet 0.0323 0G.
+**Estimated cost @ 3 epochs.** Testnet 0.0456 0G · Mainnet 0.0322 0G.
 
 ### Topic coverage
 
