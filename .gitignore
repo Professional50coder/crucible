@@ -18,6 +18,7 @@ TODO.md
 node_modules/
 dist/
 .next/
+.vercel/
 coverage/
 .env
 .env.*
