@@ -70,6 +70,7 @@ import {
 import { DEPLOYMENT_BLOCKS, isDeployed, passportAddress } from '@/lib/passport-contract'
 import type { PassportRecord } from '@/lib/types'
 import { Disclosure } from './Disclosure'
+import { EvidenceTrail } from './EvidenceTrail'
 import { CopyButton, Hash, TypedRow, TypedRows } from './Hash'
 import { PassportExport } from './PassportExport'
 import { LineageGraph } from './LineageGraph'
@@ -526,6 +527,17 @@ export function PassportView({
           ) : null}
         </section>
       ) : null}
+
+      {/* ================================================================ */}
+      {/* The audit log behind the certificate                              */}
+      {/*                                                                   */}
+      {/* Everything above states an outcome. This states the process, with */}
+      {/* a timestamp on every instant the run actually recorded, so a      */}
+      {/* stranger can check how it got there rather than that it did.      */}
+      {/* ================================================================ */}
+      <div className="mt-4">
+        <EvidenceTrail record={record} />
+      </div>
 
       {/* ================================================================ */}
       {/* Chain of custody — the narrative                                  */}

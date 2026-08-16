@@ -30,20 +30,187 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { formatCount, formatOg, formatRelative } from '@/lib/format'
-import type { PassportSummary } from '@/lib/types'
+import type { Network, PassportSummary } from '@/lib/types'
 import { AlertIcon, CheckIcon } from './icons'
 import { Dot } from './ui'
+
+// ---------------------------------------------------------------------------
+// Sorting
+// ---------------------------------------------------------------------------
+
+/**
+ * The three columns worth ordering by.
+ *
+ * Deliberately not every column. A sort control on `Passport` or `Provenance`
+ * would be a control that answers no question a reader has — the facet idea is
+ * from Immich's asset browser (AGPL-3.0; idea only, no code taken or adapted),
+ * and the lesson taken from it is that a facet earns its place by narrowing a
+ * real question, not by existing for every field in the row.
+ *
+ *  - `age`    — newest or oldest first. The default, newest first.
+ *  - `tokens` — how much data actually went through the run.
+ *  - `fee`    — what it cost, compared across records.
+ */
+export const SORT_KEYS = ['age', 'tokens', 'fee'] as const
+export type SortKey = (typeof SORT_KEYS)[number]
+export type SortDirection = 'asc' | 'desc'
+
+export interface Sort {
+  key: SortKey
+  direction: SortDirection
+}
+
+/** Newest first: the only default that makes sense for a record of runs. */
+export const DEFAULT_SORT: Sort = { key: 'age', direction: 'desc' }
+
+export function isSortKey(value: string): value is SortKey {
+  return (SORT_KEYS as readonly string[]).includes(value)
+}
+
+/**
+ * Order a list of summaries.
+ *
+ * Pure, total, and non-mutating — it copies before sorting, because the caller's
+ * array is the unfiltered source of truth for the counts in the header and a
+ * sort that reorders it in place would silently change those too.
+ *
+ * `fee` compares as BigInt: neuron amounts are 1e16-scale strings and Number()
+ * on them loses precision exactly where two records would need to be told apart.
+ */
+export function sortPassports(passports: PassportSummary[], sort: Sort): PassportSummary[] {
+  const factor = sort.direction === 'asc' ? 1 : -1
+
+  return [...passports].sort((a, b) => {
+    let delta = 0
+
+    if (sort.key === 'age') {
+      // `desc` on age means newest first, which is the larger timestamp.
+      delta = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    } else if (sort.key === 'tokens') {
+      delta = a.tokenCount - b.tokenCount
+    } else {
+      const left = BigInt(a.totalNeuron || '0')
+      const right = BigInt(b.totalNeuron || '0')
+      delta = left < right ? -1 : left > right ? 1 : 0
+    }
+
+    // Ties resolve by id so the order is stable and a shared URL reproduces
+    // exactly the list the sender was looking at.
+    if (delta === 0) return a.id.localeCompare(b.id)
+    return delta * factor
+  })
+}
+
+// ---------------------------------------------------------------------------
+// The gallery's view state, and its URL
+// ---------------------------------------------------------------------------
+
+/**
+ * Filter + sort, serialised to a query string and back.
+ *
+ * A filtered gallery that cannot be linked to is a filtered gallery nobody can
+ * cite. "The two on-chain records", "everything over 100k tokens" — each should
+ * be a URL a reader can paste into a report. The facet model that makes that
+ * worth doing is Immich's asset browser (AGPL-3.0 — idea only; no code taken or
+ * adapted).
+ *
+ * **These live here rather than in `app/gallery/page.tsx` because a Next route
+ * file may not export anything outside the route contract.** Next generates a
+ * type in `.next/types` asserting that every non-route export of a `page.tsx` is
+ * `never`, so exporting these two helpers from the page typechecks locally and
+ * then fails `next build`. Keeping them in the module that already owns the
+ * table's sorting keeps them unit-testable without breaking the build.
+ */
+export interface GalleryView {
+  network: Network | 'all'
+  model: string
+  query: string
+  sort: Sort
+}
+
+export const DEFAULT_VIEW: GalleryView = {
+  network: 'all',
+  model: 'all',
+  query: '',
+  sort: DEFAULT_SORT,
+}
+
+/**
+ * Defaults are omitted, so an untouched gallery stays at `/gallery` rather than
+ * carrying four redundant parameters a reader would have to squint past.
+ */
+export function viewToParams(view: GalleryView): string {
+  const params = new URLSearchParams()
+  if (view.network !== DEFAULT_VIEW.network) params.set('network', view.network)
+  if (view.model !== DEFAULT_VIEW.model) params.set('model', view.model)
+  if (view.query.trim() !== '') params.set('q', view.query)
+  if (view.sort.key !== DEFAULT_SORT.key) params.set('sort', view.sort.key)
+  if (view.sort.direction !== DEFAULT_SORT.direction) params.set('dir', view.sort.direction)
+  return params.toString()
+}
+
+/**
+ * Read a view out of a query string.
+ *
+ * Every value is validated against what the app actually supports, because a
+ * query string is untrusted input like any other. An unrecognised
+ * `network=solana` falls back to `all` rather than filtering every record away
+ * and leaving the reader staring at an empty table with no explanation.
+ */
+export function paramsToView(search: string): GalleryView {
+  const params = new URLSearchParams(search)
+  const network = params.get('network')
+  const dir = params.get('dir')
+  const sortKey = params.get('sort')
+
+  return {
+    network: network === 'testnet' || network === 'mainnet' ? network : 'all',
+    model: params.get('model') || 'all',
+    query: params.get('q') ?? '',
+    sort: {
+      key: sortKey && isSortKey(sortKey) ? sortKey : DEFAULT_SORT.key,
+      direction: dir === 'asc' || dir === 'desc' ? dir : DEFAULT_SORT.direction,
+    },
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Table
 // ---------------------------------------------------------------------------
 
-export function PassportTable({ passports }: { passports: PassportSummary[] }) {
+export function PassportTable({
+  passports,
+  sort,
+  onSortChange,
+}: {
+  passports: PassportSummary[]
+  /** Omitted by callers that render a fixed order; the headers stay inert text. */
+  sort?: Sort
+  onSortChange?: (sort: Sort) => void
+}) {
+  /**
+   * Clicking the active column flips its direction; clicking a new one adopts
+   * that column's natural direction — largest-first for quantities, newest-first
+   * for age. Starting `tokens` ascending would open on the smallest run, which
+   * is never the row anyone clicked the header to find.
+   */
+  const toggle = (key: SortKey) => {
+    if (!onSortChange) return
+    if (sort?.key === key) {
+      onSortChange({ key, direction: sort.direction === 'asc' ? 'desc' : 'asc' })
+    } else {
+      onSortChange({ key, direction: 'desc' })
+    }
+  }
+
+  const sortable = onSortChange !== undefined && sort !== undefined
+
   return (
     <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full min-w-[38rem] border-collapse text-left">
         <caption className="sr-only">
           Every passport Crucible has recorded, with its provenance, size, fee and age.
+          {sortable ? ` Sorted by ${sort.key}, ${sort.direction}ending.` : ''}
         </caption>
 
         <thead>
@@ -53,9 +220,27 @@ export function PassportTable({ passports }: { passports: PassportSummary[] }) {
             <Th>Provenance</Th>
             <Th className="hidden lg:table-cell">Model</Th>
             <Th className="hidden md:table-cell text-right">Examples</Th>
-            <Th className="hidden md:table-cell text-right">Tokens</Th>
-            <Th className="hidden xl:table-cell text-right">Fee</Th>
-            <Th className="text-right">Age</Th>
+            <SortTh
+              sortKey="tokens"
+              label="Tokens"
+              sort={sortable ? sort : undefined}
+              onSort={sortable ? toggle : undefined}
+              className="hidden md:table-cell text-right"
+            />
+            <SortTh
+              sortKey="fee"
+              label="Fee"
+              sort={sortable ? sort : undefined}
+              onSort={sortable ? toggle : undefined}
+              className="hidden xl:table-cell text-right"
+            />
+            <SortTh
+              sortKey="age"
+              label="Age"
+              sort={sortable ? sort : undefined}
+              onSort={sortable ? toggle : undefined}
+              className="text-right"
+            />
           </tr>
         </thead>
 
@@ -155,6 +340,67 @@ function ProvenanceBadge({ onChain }: { onChain: boolean }) {
       {onChain ? <CheckIcon className="h-2.5 w-2.5" /> : <Dot tone="neutral" />}
       {onChain ? 'on chain' : 'demo'}
     </span>
+  )
+}
+
+/**
+ * A column header that sorts.
+ *
+ * `aria-sort` on the `th` is the part that matters: it is the only way a screen
+ * reader learns that a column is ordered and which way, and an arrow glyph
+ * communicates that to sighted readers alone. The button carries the label so
+ * the whole header is one hit target and one tab stop, matching the row rule
+ * above.
+ *
+ * Without an `onSort` this degrades to plain header text rather than a dead
+ * button — a control that looks interactive and does nothing is worse than no
+ * control.
+ */
+function SortTh({
+  sortKey,
+  label,
+  sort,
+  onSort,
+  className = '',
+}: {
+  sortKey: SortKey
+  label: string
+  sort?: Sort
+  onSort?: (key: SortKey) => void
+  className?: string
+}) {
+  if (!onSort || !sort) {
+    return <Th className={className}>{label}</Th>
+  }
+
+  const active = sort.key === sortKey
+  const ascending = active && sort.direction === 'asc'
+
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (ascending ? 'ascending' : 'descending') : 'none'}
+      data-testid={`sort-${sortKey}`}
+      className={`label whitespace-nowrap px-3 py-2.5 font-normal first:pl-4 last:pr-4 ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 uppercase tracking-widest2 transition-colors ${
+          active ? 'text-phosphor' : 'text-inherit hover:text-fg'
+        }`}
+      >
+        {label}
+        <span aria-hidden="true" className="font-mono text-2xs">
+          {active ? (ascending ? '↑' : '↓') : '↕'}
+        </span>
+        <span className="sr-only">
+          {active
+            ? `— sorted ${ascending ? 'ascending' : 'descending'}, activate to reverse`
+            : '— activate to sort by this column'}
+        </span>
+      </button>
+    </th>
   )
 }
 

@@ -4,7 +4,15 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Hash } from '@/components/Hash'
-import { PassportTable } from '@/components/PassportCard'
+import {
+  DEFAULT_VIEW,
+  PassportTable,
+  paramsToView,
+  sortPassports,
+  viewToParams,
+  type GalleryView,
+  type Sort,
+} from '@/components/PassportCard'
 import { AlertIcon, AnchorIcon, ArrowIcon, CheckIcon, SearchIcon } from '@/components/icons'
 import { Badge, Dot, EmptyState, ErrorState, HatchBand, IconTile, Skeleton } from '@/components/ui'
 import { applyFilter, getPassport, listPassports } from '@/lib/api'
@@ -48,9 +56,50 @@ export default function GalleryPage() {
   const [passports, setPassports] = useState<PassportSummary[] | null>(null)
   const [featured, setFeatured] = useState<PassportRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [network, setNetwork] = useState<NetworkFilter>('all')
-  const [model, setModel] = useState<string>('all')
-  const [query, setQuery] = useState('')
+  /**
+   * Seeded from the URL on first render, so a shared link opens on the view its
+   * sender was looking at rather than on the default and then jumping.
+   * `typeof window` guards the server pass, where there is no location to read.
+   */
+  const [view, setView] = useState<GalleryView>(() =>
+    typeof window === 'undefined' ? DEFAULT_VIEW : paramsToView(window.location.search),
+  )
+  const { network, model, query, sort } = view
+
+  const patch = useCallback(
+    (next: Partial<GalleryView>) => setView((current) => ({ ...current, ...next })),
+    [],
+  )
+
+  const setNetwork = useCallback((value: NetworkFilter) => patch({ network: value }), [patch])
+  const setModel = useCallback((value: string) => patch({ model: value }), [patch])
+  const setQuery = useCallback((value: string) => patch({ query: value }), [patch])
+  const setSort = useCallback((value: Sort) => patch({ sort: value }), [patch])
+
+  /**
+   * Mirror the view into the address bar, so a filtered view is a shareable
+   * link. Two choices worth stating, because both look like the wrong ones:
+   *
+   *  - **`history.replaceState`, not `router.replace`.** Every keystroke in the
+   *    search box updates the URL. Pushing those through the Next router would
+   *    re-render the route on each character and stack a history entry per
+   *    keystroke for the back button to chew through. `replaceState` writes the
+   *    address bar and nothing else, which is the whole of what is wanted.
+   *  - **`window.location.search`, not `useSearchParams`.** `useSearchParams`
+   *    opts the route into dynamic rendering and needs a Suspense boundary above
+   *    it to build. This state is client-only — read once on mount, written
+   *    thereafter — so reading the browser's own location keeps the route
+   *    statically renderable and adds no boundary.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = viewToParams(view)
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${params ? `?${params}` : ''}`,
+    )
+  }, [view])
 
   const load = useCallback(() => {
     setError(null)
@@ -81,9 +130,15 @@ export default function GalleryPage() {
     return [...new Set(passports.map((p) => p.model))].sort()
   }, [passports])
 
+  /**
+   * Filter first, then sort. The existing `applyFilter` is untouched — sorting
+   * is a separate concern layered over it, so the filter behaviour this page
+   * already had keeps its own tests and its own meaning.
+   */
   const visible = useMemo(
-    () => (passports ? applyFilter(passports, { network, model, query }) : []),
-    [passports, network, model, query],
+    () =>
+      passports ? sortPassports(applyFilter(passports, { network, model, query }), sort) : [],
+    [passports, network, model, query, sort],
   )
 
   /**
@@ -230,6 +285,9 @@ export default function GalleryPage() {
             {visible.length > 0
               ? ` · ${formatCount(visible.reduce((sum, p) => sum + p.tokenCount, 0))} tokens`
               : ''}
+            {/* The active order, stated. It is in the URL, so it is part of what
+                a shared link carries and the reader should be able to see it. */}
+            {visible.length > 1 ? ` · by ${sort.key} ${sort.direction}` : ''}
           </p>
         ) : (
           <div className="py-4">
@@ -269,7 +327,7 @@ export default function GalleryPage() {
           )
         ) : (
           <div className="animate-fadeup">
-            <PassportTable passports={visible} />
+            <PassportTable passports={visible} sort={sort} onSortChange={setSort} />
           </div>
         )}
       </div>
