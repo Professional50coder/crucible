@@ -367,6 +367,18 @@ await file.close()
 Confirmed: dataset uploaded, root hash `0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd`,
 tx `0xc38e41315c97911bda12bdea3c0387eecf70d86fbae9cf78a1fc66ff09d7da52`.
 
+**Which file that hash is** — `datasets/sentiment/train.jsonl`, 11,695 bytes, chat format, 61
+examples. Recorded here because it was not recorded anywhere for two days: both passports carry
+a `datasetRootHash` that no document in this repository could turn back into a file. A hash
+nobody can resolve is not evidence of anything. `node tools/identify-dataset.mjs` recomputes the
+0G merkle root of every `.jsonl` under `datasets/` and reports which one matches, so the link is
+re-checkable rather than asserted:
+
+```
+>>  datasets/sentiment/train.jsonl   0xa5051ae7…9e7dbfd   11695 bytes
+MATCH: datasets/sentiment/train.jsonl
+```
+
 ---
 
 ## ✅ FIRST REAL FINE-TUNING TASK CREATED — 2026-08-14
