@@ -15,8 +15,37 @@ Judging weights, for prioritisation when time runs short:
 |---|---|---|
 | **40%** | Progress & Momentum | `submission/WAVE3_CHANGELOG.md` + the commit history |
 | **30%** | 0G Integration | mainnet address, explorer activity, the demo video, ARCHITECTURE.md |
-| **20%** | Technical Quality | the repo itself — tests, contract, docs |
+| **20%** | Technical Quality & Execution | the repo itself — tests, contract, docs |
 | **10%** | Traction & Communication | the X post, the public gallery, FIELD_NOTES |
+
+### Verified against the live page, 2026-08-16
+
+Everything above was transcribed from the form on 2026-08-15. It has now been read back from
+[`app.akindo.io/wave-hacks/Z4MlX4vreI72ol6pd`](https://app.akindo.io/wave-hacks/Z4MlX4vreI72ol6pd)
+in a signed-in browser. **Every weight, name and date matched.** The transcription was accurate.
+
+One trap worth recording so nobody re-derives it: searching AKINDO for 0G surfaces
+`wave-hacks/xKOgjd91kCmrN3ORz` first — *"Build onchain AI dapps with 0G's Modular L1"*, 169
+submissions. **That is the 2025 buildathon**, whose final wave closed 2025-11-04 and whose criteria
+are a completely different 40/30/30. Ours is **"0G Bridge by AKINDO"**, `Z4MlX4vreI72ol6pd`.
+Checking our facts against the wrong page would have "corrected" a correct repo into a wrong one.
+
+What the live page adds that was not previously recorded:
+
+- **Wave 3 pays in USDC.** $7,500 USDC + $7,500 in 0G credits — **$15,000, the largest single-wave
+  pool of the program** and 30% of the $50,000 total. Announced 2026-08-13, after our spec was
+  written.
+- **The mainnet requirement has an exemption we already happen to satisfy.** From the FAQ, verbatim:
+  *"Wave 3 onwards requires mainnet deployment for 0G Chain integration. Compute Network and DA can
+  remain on testnet."* So `Passport.sol` must reach 16661, and the fine-tuning flow may stay on
+  Galileo. That is exactly the split decided in `.paul/STATE.md` on 2026-08-14, for different
+  reasons. Nothing about the run pipeline needs to move.
+- **Wave 3 had 8 submissions** at the time of checking, against 48 across the whole program and 201
+  registered builders.
+- **Wave 4 closes 9/20 20:30, Wave 5 closes 9/25 20:30.** Judging for Wave 3 runs to 9/10 20:30.
+  Demo Day is timed to Token2049 Singapore, 7–8 October 2026.
+- **The team page shows no registered product**, and the `+ New product` control is present — so the
+  three-products-per-team cap is not in play. Registration remains the blocking step.
 
 ### The three things standing between here and a valid submission
 

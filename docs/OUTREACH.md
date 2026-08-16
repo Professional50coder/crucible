@@ -64,15 +64,48 @@ Short version. Send this one.
 
 ---
 
-## AKINDO comment thread — public, only if Telegram gets no reply
+## AKINDO comment thread — post this one
 
-Keep it factual. The thread is read by other builders and by the organisers.
+**Why this is now a correction and not a follow-up.** The comment posted to the buildathon page on
+2026-08-14 says a Compute ledger "requires a 3 0G minimum". That is the claim this project spent a
+day disproving, and it is sitting in public under our own name, on the same page whose judges will
+read a repository whose README lists it as defect 03. Leaving a wrong number up while the repo
+calls it wrong is worse than never having posted it.
 
-> Following up on my 2026-08-14 note. Crucible is now live on Galileo — contract deployed and
-> source-verified at `0x27087B5b…83C1c7`, passport #1 minted, manifest on 0G Storage, two paid
-> fine-tuning tasks completed. Repo: github.com/Professional50coder/crucible
+It also inverts the ask. The original comment requested tokens *because* of a blocker that does not
+exist. Correcting it in public is the stronger move: it withdraws a request we no longer need, hands
+other builders a real finding, and demonstrates the thing Wave 3 scores 40% on — progress.
+
+> Correcting my own comment above, because it is publicly wrong and other builders will hit the
+> same wall.
 >
+> **The 3 0G ledger minimum is a client-side guard in the SDK, not a chain rule.** `addLedger()`
+> throws *"Minimum balance to create a ledger is 3 0G"* before it ever reaches the network. The
+> contract disagrees: `LedgerManager.MIN_ACCOUNT_BALANCE()` returns **0.1 0G** on Galileo. We
+> created a working ledger with 0.3 0G by calling the contract directly, and have since run three
+> fine-tuning tasks on `0xA02b95Aa…1A09` at ~0.0119 0G each.
+>
+> So nobody needs a month of faucet drips to run a job that costs pennies. Skip the guard.
+>
+> Two more from the same week, in case they save someone else the loss:
+>
+> - `acknowledgeModel`'s default `downloadMethod: 'auto'` tries 0G Storage first, which spawns a
+>   bundled `0g-storage-client` that is a **Linux ELF**. On Windows that is ENOENT, the TEE
+>   fallback rate-limits, and you lose the model *and* 30% of the fee. Identical code from WSL2
+>   retrieved the 93 MB adapter first try. One variable, two outcomes — both are minted on Galileo
+>   as passports #1 and #2, so the comparison is public and checkable.
+> - `getLockedTime()` returns 86400. That is the 24-hour *refund* lock, not the 48-hour acknowledge
+>   window. Read it as the deadline and your daemon fires at the wrong time.
+>
+> Withdrawing the token request from my earlier comment — we are unblocked on testnet.
+>
+> Repo: github.com/Professional50coder/crucible
+
+**Still true, and still needed — the mainnet gas ask.** Keep this separate from the correction; do
+not bury a request inside an apology. Send it on Telegram first (above), and only post publicly if
+that gets no reply:
+
 > Wave 3 asks for a mainnet contract address and explorer activity. Deploy plus one mint prices at
-> about 0.0103 0G of gas, and there is no mainnet faucet. If there is a route for getting a small
-> amount of mainnet 0G for the deployment, I would appreciate a pointer — happy to do it any way
-> that works for the team.
+> about 0.0103 0G of gas at 4 gwei, and there is no mainnet faucet. If there is a route to a small
+> amount of mainnet 0G for the deployment, I would appreciate a pointer — happy to do it whichever
+> way works for the team. `0xD68235F859f3756c87f50619b165F68b80FDdFD4`
