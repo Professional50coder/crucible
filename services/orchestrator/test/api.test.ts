@@ -225,6 +225,91 @@ describe('POST /jobs/:id/unlock', () => {
   })
 })
 
+/**
+ * The provider-scoped half of the recovery API. Every test here deliberately
+ * creates NO local job: an account that arrived with the queue already locked
+ * has no job record to address, which is exactly why /jobs/:id/unlock cannot
+ * reach it.
+ */
+describe('GET /providers/:provider/lock', () => {
+  it('reports an open queue when no deliverable is sitting unacknowledged', async () => {
+    const { res, json } = await get(`/providers/${TESTNET_PROVIDER}/lock`)
+    expect(res.status).toBe(200)
+    expect(json.locked).toBe(false)
+    expect(orch.listJobs()).toHaveLength(0)
+  })
+
+  it('reports the locked queue and the task holding it, with no local job record', async () => {
+    broker.setTask('task-orphan', 'Delivered')
+
+    const { res, json } = await get(`/providers/${TESTNET_PROVIDER}/lock`)
+    expect(res.status).toBe(200)
+    expect(json.locked).toBe(true)
+    expect(json.taskId).toBe('task-orphan')
+    expect(json.reason).toMatch(/not acknowledged/i)
+    expect(orch.listJobs()).toHaveLength(0)
+  })
+
+  it('rejects an unsupported method on the lock route', async () => {
+    const { res, json } = await post(`/providers/${TESTNET_PROVIDER}/lock`)
+    expect(res.status).toBe(405)
+    expect(json.code).toBe('method_not_allowed')
+  })
+})
+
+describe('POST /providers/:provider/unlock', () => {
+  it('frees an orphaned queue via acknowledgeDeliverable and never the deprecated path', async () => {
+    broker.setTask('task-orphan', 'Delivered')
+
+    const { res, json } = await post(`/providers/${TESTNET_PROVIDER}/unlock`)
+    expect(res.status).toBe(200)
+    expect(json.ok).toBe(true)
+    expect(json.taskId).toBe('task-orphan')
+    expect(json).toHaveProperty('txHash')
+    expect(broker.acknowledgeDeliverableCalls).toEqual([
+      { provider: TESTNET_PROVIDER, taskId: 'task-orphan' },
+    ])
+    expect(broker.usedDeprecatedPath()).toBe(false)
+  })
+
+  it('502s rather than reporting a fake success when there is nothing to unlock', async () => {
+    const { res, json } = await post(`/providers/${TESTNET_PROVIDER}/unlock`)
+    expect(res.status).toBe(502)
+    expect(json.error).toMatch(/nothing to unlock/i)
+    expect(json.code).toBe('unlock_failed')
+    expect(broker.acknowledgeDeliverableCalls).toHaveLength(0)
+  })
+
+  it('reports a genuine on-chain failure with a 502 and the underlying message', async () => {
+    broker.setTask('task-orphan', 'Delivered')
+    broker.acknowledgeDeliverableErrors.push(new Error('insufficient funds for gas'))
+
+    const { res, json } = await post(`/providers/${TESTNET_PROVIDER}/unlock`)
+    expect(res.status).toBe(502)
+    expect(json.error).toMatch(/insufficient funds/)
+    expect(json.code).toBe('unlock_failed')
+  })
+
+  it('rejects an unsupported method on the unlock route', async () => {
+    const { res, json } = await get(`/providers/${TESTNET_PROVIDER}/unlock`)
+    expect(res.status).toBe(405)
+    expect(json.code).toBe('method_not_allowed')
+  })
+
+  it('400s when no provider address was given', async () => {
+    const { res, json } = await post('/providers')
+    expect(res.status).toBe(400)
+    expect(json.code).toBe('invalid_provider')
+  })
+
+  it('404s an unknown sub-route with the same structured shape as everywhere else', async () => {
+    const { res, json } = await get(`/providers/${TESTNET_PROVIDER}/nonsense`)
+    expect(res.status).toBe(404)
+    expect(json.code).toBe('not_found')
+    expect(json.error).toMatch(/No such route/)
+  })
+})
+
 describe('GET /jobs/:id/stream (SSE)', () => {
   it('streams the current job immediately, then live updates, as event: state', async () => {
     const a = (await post('/jobs', validBody)).json
@@ -307,6 +392,37 @@ describe('job panel fields over HTTP', () => {
     })
     expect(res.status).toBe(400)
     expect(json.error).toMatch(/format/i)
+  })
+})
+
+describe('state history and deadline flag over HTTP', () => {
+  it('serves the timestamped transitions the client draws a timeline from', async () => {
+    const a = (await post('/jobs', validBody)).json
+    expect(a.transitions).toEqual([{ state: 'Init', at: '2026-08-14T12:00:00.000Z' }])
+
+    broker.nextTaskId = 'task-history'
+    await orch.tick()
+    clock.advance(HOUR)
+    broker.setTask('task-history', 'Training')
+    await orch.tick()
+
+    const { json } = await get(`/jobs/${a.id}`)
+    expect(json.transitions.map((t: { state: string }) => t.state)).toEqual(['Init', 'Training'])
+    // ISO strings, same as every other timestamp on the wire.
+    expect(json.transitions[1].at).toBe('2026-08-14T13:00:00.000Z')
+    expect(typeof json.transitions[1].at).toBe('string')
+  })
+
+  it('exposes ackDeadlineMissed as a boolean field, not buried in the error text', async () => {
+    const a = (await post('/jobs', validBody)).json
+    expect(a.ackDeadlineMissed).toBe(false)
+    expect(a.artifactAtRisk).toBe(false)
+
+    const { json } = await get(`/jobs/${a.id}`)
+    // Present on every response, so a client never has to parse `error` to
+    // find the one outcome that costs the model and 30% of the fee.
+    expect(Object.keys(json)).toContain('ackDeadlineMissed')
+    expect(json.ackDeadlineMissed).toBe(false)
   })
 })
 

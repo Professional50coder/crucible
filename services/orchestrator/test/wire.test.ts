@@ -24,11 +24,13 @@ describe('wire Job — docs/INTERFACES.md section 5', () => {
     const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
     expect(Object.keys(toWireJob(job)).sort()).toEqual(
       [
+        'ackDeadlineMissed',
         'acknowledgeScheduledFor',
         'acknowledgedAt',
         'adapterPath',
         'artifactAtRisk',
         'createdAt',
+        'transitions',
         'datasetRootHash',
         'deliveredAt',
         'error',
@@ -163,6 +165,123 @@ describe('wire Job — docs/INTERFACES.md section 5', () => {
       ]) {
         expect(keys).toContain(original)
       }
+    })
+  })
+
+  describe('transitions — the state history the client renders a timeline from', () => {
+    it('carries the seeded Init transition on a brand-new job', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const wire = toWireJob(job)
+      expect(wire.transitions).toEqual([{ state: 'Init', at: '2026-08-14T12:00:00.000Z' }])
+    })
+
+    it('renders every `at` as an ISO string, matching the other wire timestamps', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const moved = store.update(job.id, {
+        state: 'Delivered',
+        transitions: [
+          { state: 'Init', at: T0 },
+          { state: 'Training', at: T0 + HOUR },
+          { state: 'Delivered', at: T0 + 5 * HOUR },
+        ],
+      })
+      const wire = toWireJob(moved)
+      expect(wire.transitions).toEqual([
+        { state: 'Init', at: '2026-08-14T12:00:00.000Z' },
+        { state: 'Training', at: '2026-08-14T13:00:00.000Z' },
+        { state: 'Delivered', at: '2026-08-14T17:00:00.000Z' },
+      ])
+      // Same convention as createdAt: an ISO string, never an epoch number.
+      for (const transition of wire.transitions) {
+        expect(typeof transition.at).toBe('string')
+        expect(Number.isFinite(new Date(transition.at).getTime())).toBe(true)
+      }
+      expect(new Date(wire.transitions[2]!.at).getTime()).toBe(T0 + 5 * HOUR)
+    })
+
+    it('preserves order and each entry has exactly the two documented keys', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const moved = store.update(job.id, {
+        transitions: [
+          { state: 'Init', at: T0 },
+          { state: 'Delivered', at: T0 + HOUR },
+          { state: 'UserAcknowledged', at: T0 + 2 * HOUR },
+        ],
+      })
+      const wire = toWireJob(moved)
+      expect(wire.transitions.map((t) => t.state)).toEqual([
+        'Init',
+        'Delivered',
+        'UserAcknowledged',
+      ])
+      for (const transition of wire.transitions) {
+        expect(Object.keys(transition).sort()).toEqual(['at', 'state'])
+      }
+    })
+
+    it('survives the JSON hop intact', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const moved = store.update(job.id, {
+        transitions: [
+          { state: 'Init', at: T0 },
+          { state: 'Training', at: T0 + HOUR },
+        ],
+      })
+      const roundTripped = JSON.parse(JSON.stringify(toWireJob(moved)))
+      expect(roundTripped.transitions).toHaveLength(2)
+      expect(roundTripped.transitions[1]).toEqual({
+        state: 'Training',
+        at: '2026-08-14T13:00:00.000Z',
+      })
+    })
+
+    it('emits an empty array, never undefined, for a record with no history', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      // A record written before transitions were tracked. The key must still
+      // be present — the client destructures it.
+      const wire = toWireJob({ ...job, transitions: undefined as never })
+      expect(wire.transitions).toEqual([])
+      expect(Object.keys(wire)).toContain('transitions')
+      expect(JSON.stringify(wire)).not.toContain('undefined')
+    })
+  })
+
+  describe('ackDeadlineMissed — the worst outcome, as a field not a substring', () => {
+    it('is false on a job that has not missed the deadline', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const wire = toWireJob(job)
+      expect(wire.ackDeadlineMissed).toBe(false)
+      expect(typeof wire.ackDeadlineMissed).toBe('boolean')
+    })
+
+    it('is true once the window closed with no acknowledgement — no substring match needed', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      const missed = store.update(job.id, {
+        state: 'Delivered',
+        deliveredAt: T0,
+        ackDeadlineMissed: true,
+        error: 'Acknowledgement deadline passed: the model is lost and 30% of the fee is forfeit.',
+      })
+      const wire = toWireJob(missed)
+      expect(wire.ackDeadlineMissed).toBe(true)
+      // The point of the field: reading it must not depend on the wording of
+      // `error`, which we are free to reword at any time.
+      expect(JSON.parse(JSON.stringify(wire)).ackDeadlineMissed).toBe(true)
+    })
+
+    it('stays false when the artifact is at risk but the deadline was met', () => {
+      const job = store.create({ network: 'testnet', provider: TESTNET_PROVIDER })
+      // The recovery path: acknowledged on-chain inside the window without a
+      // download. The artifact may be gone; the 30% penalty was avoided.
+      const rescued = store.update(job.id, {
+        state: 'UserAcknowledged',
+        acknowledgedAt: T0 + HOUR,
+        ackMethod: 'acknowledgeDeliverable',
+        artifactAtRisk: true,
+      })
+      const wire = toWireJob(rescued)
+      expect(wire.artifactAtRisk).toBe(true)
+      expect(wire.ackDeadlineMissed).toBe(false)
     })
   })
 

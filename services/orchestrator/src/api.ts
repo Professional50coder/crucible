@@ -8,7 +8,7 @@ import type { CreateJobInput, JobDataset, NetworkName, TrainingConfig } from './
 /**
  * The HTTP surface, on `node:http`.
  *
- * No framework: the whole API is nine routes, and a dependency-free server is
+ * No framework: the whole API is eleven routes, and a dependency-free server is
  * one less thing that can fail to install on the machine that is supposed to be
  * babysitting someone's 48-hour deadline.
  *
@@ -102,6 +102,43 @@ export function createApi(options: ApiOptions): ApiHandle {
         try {
           const result = await orch.unlockJob(id)
           return sendJson(res, 200, result)
+        } catch (error) {
+          return sendError(res, 502, message(error), 'unlock_failed')
+        }
+      }
+
+      return sendError(res, 404, `No such route: ${method} ${path}`, 'not_found')
+    }
+
+    // /providers — the provider-scoped half of the recovery API.
+    //
+    // `POST /jobs/:id/unlock` can only rescue a queue we have a local job for.
+    // The account recovery.ts exists for is precisely the one that arrived with
+    // the queue already locked by someone else's earlier task, so it has no
+    // local job record and no id to address — leaving it with no HTTP path at
+    // all. These two routes take the provider address directly.
+    if (segments[0] === 'providers') {
+      const provider = segments[1]
+      if (typeof provider !== 'string' || provider.length === 0) {
+        return sendError(res, 400, 'Field "provider" is required', 'invalid_provider')
+      }
+      const sub = segments[2]
+
+      if (sub === 'lock') {
+        if (method !== 'GET') return sendError(res, 405, 'Method not allowed', 'method_not_allowed')
+        try {
+          return sendJson(res, 200, await orch.detectLock(provider))
+        } catch (error) {
+          // A read against the chain failed. That is not "no lock" — reporting
+          // `locked: false` here would tell a stranded user everything is fine.
+          return sendError(res, 502, message(error), 'lock_detect_failed')
+        }
+      }
+
+      if (sub === 'unlock') {
+        if (method !== 'POST') return sendError(res, 405, 'Method not allowed', 'method_not_allowed')
+        try {
+          return sendJson(res, 200, await orch.unlock(provider))
         } catch (error) {
           return sendError(res, 502, message(error), 'unlock_failed')
         }
