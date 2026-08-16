@@ -1,7 +1,7 @@
 # Claims audit
 
 Every falsifiable claim this repository makes about the outside world, checked against a
-primary source on **2026-08-15**. A judge should be able to break any of these in a minute; the
+primary source on **2026-08-15**, with the licence section added **2026-08-16**. A judge should be able to break any of these in a minute; the
 point of this file is that they cannot.
 
 Claims about our own code are not listed here — those are checked by running the tests.
@@ -97,3 +97,25 @@ contract in `agenticID-examples`. That is a Wave 4 item, and it is on the roadma
 
 Sources: [0G Builder Hub — Agentic ID](https://build.0g.ai/agentic-id) ·
 [ERC-7857 in 0G's docs](https://docs.0g.ai/developer-hub/building-on-0g/agentic-id/erc7857)
+
+---
+
+## Licences of everything we read or depend on — checked 2026-08-16
+
+The standing rule is that reused code must be open source and cited, and that unlicensed code
+may be read but not copied. That rule is only worth having if someone checks the licences.
+
+| Claim in the repo | Verdict | Source |
+|---|---|---|
+| The 0G SDKs are **ISC** | ✅ accurate | `license` field in `@0gfoundation/0g-compute-ts-sdk@0.9.0` and `@0gfoundation/0g-storage-ts-sdk@1.2.11` |
+| `databricks/databricks-dolly-15k` is **Apache 2.0** | ❌ **wrong, and corrected 2026-08-16.** It is **CC BY-SA 3.0**. The card permits commercial use *under those terms*, which include share-alike — so the derived slice in `datasets/dolly-slice/` inherits CC BY-SA 3.0 and cannot sit under the root MIT licence. It now carries its own `LICENSE` | the dataset card itself: `license: cc-by-sa-3.0` in its front matter, and the body text naming the [CC BY-SA 3.0 Unported License](https://creativecommons.org/licenses/by-sa/3.0/legalcode) |
+| `0gfoundation/fine-tuning-example` declares **MIT** | ⚠️ accurate but narrower than it sounded — MIT appears in `package.json`; the repository ships **no `LICENSE` file** | `GET /repos/0gfoundation/fine-tuning-example` → `"license": null`; `/license` → 404; `package.json` → `"license": "MIT"` |
+| `0gfoundation/agenticID-examples` — patterns to lift | ❌ **no licence at all.** No `LICENSE` file, no `license` field. Default copyright: readable, not reusable | `GET /repos/0gfoundation/agenticID-examples` → `"license": null`; `/license` → 404 |
+| `0gfoundation/0g-deployment-scripts` — "use directly" | ❌ **no licence at all.** No `LICENSE` file, and no `package.json` on `main` | `GET /repos/0gfoundation/0g-deployment-scripts` → `"license": null`; root listing is `.gitignore`, `README.md`, `foundry/`, `hardhat/`, `truffle/` |
+| The 0G SDK versions are **0.9.0** (compute) and **1.2.11** (storage) | ✅ accurate | `package.json` of each installed package |
+
+**What this changed.** `docs/PRIOR_ART.md` had planned to "lift patterns" from the first of those
+and "use directly" from the second, with *"Check repo"* sitting in the licence column of both. No
+code was in fact copied — the contract and the Hardhat config are written here — but the plan of
+record rested on a licence nobody had looked up. Both entries are now read-only, and this row
+exists so the question is not asked again from memory.

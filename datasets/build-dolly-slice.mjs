@@ -7,10 +7,12 @@
  *     https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl
  *   node datasets/build-dolly-slice.mjs --source /tmp/databricks-dolly-15k.jsonl
  *
- * Source: databricks/databricks-dolly-15k — Apache 2.0, human-authored by
+ * Source: databricks/databricks-dolly-15k — **CC BY-SA 3.0**, human-authored by
  * Databricks employees. Chosen precisely because its provenance is
  * unambiguous: a provenance product must be able to state where its own
- * training data came from. (Alpaca / alpaca-cleaned is deliberately NOT used
+ * training data came from. Note the share-alike term: the dataset card permits
+ * commercial use, but a derived slice inherits CC BY-SA 3.0 and must be
+ * redistributed under it. This repository is MIT; datasets/dolly-slice is not. (Alpaca / alpaca-cleaned is deliberately NOT used
  * — it is GPT-3.5-generated and its commercial provenance is murky.)
  *
  * FIELD MAPPING — Dolly to 0G's instruction format:
@@ -137,7 +139,7 @@ const manifest = {
   source: {
     dataset: 'databricks/databricks-dolly-15k',
     url: 'https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl',
-    licence: 'Apache-2.0',
+    licence: 'CC-BY-SA-3.0',
     attribution: 'Databricks, Inc. — databricks-dolly-15k, human-authored instruction records.',
     sha256: sourceSha256,
     totalLines: lines.filter((l) => l.trim() !== '').length,

@@ -17,7 +17,7 @@ so a demo trained on invented facts would refute its own thesis.
 |---|---|---|---|---|---|---|
 | `0g-expert/` | chat | 249 | 44 | ~14,944 | **0.0324 0G** | Authored here from 0G docs + `docs/FIELD_NOTES.md` |
 | `sentiment/` | chat | 61 | 20 | ~1,792 | **0.0127 0G** | Authored here, synthetic |
-| `dolly-slice/` | instruction | 200 | 40 | ~67,006 | **0.1105 0G** | `databricks/databricks-dolly-15k`, Apache-2.0 |
+| `dolly-slice/` | instruction | 200 | 40 | ~67,006 | **0.1105 0G** | `databricks/databricks-dolly-15k`, **CC BY-SA 3.0** |
 | `edge-cases/invalid/` | (broken on purpose) | — | 11 files | — | — | Authored here as test fixtures |
 
 All six valid files pass both `datasets/validate.mjs` and the repo's own
@@ -270,9 +270,18 @@ node datasets/build-dolly-slice.mjs --source databricks-dolly-15k.jsonl
 
 The 13 MB source file is **not** committed.
 
-**Licence and attribution.** Apache License 2.0. © Databricks, Inc. —
-`databricks-dolly-15k`. Redistribution of this derived slice is permitted under
-Apache 2.0; attribution is carried in `slice-manifest.json` and here.
+**Licence and attribution — corrected 2026-08-16.** This slice was recorded here as Apache 2.0.
+It is not. The dataset card states **Creative Commons Attribution-ShareAlike 3.0 Unported**
+(CC BY-SA 3.0), and says commercial use is permitted *under those terms*.
+
+© Databricks, Inc. — `databricks-dolly-15k`, retrieved 2026-08-14 from the dataset card at
+https://huggingface.co/datasets/databricks/databricks-dolly-15k.
+
+The difference is not cosmetic. **Share-alike is an obligation**: this derived slice inherits
+CC BY-SA 3.0 and is redistributed under it, not under the repository's MIT licence. The MIT
+`LICENSE` at the repository root covers Crucible's own code and datasets; it does not and
+cannot cover `datasets/dolly-slice/`. Attribution is carried in `slice-manifest.json`, in
+`datasets/dolly-slice/LICENSE`, and here.
 
 ---
 

@@ -63,7 +63,7 @@ roadmap: today Crucible proves lineage; VFT-style ZK circuits would prove *hones
 | Component | Use for | License | Action |
 |---|---|---|---|
 | **OpenSSF Model Signing (`model-signing` Python pkg)** | Sign the LoRA adapter with a standard signature instead of inventing our own. Anchor the OMS signature + our manifest hash on 0G. | Spec is Community Specification License 1.0; **verify the library's own license before depending on it** | **Integrate.** Standards-compliance is a differentiator, and it's how we avoid reinventing signing. |
-| **`databricks-dolly-15k`** | Demo dataset. **Apache 2.0**, JSONL, `instruction / context / response` — maps almost directly onto 0G's Format 1 (`instruction / input / output`). | Apache 2.0 | **Use.** Field remap is exactly what `crucible-core`'s converter is for. |
+| **`databricks-dolly-15k`** | Demo dataset. JSONL, `instruction / context / response` — maps almost directly onto 0G's Format 1 (`instruction / input / output`). | **CC BY-SA 3.0** (checked against the dataset card 2026-08-16 — this repo previously said Apache 2.0, which was wrong) | **Use, and share alike.** The derived slice in `datasets/dolly-slice/` carries its own CC BY-SA 3.0 `LICENSE`; the root MIT licence does not cover it. |
 | **`0gfoundation/agenticID-examples`** | Contract patterns for ERC-7857, Next.js + wagmi + RainbowKit scaffolding | **None found** — no `LICENSE` file, no `license` field in `package.json` | **Read only.** Reimplement; nothing copied |
 | **`0gfoundation/0g-deployment-scripts`** | Hardhat/Foundry configs already verified for Galileo + mainnet | **None found** — no `LICENSE` file and no `package.json` on `main` | **Read only.** Our Hardhat config is written here |
 | **`0gfoundation/fine-tuning-example`** | Reference for the end-to-end job flow | **MIT**, declared in `package.json` only — the repository ships no `LICENSE` file | **Read**, cite what it taught |
@@ -104,7 +104,7 @@ up. Both actions are corrected above. This also sharpens `.paul/STATE.md`, which
 
 | Dataset | License | Format fit | Why |
 |---|---|---|---|
-| **databricks-dolly-15k** | Apache 2.0 | Format 1 after remap (`context`→`input`, `response`→`output`) | Human-written, commercially clean, well-known to judges |
+| **databricks-dolly-15k** | **CC BY-SA 3.0** — attribution *and* share-alike | Format 1 after remap (`context`→`input`, `response`→`output`) | Human-written, explicitly cleared for commercial use by its own card, well-known to judges. The share-alike obligation is met by `datasets/dolly-slice/LICENSE` |
 | **DataProvenanceInitiative / Commercially-Verified-Licenses** | Mixed, **verified** | Varies | Thematically perfect — a *provenance* project training on a *license-verified* corpus is a good story |
 | Alpaca-cleaned | Apache 2.0 (code); data is GPT-3.5-generated — **OpenAI terms make commercial use murky** | Format 1 | Widely used but **avoid**: a provenance project shouldn't demo on a dataset with questionable provenance |
 

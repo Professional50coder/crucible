@@ -1,0 +1,27 @@
+Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+https://creativecommons.org/licenses/by-sa/3.0/legalcode
+
+This directory is NOT covered by the MIT licence at the root of this repository.
+
+train.jsonl and test.jsonl are a derived slice of:
+
+    databricks/databricks-dolly-15k
+    © Databricks, Inc.
+    https://huggingface.co/datasets/databricks/databricks-dolly-15k
+    retrieved 2026-08-14, source sha256
+    2df9083338b4abd6bceb5635764dab5d833b393b55759dffb0959b6fcbf794ec
+
+The dataset card licenses that data under CC BY-SA 3.0 and states it may be used
+for any purpose, academic or commercial, under those terms. Two of those terms
+travel with this slice:
+
+  Attribution — credit Databricks, Inc. as above.
+  ShareAlike  — distribute derivatives of this data under CC BY-SA 3.0.
+
+Selection and field remapping (context -> input, response -> output, category
+dropped) are recorded in slice-manifest.json and reproducible with
+datasets/build-dolly-slice.mjs. No record text was altered.
+
+Recorded 2026-08-16, correcting an earlier note in this repository that gave the
+licence as Apache 2.0. It was checked against the dataset card, which is the
+primary source; see docs/CLAIMS_AUDIT.md.
