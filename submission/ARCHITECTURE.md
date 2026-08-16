@@ -277,14 +277,40 @@ SDK: `@0gfoundation/0g-compute-ts-sdk@0.9.0`.
   orchestrator never calls the deprecated `downloadModelFrom0GStorage` + `decryptModel` pair.
 - **TEE.** Both providers run Intel TDX via Phala dstack on 1x H200 (8 vCPU, 187 GB RAM, 900 GB
   disk) and share the TEE signer `0x24135b4Bd964872284728F79F5f17eB874C5583A`, which is
-  acknowledged on-chain; `verifyService()` checks the attestation. This is why the passport's TEE
-  section is a checkable claim rather than a marketing sentence. The task that actually ran used
-  the **testnet** provider `0xA02b95Aa6886b1116C4f334eDe00381511E31A09`; the mainnet provider
+  acknowledged on-chain. The task that actually ran used the **testnet** provider
+  `0xA02b95Aa6886b1116C4f334eDe00381511E31A09`; the mainnet provider
   `0x940b4a101CaBa9be04b16A7363cafa29C1660B0d` has been probed read-only but not paid.
-- **The footgun handling is the product.** Acknowledgement is scheduled the moment `Delivered` is
-  observed, and only ever via `acknowledgeModel`. Decryption waits for `Finished`. The dataset
-  root hash is persisted before task creation, so a crash between upload and task creation never
-  costs a second upload.
+  - **`verifyService()` — run once, as a tool, and not yet wired into the product.** On
+    2026-08-16 `tools/verify-attestation.mjs` called it against the testnet provider and it
+    passed: the TEE signer inside the attestation report matches the address registered on-chain,
+    and the compose hash matches the report's own event log. **That is two of three checks.** The
+    SDK's output names the third — Intel TDX quote validation via `dcap-qvl`, plus RTMR event-log
+    replay and OS image measurement — and points at an external `dstack-verifier` container to
+    perform it. We have not run that, so the quote itself is cryptographically unvalidated on our
+    end. This is why every passport still carries `tee.attestationVerified: false`: the field can
+    now be earned, but only for a meaning we are willing to state, and two passing checks are not
+    the three. The 55 KB report is committed so the claim can be checked rather than believed.
+- **The footgun handling is the product, and it has now been exercised.** Acknowledgement is
+  scheduled the moment `Delivered` is observed, and only ever via `acknowledgeModel`. Decryption
+  waits for `Finished`. The dataset root hash is persisted before task creation, so a crash
+  between upload and task creation never costs a second upload.
+  - **Proven end to end on 2026-08-16.** Task `b1807e85-a942-46f5-9d04-ec23fdff020a` was submitted
+    through `POST /jobs` by the Submitter, tracked by the Poller, and acknowledged by the
+    Acknowledger — no script anywhere in the chain. Delivered 08:53:57Z, acknowledgement scheduled
+    for 09:53:57Z (the real `ACK_TARGET_DELAY_MS` of one hour, 47 hours of margin), 93,642,471
+    bytes downloaded from 0G Storage between 09:54:15Z and 09:55:50Z, acknowledged on-chain at
+    09:56:05Z in tx `0x4e2c81e2…7e4cfa`, block 49716408, gas 49,263. Read back from
+    `FineTuningServing.getDeliverables()` rather than from the provider's API: `acknowledged: true`,
+    model root `0x3bdc74ea…fbad6`. It ran on the daemon's own default `downloadMethod: 'auto'` —
+    the path that spawns the Linux binary and fails on Windows — because forcing the TEE path
+    would have demonstrated less. Full record, including four things it does *not* prove, in
+    `runs/run3-daemon.json`.
+- **Dataset quality, before the money moves.** At submission the orchestrator runs `packages/ml`'s
+  analysis over the dataset and records what it finds: exact and near-duplicate records,
+  train/test leakage against a sibling `test.jsonl`, and PII or secrets with Luhn-checked card
+  numbers. It is advisory and can never fail a job. The findings that cross into the job record
+  are counts, types and line numbers only — never the matched secret itself, not even in the
+  library's own redacted form, because that record is appended to disk and served over HTTP.
   - Not yet implemented, and named here rather than implied: **automatic sub-account funding.**
     0G's own documentation records that `transfer-fund` routes to the *inference*
     sub-account unless `--service fine-tuning` is passed, surfacing much later as an

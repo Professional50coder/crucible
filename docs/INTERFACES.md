@@ -150,9 +150,18 @@ Base: `http://localhost:8787` (override with `CRUCIBLE_API_URL`).
 | `GET` | `/jobs/:id` | `Job` |
 | `GET` | `/jobs/:id/logs` | `{ logs: string }` |
 | `GET` | `/jobs/:id/stream` | SSE, `event: state`, `data: Job` |
-| `POST` | `/jobs/:id/unlock` | `{ ok, txHash }` — Bug #4 escape hatch |
+| `POST` | `/jobs/:id/unlock` | `{ ok, txHash }` — Bug #4 escape hatch, for a job we hold |
+| `GET` | `/providers/:provider/lock` | `LockDetection` — **added 2026-08-16** |
+| `POST` | `/providers/:provider/unlock` | `UnlockResult` — **added 2026-08-16** |
 | `GET` | `/passports` | `PassportManifest[]` |
 | `GET` | `/passports/:id` | `PassportManifest` |
+
+The two provider-scoped routes exist because the job-scoped unlock can only rescue a queue we
+already have a local job record for. The account `recovery.ts` was written for is precisely the
+one that arrived with its deliverable queue already stranded by an earlier task — which by
+definition has no job here and no id to address. A failed chain read returns `502`, never
+`locked: false`, because telling a stranded user that everything is fine is worse than telling
+them nothing.
 
 ```ts
 interface Job {
@@ -169,7 +178,17 @@ interface Job {
   adapterPath: string | null
   error: string | null
   queued: boolean                      // provider occupied
-  artifactAtRisk?: boolean             // acknowledge failing near the deadline
+  artifactAtRisk: boolean              // acknowledged on-chain without a successful download
+
+  // ── Added 2026-08-16.
+  /** The 48h window closed unacknowledged: model lost, 30% forfeit. Its own
+   *  boolean because the only previous way to read it over HTTP was
+   *  substring-matching the human-readable `error`, which changes whenever a
+   *  message is reworded. Independent of `artifactAtRisk`. */
+  ackDeadlineMissed: boolean
+  /** Complete timestamped state history, oldest first. Without it a client can
+   *  render the current state but not when anything happened. */
+  transitions: { state: TaskState; at: string }[]
 
   // ── Added 2026-08-14. The job page renders all four; without them the
   //    Config, Fee and Dataset panels are empty in the live path.
@@ -184,6 +203,31 @@ interface Job {
     format: 'chat' | 'instruction' | 'text'
     exampleCount: number
     tokenCount: number
+  }
+
+  /**
+   * Pre-flight dataset findings, added 2026-08-16. Advisory: a `fail` severity
+   * describes the DATASET and never blocks the job, and says nothing about the
+   * model or the training run.
+   *
+   * It carries counts, types and line numbers ONLY. The matched secret is never
+   * included — not even in the analysing library's own redacted form, which
+   * keeps four characters — because this record is appended to disk and served
+   * over HTTP.
+   */
+  quality?: {
+    severity: 'ok' | 'warn' | 'fail' | 'unavailable'
+    analyzedAt: string
+    recordsAnalyzed: number
+    truncated: boolean
+    duplicates: { exactGroups: number; redundantRecords: number
+                  nearPairs: number; redundantFraction: number }
+    leakage?: { clean: boolean; testExampleCount: number
+                contaminatedTestCount: number; contaminatedTestLines: number[] }
+    pii: { total: number; highSeverity: number
+           byType: Record<string, number>; affectedLines: number[] }
+    issues: { code: string; severity: string; message: string }[]
+    recommendations: string[]
   }
 }
 ```
