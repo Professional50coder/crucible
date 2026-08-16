@@ -15,6 +15,12 @@ export {
 } from './dataset.js'
 
 export {
+  type ConversionResult,
+  type SkippedRecord,
+  convertDataset,
+} from './convert.js'
+
+export {
   type FeeEstimate,
   type FeeEstimateArgs,
   NEURON_PER_OG,
