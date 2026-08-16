@@ -216,8 +216,9 @@ Do not start any of these while a hard requirement is outstanding.
 - [ ] Pitch deck
 - [ ] User feedback — even two or three real reactions from the 0G builder Telegram beat zero
 - [ ] Tutorial / write-up — `docs/FIELD_NOTES.md` is most of one already; publishing it as a standalone post would serve other builders and the Communication score at once
-- [ ] Frontend demo link — now unblocked (`next build` is clean); a hosted URL is the cheapest remaining win for the Communication score
-- [ ] Public passport gallery reachable without a wallet — same, and it makes the demo clickable rather than clonable
+- [x] **Frontend demo link** — live at [crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/), deployed 2026-08-16 from commit `0e41a8e`. Three Vercel settings were wrong, not the code: Root Directory was the repo root rather than `apps/web` (so the root build glob `packages/*` never reached the app and Vercel looked for a `public/` dir), Framework Preset was `Other`, and Vercel Authentication was on — which bounced every URL to a login page even when a build succeeded
+- [x] **Public passport gallery reachable without a wallet** — `/`, `/gallery`, `/jobs`, `/new` and `/passport/1` all return 200 logged out and unauthenticated. `/passport/1` is the meaningful one: it is server-rendered on demand, so a 200 there proves the Next.js builder is active rather than a static export
+- [ ] **Disclose mock mode on the hosted app, before the URL goes on anything judged** — `NEXT_PUBLIC_CRUCIBLE_API_URL` is unset in the Vercel environment, so the job-launch flow serves the fixture store. Passport views read real chain data and are genuine. Stated in the README; it should also be visible on the page itself. A judge who discovers this unprompted discounts everything else
 
 ---
 

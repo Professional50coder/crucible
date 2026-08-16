@@ -364,7 +364,10 @@ Full detail: [docs/FIELD_NOTES.md](../docs/FIELD_NOTES.md)
 3. Let run 2 (`3e385c46-…`) resolve, then record what actually happened. Do not pre-write either outcome.
 4. Create the AKINDO product and register it into the 3rd Wave — GitHub is connected now, so this is unblocked. Owner action.
 5. Fix the README status row that claims a completed end-to-end fine-tune; the chain contradicts it.
-6. Host the web app, then demo video, X post, and submit.
+6. ~~Host the web app~~ — **done 2026-08-16, [crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/)**,
+   from commit `0e41a8e`. The blocker was three Vercel project settings, not the code: Root Directory
+   was the repo root (so the root `packages/*` build glob never reached `apps/web`), Framework Preset
+   was `Other`, and Vercel Authentication was on. Then demo video, X post, and submit.
 
 ---
 *State initialised: 2026-08-14 · Last verified against the live chain: 2026-08-15*

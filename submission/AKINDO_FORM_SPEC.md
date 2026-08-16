@@ -59,7 +59,7 @@ it will not submit without them.
 | 2.6 | About | ✅ | Markdown, pre-templated: *What it does · The problem it solves · Challenges I ran into · What we learned · What's next* | keep their headings; fill each honestly | 🟡 |
 | 2.7 | Deliverable URL | ✅ | repo URL, **must be public for judging** | `https://github.com/Professional50coder/crucible` | ✅ |
 | 2.8 | Video | — | public YouTube URL | ≤ 3 min, per `DEMO_SCRIPT.md` | ❌ |
-| 2.9 | Live demo | — | public URL | hosted passport gallery, if deployed | ❌ |
+| 2.9 | Live demo | — | public URL | `https://crucible-orpin.vercel.app/` — live 2026-08-16, opens logged out, no wallet. Disclose that the job-launch flow is fixture-backed | ✅ |
 | 2.10 | Build with | ✅ | infrastructure layer, free text, Enter to add | `0G` | ✅ |
 | 2.11 | Tags | ✅ | tech stack, **max 10**, Enter to add | `Solidity` `Hardhat` `TypeScript` `Next.js` `ERC-7857` `0G Compute` `0G Storage` `0G Chain` `Fine-tuning` `Provenance` | ✅ |
 | 2.12 | Product detail visibility | — | `Show` / `Hide` | **Show** — hiding costs the traction score and stops judges reading the repo | ✅ |

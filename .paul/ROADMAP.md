@@ -236,8 +236,10 @@ daemon is the response to that failure, not evidence against it.
    was minted by `contracts/scripts/mint-testnet-passport.js`. "Mint-to-Agentic-ID flow" was in
    the original scope and did not land as a UI action.
 
-The app is not yet hosted anywhere, so the exit criterion is met by cloning, not by clicking.
-Hosting it is now unblocked and is the cheapest remaining win for the traction score.
+**The app is hosted as of 2026-08-16: [crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/)**,
+so the exit criterion is now met by clicking rather than cloning. Limitation 1 above still applies to
+the hosted build — the Vercel environment has no `NEXT_PUBLIC_CRUCIBLE_API_URL`, so what a visitor
+launches is the fixture store. The passport and gallery views are real.
 
 ---
 

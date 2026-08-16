@@ -12,6 +12,8 @@ Hitansh Gopani · 16 August 2026
 [Changelog — including what I got wrong](CHANGELOG.md) ·
 [Prior art](docs/PRIOR_ART.md)
 
+**[Open the app →](https://crucible-orpin.vercel.app/)** · no wallet, no clone
+
 `Passport.sol 0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` · verified · passports #1 and #2 minted · chain 16602
 
 0G Bridge Buildathon — Wave 3 · [@Hitansh54](https://x.com/Hitansh54)
@@ -285,6 +287,15 @@ submission/              architecture, demo script, changelog, checklist, form s
 ```
 
 ### Running it
+
+The app is deployed at **[crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/)** if you would
+rather click than clone — the passport and gallery views read real on-chain values and need no wallet.
+
+> [!NOTE]
+> The hosted build runs with `NEXT_PUBLIC_CRUCIBLE_API_URL` unset, so **the job-launch flow serves an
+> in-memory fixture store, not a live orchestrator.** The passport views are real; the job views are
+> not. Point that variable at a running orchestrator to switch. Said here rather than left for you to
+> discover, because "the app works" is not by itself evidence that the backend does.
 
 Requires **Node.js ≥ 22**. No GPU and no wallet are needed for discovery and validation.
 

@@ -49,6 +49,7 @@ left for a judge to discover.
 | 0G Compute fine-tuning tasks | **three, all paid**: `10551604-…` · `3e385c46-…` · `b1807e85-…` on provider `0xA02b95Aa…1E31A09` |
 | Daemon acknowledgement tx | [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa) · block 49716408 · gas 49,263 — sent by the orchestrator itself, not by a script |
 | Manifest on 0G Storage | root `0xc757a7e6…e1140` · upload tx `0x8372e7de…6ca10` · 584 bytes |
+| **The app, live** | **[crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/)** — opens logged out, no wallet, no clone. `/`, `/gallery`, `/jobs`, `/new` and `/passport/1` all return 200 |
 
 **The whole verification loop, walkable by a stranger with no wallet and no clone of this repo:**
 
@@ -367,6 +368,17 @@ window is **48h** and is documentation, not a contract constant.
   (`/gallery`). 310 tests across 24 files. It runs against the orchestrator when
   `NEXT_PUBLIC_CRUCIBLE_API_URL` is set and against an in-memory fixture store when it is not, so
   the UI can be demonstrated with no backend running.
+- **The app is deployed, and a judge can open it without cloning anything** —
+  **[crucible-orpin.vercel.app](https://crucible-orpin.vercel.app/)**, live 2026-08-16. Every route
+  answers 200 while logged out and with no wallet connected, including `/passport/1`, which is
+  server-rendered on demand rather than prerendered. Getting there was three wrong Vercel settings
+  and no code change: the project's Root Directory was the repository root, so the root build script
+  `npm run build --workspaces --if-present` walked the `packages/*` glob, built core, cli and ml, and
+  never reached `apps/web` — Vercel then failed looking for a `public/` directory. The Framework
+  Preset was `Other`, and Vercel Authentication was enabled, which bounced every deployment URL to a
+  login page. **Honest scope: the hosted build has no `NEXT_PUBLIC_CRUCIBLE_API_URL`, so the
+  job-launch flow serves the fixture store.** The passport and gallery views read real on-chain
+  values. A working UI is not on its own evidence of a working backend, and it is not offered as any.
 - **Independent verification path, documented.** The root README carries a step-by-step procedure
   for verifying any passport with no wallet: fetch the manifest, recompute the canonical
   `keccak256`, call `verifyManifest` on the chain, then check the dataset root hash, the base
