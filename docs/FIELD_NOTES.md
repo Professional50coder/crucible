@@ -178,10 +178,17 @@ Init → SettingUp → SetUp → Training → Trained → Delivering → Deliver
 
 ## Models
 
-| Model | Networks | Tokenizer | LoRA size | Storage reserve fee |
+| Model | Networks | Tokenizer | Adapter size | Storage reserve fee |
 |---|---|---|---|---|
-| `Qwen2.5-0.5B-Instruct` | testnet + mainnet | `Qwen/Qwen2.5-0.5B-Instruct` | ~100 MB | 0.01 0G |
-| `Qwen3-32B` | **mainnet only** | `Qwen/Qwen3-32B` | ~900 MB | 0.09 0G |
+| `Qwen2.5-0.5B-Instruct` | testnet + mainnet | `Qwen/Qwen2.5-0.5B-Instruct` | **93,642,469 bytes, measured** | 0.01 0G |
+| `Qwen3-32B` | **mainnet only** | `Qwen/Qwen3-32B` | ~900 MB — 0G's figure, not ours | 0.09 0G |
+
+The first row is no longer an estimate. Task `3e385c46-…` delivered an artifact of exactly
+**93,642,469 bytes**, sha256 `0x9f788764…ae1d`, retrieved from 0G Storage on 2026-08-16 and
+validated against the provider's on-chain root hash. That is the *delivered, still-encrypted*
+artifact — the size a user must budget storage and bandwidth for, which is the number that
+matters here. 0G's documentation says "~100 MB" for this model, which is close and was worth
+checking rather than repeating. The Qwen3-32B row remains 0G's number; we have never run it.
 
 Model names take **no `Qwen/` prefix** when passed as `--model`.
 Each model carries a `turbo` hash (TEE storage) and an empty `standard` hash — the contract
