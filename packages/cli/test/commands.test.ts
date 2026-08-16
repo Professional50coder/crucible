@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest'
-import { configCommand, convertCommand, validateCommand } from '../src/commands.js'
+import {
+  cardCommand,
+  configCommand,
+  convertCommand,
+  validateCommand,
+  verifyCommand,
+} from '../src/commands.js'
+import { STANDARD_TEMPLATE, buildManifest, buildModelCard, manifestHash } from '@crucible/core'
 import { plain } from '../src/format.js'
 
 const text = (lines: string[]) => plain(lines.join('\n'))
@@ -194,5 +201,139 @@ describe('convertCommand', () => {
   test('converted output passes validate', () => {
     const out = convertCommand(validInstruction(), 'chat', 'in.jsonl').output ?? ''
     expect(validateCommand(out, 'out.jsonl').code).toBe(0)
+  })
+})
+
+/**
+ * The manifest actually anchored on Galileo, byte for byte (runs/manifest-1.json),
+ * with the hash recorded in contracts/deployments/galileo-mints.json and README.md:133.
+ * It is the earlier flat shape, not the sectioned PassportManifest — which is the
+ * point: the one manifest a user can check against the chain today has to verify.
+ */
+const ANCHORED_MANIFEST = JSON.stringify({
+  adapterRootHash: '0x418e9f5f06b5930bd8a7fcb5d50a42d7646485b169916e23b818eb5d8c5ae8eb',
+  baseModelHash: '0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7',
+  chainId: 16602,
+  configHash: '0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1',
+  datasetRootHash: '0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd',
+  network: 'testnet',
+  note: 'adapter not retrieved; acknowledgeModel failed on Windows (ENOENT) then HTTP 429',
+  provider: '0xA02b95Aa6886b1116C4f334eDe00381511E31A09',
+  taskId: '10551604-2664-4516-86cf-269a62f93bfc',
+  version: 1,
+})
+
+const ANCHORED_HASH = '0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f'
+
+const passportManifest = () =>
+  buildManifest({
+    network: 'testnet',
+    createdAt: '2026-08-14T10:00:00.000Z',
+    task: {
+      id: '0x7f3a9c1e',
+      provider: '0xA02b95Aa6886b1116C4f334eDe00381511E31A09',
+      state: 'Finished',
+    },
+    base: {
+      model: 'Qwen2.5-0.5B-Instruct',
+      modelHash: '0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7',
+      tokenizer: 'Qwen/Qwen2.5-0.5B-Instruct',
+    },
+    dataset: {
+      rootHash: '0x2222222222222222222222222222222222222222222222222222222222222222',
+      format: 'chat',
+      exampleCount: 240,
+      tokenCount: 51_200,
+    },
+    training: STANDARD_TEMPLATE,
+    adapter: {
+      rootHash: '0x3333333333333333333333333333333333333333333333333333333333333333',
+      sizeBytes: 8_400_000,
+    },
+    fee: {
+      trainingNeuron: 40_960_000_000_000_000n,
+      storageReserveNeuron: 10_000_000_000_000_000n,
+      totalNeuron: 50_960_000_000_000_000n,
+    },
+    tee: {
+      signerAddress: '0x24135b4Bd964872284728F79F5f17eB874C5583A',
+      acknowledged: true,
+      attestationVerified: true,
+    },
+  })
+
+describe('verifyCommand', () => {
+  test('reproduces the hash anchored on Galileo for the real manifest', () => {
+    const r = verifyCommand(ANCHORED_MANIFEST, 'manifest-1.json')
+    expect(r.code).toBe(0)
+    expect(text(r.lines)).toContain(ANCHORED_HASH)
+    // stdout carries the bare hash so a script can compare it without parsing.
+    expect(r.output).toBe(`${ANCHORED_HASH}\n`)
+  })
+
+  test('--expect against the anchored hash passes and exits 0', () => {
+    const r = verifyCommand(ANCHORED_MANIFEST, 'manifest-1.json', ANCHORED_HASH)
+    expect(r.code).toBe(0)
+    expect(text(r.lines)).toContain('matches the expected hash')
+  })
+
+  test('key order is irrelevant — that is what canonicalization buys', () => {
+    const shuffled = JSON.stringify(
+      Object.fromEntries(Object.entries(JSON.parse(ANCHORED_MANIFEST)).reverse()),
+    )
+    expect(verifyCommand(shuffled, 'shuffled.json', ANCHORED_HASH).code).toBe(0)
+  })
+
+  test('one changed byte fails, and both hashes are printed', () => {
+    const tampered = JSON.parse(ANCHORED_MANIFEST) as Record<string, unknown>
+    tampered['note'] = 'adapter retrieved'
+    const r = verifyCommand(JSON.stringify(tampered), 'tampered.json', ANCHORED_HASH)
+    expect(r.code).toBe(1)
+    expect(text(r.lines)).toContain('does not match')
+    expect(text(r.lines)).toContain(ANCHORED_HASH)
+  })
+
+  test('a checksum-cased or padded expected hash still matches', () => {
+    const r = verifyCommand(ANCHORED_MANIFEST, 'm.json', `  ${ANCHORED_HASH.toUpperCase()}  `)
+    expect(r.code).toBe(0)
+  })
+
+  test('verifies a current-shape passport manifest too', () => {
+    const manifest = passportManifest()
+    const r = verifyCommand(JSON.stringify(manifest), 'm.json', manifestHash(manifest))
+    expect(r.code).toBe(0)
+  })
+
+  test('a non-JSON file exits 1 rather than throwing', () => {
+    expect(verifyCommand('{oops', 'm.json').code).toBe(1)
+    expect(verifyCommand('[1,2]', 'm.json').code).toBe(1)
+  })
+})
+
+describe('cardCommand', () => {
+  test('prints a Hugging Face card carrying the manifest hash', () => {
+    const manifest = passportManifest()
+    const r = cardCommand(JSON.stringify(manifest), 'm.json')
+    expect(r.code).toBe(0)
+    expect(r.output).toBe(buildModelCard(manifest))
+    expect(r.output).toContain(manifestHash(manifest))
+    // The Hub reads the YAML front matter; it has to be the first bytes.
+    expect(r.output?.startsWith('---')).toBe(true)
+  })
+
+  test('--license lands in the front matter', () => {
+    const r = cardCommand(JSON.stringify(passportManifest()), 'm.json', 'apache-2.0')
+    expect(r.code).toBe(0)
+    expect(r.output).toContain('apache-2.0')
+  })
+
+  test('a manifest without the passport sections is refused, not crashed on', () => {
+    const r = cardCommand(ANCHORED_MANIFEST, 'manifest-1.json')
+    expect(r.code).toBe(1)
+    expect(text(r.lines)).toContain('cannot build a model card')
+  })
+
+  test('a non-JSON file exits 1', () => {
+    expect(cardCommand('{oops', 'm.json').code).toBe(1)
   })
 })

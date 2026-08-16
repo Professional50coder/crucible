@@ -9,7 +9,12 @@
  * untestable part was exactly the part that touched money.
  */
 import { createZGComputeNetworkReadOnlyBroker } from '@0gfoundation/0g-compute-ts-sdk'
-import { networkFor, type NetworkConfig } from '@crucible/core'
+import {
+  approximateTokenCount,
+  networkFor,
+  parseJsonlLoosely,
+  type NetworkConfig,
+} from '@crucible/core'
 import { JsonRpcProvider, Wallet, formatEther } from 'ethers'
 import dotenv from 'dotenv'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -17,10 +22,16 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 import { parseArgs, USAGE } from './cli.js'
-import { configCommand, convertCommand, validateCommand, type CommandResult } from './commands.js'
+import {
+  cardCommand,
+  configCommand,
+  convertCommand,
+  validateCommand,
+  verifyCommand,
+  type CommandResult,
+} from './commands.js'
 import { doctor, REFERENCE_TOKEN_COUNT, type TokenSource, type WalletState } from './doctor.js'
 import { bad } from './format.js'
-import { estimateTokenCount, parseJsonlLoosely } from './tokens.js'
 
 // The .env lives at the monorepo root, not beside this package.
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -54,7 +65,7 @@ function tokenSource(dataset: string | undefined): TokenSource {
   const records = parseJsonlLoosely(read(dataset))
   return {
     kind: 'estimated',
-    tokens: estimateTokenCount(records),
+    tokens: approximateTokenCount(records),
     records: records.length,
     label: path.basename(dataset),
   }
@@ -96,6 +107,30 @@ switch (command.kind) {
   case 'config': {
     const result = configCommand(read(command.file), path.basename(command.file))
     report(result)
+    process.exit(result.code)
+    break
+  }
+
+  case 'verify': {
+    const result = verifyCommand(read(command.file), path.basename(command.file), command.expect)
+    report(result)
+
+    // The bare hash goes to stdout so it can be piped or compared by a script;
+    // the human report stays on stderr, as with convert.
+    if (result.output !== undefined) process.stdout.write(result.output)
+
+    process.exit(result.code)
+    break
+  }
+
+  case 'card': {
+    const result = cardCommand(read(command.file), path.basename(command.file), command.license)
+    report(result)
+
+    // `crucible card m.json > README.md` must produce a card, not a card with a
+    // status line in it.
+    if (result.output !== undefined) process.stdout.write(result.output)
+
     process.exit(result.code)
     break
   }

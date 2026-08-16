@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { USAGE, parseArgs } from '../src/cli.js'
-import { CHARS_PER_TOKEN, estimateTokenCount, parseJsonlLoosely } from '../src/tokens.js'
+import { CHARS_PER_TOKEN, approximateTokenCount, parseJsonlLoosely } from '@crucible/core'
 
 describe('parseArgs', () => {
   test('no arguments still means doctor on the default network', () => {
@@ -66,6 +66,34 @@ describe('parseArgs', () => {
     expect(r.kind === 'error' && r.message).toContain('instruction')
   })
 
+  test('verify takes a manifest and an optional --expect', () => {
+    expect(parseArgs(['verify', 'm.json'])).toEqual({ kind: 'verify', file: 'm.json' })
+    expect(parseArgs(['verify', 'm.json', '--expect', '0xabc'])).toEqual({
+      kind: 'verify',
+      file: 'm.json',
+      expect: '0xabc',
+    })
+    // The flag must not swallow the path, in either order.
+    expect(parseArgs(['verify', '--expect', '0xabc', 'm.json'])).toEqual({
+      kind: 'verify',
+      file: 'm.json',
+      expect: '0xabc',
+    })
+    expect(parseArgs(['verify'])).toMatchObject({ kind: 'error' })
+    expect(parseArgs(['verify', 'm.json', '--expect'])).toMatchObject({ kind: 'error' })
+  })
+
+  test('card takes a manifest and an optional --license', () => {
+    expect(parseArgs(['card', 'm.json'])).toEqual({ kind: 'card', file: 'm.json' })
+    expect(parseArgs(['card', 'm.json', '--license', 'apache-2.0'])).toEqual({
+      kind: 'card',
+      file: 'm.json',
+      license: 'apache-2.0',
+    })
+    expect(parseArgs(['card'])).toMatchObject({ kind: 'error' })
+    expect(parseArgs(['card', 'm.json', '--license'])).toMatchObject({ kind: 'error' })
+  })
+
   test('an unknown command lists the available ones', () => {
     const r = parseArgs(['deploy'])
     expect(r.kind).toBe('error')
@@ -82,7 +110,7 @@ describe('parseArgs', () => {
 
 describe('USAGE', () => {
   test('documents every command the parser accepts', () => {
-    for (const cmd of ['doctor', 'validate', 'convert', 'config']) {
+    for (const cmd of ['doctor', 'validate', 'convert', 'config', 'verify', 'card']) {
       expect(USAGE).toContain(`crucible ${cmd}`)
     }
   })
@@ -93,30 +121,31 @@ describe('USAGE', () => {
   })
 })
 
-describe('estimateTokenCount', () => {
+/**
+ * The estimator itself is core's now (packages/core/src/tokens.ts) and is tested
+ * there. What is left to check here is that the CLI reaches for that copy rather
+ * than growing another one — this package had its own for a while, and the whole
+ * point of the move is that `crucible doctor --dataset x` and the orchestrator
+ * quote the same number for x.
+ */
+describe('the token estimate comes from core', () => {
   test('is the repo-wide ~4-chars-per-token rule', () => {
     expect(CHARS_PER_TOKEN).toBe(4)
     // {"text":"aaaa"} is 16 serialised characters.
-    expect(estimateTokenCount([{ text: 'aaaa' }])).toBe(4)
+    expect(approximateTokenCount([{ text: 'aaaa' }])).toBe(4)
   })
 
   test('an empty dataset is zero tokens, not one', () => {
-    expect(estimateTokenCount([])).toBe(0)
+    expect(approximateTokenCount([])).toBe(0)
   })
 
   test('grows with the data', () => {
-    expect(estimateTokenCount([{ text: 'a'.repeat(400) }])).toBeGreaterThan(
-      estimateTokenCount([{ text: 'a'.repeat(100) }]),
+    expect(approximateTokenCount([{ text: 'a'.repeat(400) }])).toBeGreaterThan(
+      approximateTokenCount([{ text: 'a'.repeat(100) }]),
     )
   })
-})
 
-describe('parseJsonlLoosely', () => {
-  test('skips blank and unparseable lines rather than failing the count', () => {
+  test('parses a dataset loosely enough that one bad line still gives a preview', () => {
     expect(parseJsonlLoosely('{"a":1}\n\nnot json\n{"b":2}\n')).toEqual([{ a: 1 }, { b: 2 }])
-  })
-
-  test('tolerates a BOM, which validate reports separately', () => {
-    expect(parseJsonlLoosely('﻿{"a":1}\n')).toEqual([{ a: 1 }])
   })
 })

@@ -33,6 +33,18 @@ USAGE
       Validate a training config against 0G's five-parameter template.
       Exit 0 if clean, 1 if anything is wrong.
 
+  crucible verify <manifest.json> [--expect <0xhash>]
+      Recompute a Model Passport's keccak256 from the file: canonical JSON
+      (keys sorted, no whitespace), then keccak256. Prints the hash to stdout.
+      With --expect, compares it against the hash anchored on chain and exits
+      1 if they differ. This is the whole provenance claim, checkable by anyone
+      holding the manifest, with no network and no trust in Crucible.
+
+  crucible card <manifest.json> [--license <id>]
+      Print the Hugging Face model card for a passport, to stdout. --license
+      takes an SPDX id for the adapter; without it the Hub shows "unknown",
+      which is honest, and a guessed licence is not.
+
   crucible help
       This text.
 
@@ -46,6 +58,8 @@ export type Command =
   | { kind: 'validate'; file: string }
   | { kind: 'convert'; file: string; to: DatasetFormat; out?: string }
   | { kind: 'config'; file: string }
+  | { kind: 'verify'; file: string; expect?: string }
+  | { kind: 'card'; file: string; license?: string }
   | { kind: 'help' }
   | { kind: 'error'; message: string }
 
@@ -88,6 +102,30 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
     return command === 'validate' ? { kind: 'validate', file } : { kind: 'config', file }
   }
 
+  if (command === 'verify') {
+    const expect = takeFlag(rest, 'expect')
+    if (expect.error) return { kind: 'error', message: expect.error }
+
+    const file = rest.shift()
+    if (file === undefined) return { kind: 'error', message: 'verify needs a manifest path.' }
+
+    const cmd: Command = { kind: 'verify', file }
+    if (expect.value !== undefined) cmd.expect = expect.value
+    return cmd
+  }
+
+  if (command === 'card') {
+    const license = takeFlag(rest, 'license')
+    if (license.error) return { kind: 'error', message: license.error }
+
+    const file = rest.shift()
+    if (file === undefined) return { kind: 'error', message: 'card needs a manifest path.' }
+
+    const cmd: Command = { kind: 'card', file }
+    if (license.value !== undefined) cmd.license = license.value
+    return cmd
+  }
+
   if (command === 'convert') {
     const to = takeFlag(rest, 'to')
     if (to.error) return { kind: 'error', message: to.error }
@@ -113,6 +151,8 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
 
   return {
     kind: 'error',
-    message: `Unknown command "${command}". Available: doctor, validate, convert, config, help.`,
+    message:
+      `Unknown command "${command}". ` +
+      `Available: doctor, validate, convert, config, verify, card, help.`,
   }
 }

@@ -12,11 +12,16 @@
  * satisfied for this whole surface.
  */
 import {
+  buildModelCard,
+  canonicalize,
   convertDataset,
+  manifestHash,
   recordsToJsonl,
   validateDatasetFile,
   validateTrainingConfig,
+  verifyManifest,
   type DatasetFormat,
+  type PassportManifest,
 } from '@crucible/core'
 import { c, bad, ok, warn } from './format.js'
 
@@ -93,6 +98,145 @@ export function configCommand(content: string, label: string): CommandResult {
       `  ${bad} ${errors.length} problem${errors.length === 1 ? '' : 's'} in ${label}`,
       ...errors.map((e) => `     ${e}`),
     ],
+  }
+}
+
+/**
+ * Read a manifest file into an object, or say why it is not one.
+ *
+ * Shared by verify and card so the two report a broken file identically.
+ */
+function readManifest(
+  content: string,
+  label: string,
+): { manifest?: Record<string, unknown>; result?: CommandResult } {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch (e) {
+    return {
+      result: {
+        code: 1,
+        lines: [
+          `  ${bad} ${label} is not valid JSON`,
+          `     ${e instanceof Error ? e.message : String(e)}`,
+        ],
+      },
+    }
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { result: { code: 1, lines: [`  ${bad} ${label} must be a JSON object`] } }
+  }
+
+  return { manifest: parsed as Record<string, unknown> }
+}
+
+/**
+ * `crucible verify` — recompute a manifest's keccak256 from the file itself.
+ *
+ * This is the project's central claim reduced to one command: anyone holding the
+ * manifest can recompute the anchored hash without trusting Crucible, a server,
+ * or an indexer.
+ *
+ * It deliberately does **not** require the current `PassportManifest` shape.
+ * `canonicalize` is structural — sort keys recursively, emit no whitespace — and
+ * the only manifest actually anchored on chain (runs/manifest-1.json) is the
+ * earlier flat shape from before the passport gained its sections. A verifier
+ * that rejected the one manifest a user can check against the chain today would
+ * be verifying nothing. The cast is the honest expression of that: the hash is a
+ * function of the bytes, not of the type.
+ */
+export function verifyCommand(content: string, label: string, expected?: string): CommandResult {
+  const { manifest, result } = readManifest(content, label)
+  if (result) return result
+
+  const typed = manifest as unknown as PassportManifest
+
+  let hash: string
+  let canonical: string
+  try {
+    canonical = canonicalize(typed)
+    hash = manifestHash(typed)
+  } catch (e) {
+    // canonicalize throws by design on NaN/Infinity/bigint — values JSON would
+    // silently turn into something else, producing a wrong hash quietly.
+    return {
+      code: 1,
+      lines: [
+        `  ${bad} ${label} cannot be canonicalized`,
+        `     ${e instanceof Error ? e.message : String(e)}`,
+      ],
+    }
+  }
+
+  const lines = [
+    `  ${c.bold(label)}` + c.dim(`  ·  ${canonical.length} canonical bytes`),
+    `  keccak256  ${c.cyan(hash)}`,
+  ]
+
+  if (expected === undefined) {
+    // No --expect is not a pass or a failure: it is a computation. Say what the
+    // user still has to do for it to mean anything.
+    lines.push(c.dim('     compare it against the anchored hash with --expect <0x…>'))
+    return { code: 0, lines, output: `${hash}\n` }
+  }
+
+  if (verifyManifest(typed, expected)) {
+    return {
+      code: 0,
+      lines: [...lines, `  ${ok} matches the expected hash`],
+      output: `${hash}\n`,
+    }
+  }
+
+  return {
+    code: 1,
+    lines: [
+      ...lines,
+      `  ${bad} does not match the expected hash`,
+      `     expected  ${expected.trim()}`,
+      `     computed  ${hash}`,
+      `     ${c.dim('one byte of the manifest differs from the one that was anchored')}`,
+    ],
+    output: `${hash}\n`,
+  }
+}
+
+/**
+ * `crucible card` — the Hugging Face model card for a passport.
+ *
+ * Unlike verify, this one needs the full manifest shape: `buildModelCard` reads
+ * the task, base, dataset, training, fee and tee sections by name and there is
+ * nothing sensible to print without them. It throws on a manifest missing them,
+ * so the throw is caught and reported as a file problem rather than a stack
+ * trace — the likely file a user points at is an older flat manifest.
+ */
+export function cardCommand(content: string, label: string, license?: string): CommandResult {
+  const { manifest, result } = readManifest(content, label)
+  if (result) return result
+
+  const typed = manifest as unknown as PassportManifest
+
+  try {
+    const card = buildModelCard(typed, license === undefined ? {} : { license })
+    return {
+      code: 0,
+      lines: [
+        `  ${ok} model card for ${c.bold(label)}` +
+          c.dim(license === undefined ? '  ·  no licence declared' : `  ·  licence ${license}`),
+      ],
+      output: card,
+    }
+  } catch (e) {
+    return {
+      code: 1,
+      lines: [
+        `  ${bad} cannot build a model card from ${label}`,
+        `     ${e instanceof Error ? e.message : String(e)}`,
+        `     ${c.dim('card needs a full passport manifest — the sections buildManifest writes')}`,
+      ],
+    }
   }
 }
 
