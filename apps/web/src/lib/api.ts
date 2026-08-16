@@ -29,7 +29,6 @@ import type {
   HealthResult,
   Job,
   LogLine,
-  MintResult,
   Network,
   PassportFilter,
   PassportRecord,
@@ -171,6 +170,30 @@ export async function getPassport(id: string): Promise<PassportRecord | null> {
   }
 }
 
+/**
+ * The other passport that is actually on chain, or `null` when there is none.
+ *
+ * Two passports exist on 0G Galileo. Same code, same wallet, same task — the
+ * only variable that differed between them was the operating system, and one
+ * lost its model to it while the other retrieved a 93,642,469-byte adapter.
+ * That contrast is the strongest thing either record has to say, and it is only
+ * legible if a reader can flip between the two without leaving the page, so the
+ * passport page pairs each on-chain record with the other one.
+ *
+ * A demo record gets no sibling. Inviting a comparison between a real outcome
+ * and an invented one would teach the reader that the records are
+ * interchangeable, which is the opposite of what this page argues.
+ */
+export async function getSiblingPassport(
+  record: PassportRecord,
+): Promise<PassportRecord | null> {
+  if ((record.provenance ?? 'demo') !== 'chain') return null
+
+  const summaries = await listPassports()
+  const sibling = summaries.find((item) => item.provenance === 'chain' && item.id !== record.id)
+  return sibling ? await getPassport(sibling.id) : null
+}
+
 export async function listJobs(): Promise<Job[]> {
   if (MOCK_MODE) return delay(mockListJobs())
   return request<Job[]>('/jobs')
@@ -252,26 +275,14 @@ export async function listProviders(network?: Network): Promise<ProviderInfo[]> 
   return network ? providers.filter((p) => p.network === network) : providers
 }
 
-/**
- * Minting is a wallet action, not an API call — the passport page performs it
- * through wagmi against `Passport.sol`. This exists for the orchestrator-managed
- * path (a job whose passport is minted server-side by the daemon).
+/*
+ * There is no mint function here, and that is not an omission.
+ *
+ * This app never sends a mint transaction. Both passports on 0G Galileo were
+ * minted by `contracts/scripts/mint-testnet-passport.js` and
+ * `contracts/scripts/mint-run2-passport.js`, and the orchestrator serves no
+ * mint route (`services/orchestrator/src/passports.ts` only reads records).
+ * A `mintPassport()` used to sit here, called by nothing, describing a wagmi
+ * flow and a daemon endpoint that neither existed — a stub that read as a
+ * feature. The app renders mint state; it does not produce it.
  */
-export async function mintPassport(passportId: string): Promise<MintResult> {
-  if (MOCK_MODE) {
-    const record = mockGetPassport(passportId)
-    if (!record) throw new ApiError('Passport not found', 404)
-    return delay(
-      {
-        txHash: record.mint.txHash ?? '0x',
-        tokenId: record.mint.tokenId ?? '0',
-        contractAddress: record.mint.contractAddress ?? '0x',
-      },
-      800,
-    )
-  }
-
-  return request<MintResult>(`/passports/${encodeURIComponent(passportId)}/mint`, {
-    method: 'POST',
-  })
-}

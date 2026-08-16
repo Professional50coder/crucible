@@ -140,10 +140,16 @@ Switching to the SSE stream is a change confined to `src/app/jobs/[id]/page.tsx`
   address whose explorer link goes nowhere. Both are overridable with
   `NEXT_PUBLIC_PASSPORT_ADDRESS_{TESTNET,MAINNET}`. Demo records keep the
   fabricated `0x7B4f0C3a…148f6A`, labelled as such on the page.
-- **Minting from the browser is not implemented.** `api.mintPassport()` exists
-  and is wired to the orchestrator-managed path; a wallet-signed `mint()` through
-  wagmi is the remaining piece, and needs the deployed address plus a decision on
-  who owns the token (the runner or the orchestrator's key).
+- **Minting from the browser is not implemented, and there is no client stub for
+  it either.** An `api.mintPassport()` stub used to sit here, described as "wired
+  to the orchestrator-managed path". It was wired to nothing: no page called it,
+  and its live branch posted to `POST /passports/:id/mint`, a route the
+  orchestrator has never served — `services/orchestrator/src/passports.ts` only
+  reads records. It was deleted rather than re-commented, because a stub that
+  reads as a half-built feature is worse than an absence. Both passports were
+  minted by `contracts/scripts/`. A wallet-signed `mint()` through wagmi remains
+  the open piece, and needs a decision on who owns the token — the runner, or the
+  orchestrator's key.
 
 ### 3. Duplicated logic that `@crucible/core` will own
 

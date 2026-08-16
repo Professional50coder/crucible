@@ -28,13 +28,20 @@ import { NETWORKS, addressUrl } from '@/lib/chains'
 import type { DatasetAnalysis } from '@/lib/dataset'
 import { estimateFee } from '@/lib/fee'
 import { formatCount, formatOg } from '@/lib/format'
+import { isDeployed } from '@/lib/passport-contract'
 import { DEFAULT_CONFIG, PARAMETER_SPECS, validateTrainingConfig } from '@/lib/training-config'
 import type { Network, ProviderInfo, TrainingConfig } from '@/lib/types'
 
 export default function NewRunPage() {
   const router = useRouter()
 
-  const [network, setNetwork] = useState<Network>('mainnet')
+  /**
+   * Testnet, because that is the only network a run can finish on and still
+   * produce a passport anyone can check: `Passport.sol` is deployed on 0G
+   * Galileo and nowhere else. Pre-selecting mainnet made the page contradict
+   * the landing page's own "not claimed" section on first paint.
+   */
+  const [network, setNetwork] = useState<Network>('testnet')
   const [model, setModel] = useState('Qwen2.5-0.5B-Instruct')
   const [name, setName] = useState('')
   const [config, setConfig] = useState<TrainingConfig>(DEFAULT_CONFIG)
@@ -64,6 +71,15 @@ export default function NewRunPage() {
   )
 
   const availableModels = NETWORKS[network].models
+
+  /**
+   * Whether a run launched here could end in a passport a stranger can check.
+   *
+   * Read from `KNOWN_DEPLOYMENTS` via `isDeployed` rather than restated as copy:
+   * the day mainnet is deployed to, this line stops warning on its own. A second
+   * hand-written copy of the fact is a second copy to forget.
+   */
+  const passportDeployed = isDeployed(network)
 
   // Switching to a network that does not host the selected model must not leave
   // an impossible combination selected.
@@ -182,10 +198,18 @@ export default function NewRunPage() {
                     )
                   })}
                 </div>
-                {network === 'mainnet' ? (
-                  <p className="mt-2 text-xs leading-relaxed text-faint text-pretty">
-                    Mainnet is 37.5% cheaper per token than testnet, despite 0G’s example repo
-                    stating that fine-tuning is unavailable there. It is available.
+                {/* The deployment gap, stated where the choice is made rather than
+                    discovered afterwards on a passport page whose links go nowhere. */}
+                {!passportDeployed ? (
+                  <p
+                    className="mt-2 text-xs leading-relaxed text-faint text-pretty"
+                    data-testid="no-deployment-note"
+                  >
+                    No <span className="font-mono">Passport.sol</span> is deployed on{' '}
+                    {NETWORKS[network].label} yet — the contract lives on 0G Galileo and nowhere
+                    else. A run launched here would train and settle normally, but there is no
+                    contract to anchor its manifest hash in, so it cannot produce a passport
+                    anyone could check.
                   </p>
                 ) : null}
               </div>

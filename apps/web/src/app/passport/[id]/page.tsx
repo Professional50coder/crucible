@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { PassportView } from '@/components/PassportView'
 import { EmptyState, ErrorState, LoadingPanel, Skeleton } from '@/components/ui'
-import { getPassport } from '@/lib/api'
+import { getPassport, getSiblingPassport } from '@/lib/api'
 import type { PassportRecord } from '@/lib/types'
 
 type Status = 'loading' | 'ready' | 'missing' | 'error'
@@ -14,11 +14,13 @@ export default function PassportPage({ params }: { params: { id: string } }) {
   const { id } = params
 
   const [record, setRecord] = useState<PassportRecord | null>(null)
+  const [compare, setCompare] = useState<PassportRecord | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [message, setMessage] = useState('')
 
   const load = useCallback(() => {
     setStatus('loading')
+    setCompare(null)
 
     getPassport(id)
       .then((result) => {
@@ -28,6 +30,14 @@ export default function PassportPage({ params }: { params: { id: string } }) {
         }
         setRecord(result)
         setStatus('ready')
+
+        // The sibling is an enrichment of the lineage graph, not a prerequisite
+        // for the certificate. It is fetched after the record is already on
+        // screen, and a failure to find one leaves the passport intact rather
+        // than turning a readable page into an error.
+        getSiblingPassport(result)
+          .then(setCompare)
+          .catch(() => setCompare(null))
       })
       .catch((cause: unknown) => {
         setMessage(cause instanceof Error ? cause.message : 'Unknown error')
@@ -96,5 +106,5 @@ export default function PassportPage({ params }: { params: { id: string } }) {
     )
   }
 
-  return <PassportView record={record} />
+  return <PassportView record={record} compare={compare ?? undefined} />
 }

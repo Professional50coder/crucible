@@ -96,7 +96,19 @@ type Integrity = 'verified' | 'mismatch' | 'demo'
  */
 const DECODED_FIELDS = 16
 
-export function PassportView({ record }: { record: PassportRecord }) {
+export function PassportView({
+  record,
+  compare,
+}: {
+  record: PassportRecord
+  /**
+   * The other on-chain passport, when one exists. The lineage graph offers a
+   * switch between the two runs; the pair differed in one variable — the
+   * operating system — and one of them lost its model to it. Optional, because
+   * a demo record has nothing legitimate to be compared against.
+   */
+  compare?: PassportRecord
+}) {
   const { manifest, mint } = record
   const network = NETWORKS[manifest.network]
   const links = useMemo(() => explorerLinks(manifest), [manifest])
@@ -399,7 +411,7 @@ export function PassportView({ record }: { record: PassportRecord }) {
       {/* the shape of the argument, not a detail of it.                     */}
       {/* ================================================================ */}
       <div className="mt-4">
-        <LineageGraph record={record} />
+        <LineageGraph record={record} compare={compare} />
       </div>
 
       {/* ================================================================ */}
