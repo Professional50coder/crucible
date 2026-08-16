@@ -446,6 +446,9 @@ export function realPassport2(): PassportRecord {
 export const PROVIDERS: ProviderInfo[] = [
   {
     address: MAINNET_PROVIDER,
+    // Genuinely the mainnet provider, and correct to show as one: it is live,
+    // and FIELD_NOTES records probing it read-only. Listing a provider that
+    // exists on mainnet is not a claim that anything of ours is deployed there.
     network: 'mainnet',
     url: 'https://a1b2c3d4e5f6-3080.dstack-pha-in2.phala.network',
     pricePerTokenNeuron: '500000000000',
@@ -512,7 +515,7 @@ const PASSPORT_SEEDS: PassportSeed[] = [
     name: 'support-tone-v3',
     summary:
       'Customer-support replies rewritten into house voice. Third iteration; the one that finally stopped apologising twice per message.',
-    network: 'mainnet',
+    network: 'testnet',
     model: 'Qwen2.5-0.5B-Instruct',
     taskId: 'b2f0a3c1-8e47-4d6a-9c15-7f3e2a9d4b08',
     datasetRootHash: '0xaae9b4e02c7d1f6083b4c95ea1f7d2380c6ab41957e0d3f28e5c7b90a147a5fa',
@@ -540,7 +543,7 @@ const PASSPORT_SEEDS: PassportSeed[] = [
     name: 'sql-repair-lora',
     summary:
       'Takes a failing Postgres query plus its error and returns a corrected query. Trained on three years of internal incident tickets.',
-    network: 'mainnet',
+    network: 'testnet',
     model: 'Qwen3-32B',
     taskId: '7d41e0b9-2c53-4a18-b7e6-90f1c8a35d24',
     datasetRootHash: '0xc07b1e4a95d8236f0ba4179ce3820d5f6417ab9028ec5d31b7a04f8629d3c1b5',
@@ -568,7 +571,7 @@ const PASSPORT_SEEDS: PassportSeed[] = [
     name: 'triage-classifier',
     summary:
       'Routes inbound bug reports to one of nine owning teams. Replaced a 400-line regex cascade.',
-    network: 'mainnet',
+    network: 'testnet',
     model: 'Qwen2.5-0.5B-Instruct',
     taskId: 'e51c7a08-64bd-4f39-8a02-c73e1904bd6f',
     datasetRootHash: '0x58e1cb70a4936d2f08b7e14ca50d92f36ba807145ec3920df6b18a04e73c2915',
@@ -596,7 +599,7 @@ const PASSPORT_SEEDS: PassportSeed[] = [
     name: 'solidity-natspec',
     summary:
       'Writes NatSpec for an unannotated Solidity function. Trained on OpenZeppelin plus 0G’s own contracts.',
-    network: 'mainnet',
+    network: 'testnet',
     model: 'Qwen3-32B',
     taskId: '3a8f2d17-b904-4e6c-95a1-08d7fe32c4b9',
     datasetRootHash: '0x6d09fa27b1c85e340a72f9b1e08c3d5647fa20b9138ce7605da4193f8c2b70ae',
@@ -831,9 +834,9 @@ export function buildJobs(now: number = Date.now()): Job[] {
     {
       id: 'job_7f21c4',
       name: 'support-tone-v4',
-      network: 'mainnet',
-      chainId: 16661,
-      provider: MAINNET_PROVIDER,
+      network: 'testnet',
+      chainId: 16602,
+      provider: TESTNET_PROVIDER,
       taskId: 'c48a7b21-90fe-4d35-8b06-2a71ef95034c',
       state: 'Delivered',
       createdAt: iso(-34 * MINUTE),
@@ -849,7 +852,7 @@ export function buildJobs(now: number = Date.now()): Job[] {
       queued: false,
       model: 'Qwen2.5-0.5B-Instruct',
       config: CONFIG_STANDARD,
-      fee: feeFor(298_140, 3, 'mainnet', 'Qwen2.5-0.5B-Instruct'),
+      fee: feeFor(298_140, 3, 'testnet', 'Qwen2.5-0.5B-Instruct'),
       dataset: {
         filename: 'support-tone-v4.jsonl',
         format: 'chat',
@@ -909,9 +912,9 @@ export function buildJobs(now: number = Date.now()): Job[] {
     {
       id: 'job_2ad901',
       name: 'commit-message-writer',
-      network: 'mainnet',
-      chainId: 16661,
-      provider: MAINNET_PROVIDER,
+      network: 'testnet',
+      chainId: 16602,
+      provider: TESTNET_PROVIDER,
       taskId: '8b1f39c0-27ad-4e58-b3f6-104ca79d2e85',
       state: 'Training',
       createdAt: iso(-9 * MINUTE),
@@ -925,7 +928,7 @@ export function buildJobs(now: number = Date.now()): Job[] {
       queued: false,
       model: 'Qwen2.5-0.5B-Instruct',
       config: CONFIG_STANDARD,
-      fee: feeFor(118_705, 3, 'mainnet', 'Qwen2.5-0.5B-Instruct'),
+      fee: feeFor(118_705, 3, 'testnet', 'Qwen2.5-0.5B-Instruct'),
       dataset: {
         filename: 'commits.jsonl',
         format: 'chat',
@@ -943,9 +946,9 @@ export function buildJobs(now: number = Date.now()): Job[] {
     {
       id: 'job_5c8e33',
       name: 'support-tone-v3',
-      network: 'mainnet',
-      chainId: 16661,
-      provider: MAINNET_PROVIDER,
+      network: 'testnet',
+      chainId: 16602,
+      provider: TESTNET_PROVIDER,
       taskId: 'b2f0a3c1-8e47-4d6a-9c15-7f3e2a9d4b08',
       state: 'Finished',
       createdAt: iso(-2 * 24 * HOUR),
@@ -961,7 +964,7 @@ export function buildJobs(now: number = Date.now()): Job[] {
       queued: false,
       model: 'Qwen2.5-0.5B-Instruct',
       config: CONFIG_STANDARD,
-      fee: feeFor(271_480, 3, 'mainnet', 'Qwen2.5-0.5B-Instruct'),
+      fee: feeFor(271_480, 3, 'testnet', 'Qwen2.5-0.5B-Instruct'),
       dataset: {
         filename: 'support-tone-v3.jsonl',
         format: 'chat',
@@ -985,9 +988,9 @@ export function buildJobs(now: number = Date.now()): Job[] {
     {
       id: 'job_9b0f77',
       name: 'legal-clause-tagger',
-      network: 'mainnet',
-      chainId: 16661,
-      provider: MAINNET_PROVIDER,
+      network: 'testnet',
+      chainId: 16602,
+      provider: TESTNET_PROVIDER,
       taskId: null,
       state: 'Failed',
       createdAt: iso(-3 * HOUR),
@@ -1003,7 +1006,7 @@ export function buildJobs(now: number = Date.now()): Job[] {
       queued: false,
       model: 'Qwen2.5-0.5B-Instruct',
       config: CONFIG_STANDARD,
-      fee: feeFor(51_060, 3, 'mainnet', 'Qwen2.5-0.5B-Instruct'),
+      fee: feeFor(51_060, 3, 'testnet', 'Qwen2.5-0.5B-Instruct'),
       dataset: {
         filename: 'clauses.jsonl',
         format: 'instruction',
@@ -1063,7 +1066,7 @@ export function buildLogs(now: number = Date.now()): Record<string, LogLine[]> {
       { ts: iso(-34 * MINUTE), level: 'info', message: 'Funding fine-tuning sub-account (--service fine-tuning)' },
       { ts: iso(-34 * MINUTE), level: 'ok', message: 'Balance verified: 0.4472 0G available, 0.4472 0G required' },
       { ts: iso(-34 * MINUTE), level: 'info', message: 'Dataset uploaded to 0G Storage' },
-      { ts: iso(-33 * MINUTE), level: 'info', message: 'createTask → provider 0x940b4a10…60B0d, model Qwen2.5-0.5B-Instruct' },
+      { ts: iso(-33 * MINUTE), level: 'info', message: 'createTask → provider 0xA02b95Aa…1A09, model Qwen2.5-0.5B-Instruct' },
       { ts: iso(-33 * MINUTE), level: 'ok', message: 'Task c48a7b21-90fe-4d35-8b06-2a71ef95034c accepted' },
       { ts: iso(-31 * MINUTE), level: 'ok', message: 'Dataset hash verified against on-chain root hash' },
       { ts: iso(-30 * MINUTE), level: 'info', message: 'Training started — 3 epochs, 45 max steps, batch 2' },
@@ -1092,7 +1095,7 @@ export function buildLogs(now: number = Date.now()): Record<string, LogLine[]> {
       { ts: iso(-2 * MINUTE), level: 'info', message: 'step 12/45 · loss 1.688' },
     ],
     job_5c8e33: [
-      { ts: iso(-2 * 24 * HOUR), level: 'info', message: 'Task created on 0G mainnet' },
+      { ts: iso(-2 * 24 * HOUR), level: 'info', message: 'Task created on 0G Galileo testnet' },
       { ts: iso(-2 * 24 * HOUR + 22 * MINUTE), level: 'warn', message: 'Delivered. 48-hour acknowledgement window open.' },
       { ts: iso(-2 * 24 * HOUR + 24 * MINUTE), level: 'ok', message: 'acknowledgeModel succeeded — hash verified, deliverable acknowledged' },
       { ts: iso(-2 * 24 * HOUR + 26 * MINUTE), level: 'ok', message: 'Finished. Adapter decrypted to ~/.crucible/adapters/support-tone-v3' },

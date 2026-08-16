@@ -43,9 +43,18 @@ describe('listPassports', () => {
   })
 
   it('filters by network', async () => {
-    const mainnet = await listPassports({ network: 'mainnet' })
-    expect(mainnet.length).toBeGreaterThan(0)
-    expect(mainnet.every((p) => p.network === 'mainnet')).toBe(true)
+    const testnet = await listPassports({ network: 'testnet' })
+    expect(testnet.length).toBeGreaterThan(0)
+    expect(testnet.every((p) => p.network === 'testnet')).toBe(true)
+  })
+
+  // Doubles as a regression guard. The fixtures used to label eight records
+  // mainnet, chain 16661, which put a mainnet chip on screen in a project whose
+  // every document says nothing is deployed there. Nothing is, so the honest
+  // answer to this filter is an empty list, and this test fails the moment an
+  // invented mainnet record reappears.
+  it('has no mainnet passports, because nothing is deployed there', async () => {
+    expect(await listPassports({ network: 'mainnet' })).toEqual([])
   })
 })
 
@@ -71,7 +80,7 @@ describe('applyFilter', () => {
   })
 
   it('combines filters', () => {
-    const filtered = applyFilter(summaries, { network: 'testnet', model: 'Qwen3-32B' })
+    const filtered = applyFilter(summaries, { network: 'mainnet', model: 'Qwen3-32B' })
     expect(filtered).toHaveLength(0)
   })
 
@@ -156,10 +165,11 @@ describe('createJob', () => {
   })
 
   it('queues a job when the network’s single provider is already busy', async () => {
-    // job_2ad901 is seeded mid-Training on mainnet.
+    // job_2ad901 is seeded mid-Training on testnet, occupying the single
+    // testnet fine-tuning provider.
     const job = await createJob({
-      network: 'mainnet',
-      provider: '0x940b4a101CaBa9be04b16A7363cafa29C1660B0d',
+      network: 'testnet',
+      provider: '0xA02b95Aa6886b1116C4f334eDe00381511E31A09',
       model: 'Qwen2.5-0.5B-Instruct',
       config: DEFAULT_CONFIG,
     })

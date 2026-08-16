@@ -300,6 +300,34 @@ export interface Job {
   /** Provider `occupied` — a queued state, not an error. */
   queued: boolean
 
+  /**
+   * The complete timestamped state history, oldest first, exactly as the
+   * orchestrator sends it (`WireTransition` in `services/orchestrator/src/wire.ts`).
+   *
+   * This exists alongside `history` below because the two are not
+   * interchangeable. `history` is a map keyed by state, so it cannot represent
+   * the same state twice and its order depends on `TASK_STATES` rather than on
+   * what happened. An array preserves both, which is what a timeline needs.
+   *
+   * Optional because a record predating the field, or a mock, simply omits it.
+   */
+  transitions?: { state: TaskState; at: string }[]
+  /**
+   * Acknowledged on-chain without a successful download, so the model may be
+   * unrecoverable. Never silently dropped from a record.
+   */
+  artifactAtRisk?: boolean
+  /**
+   * The worst outcome in the system: the 48-hour window closed unacknowledged,
+   * so the model is lost and 30% of the fee is forfeit.
+   *
+   * It is its own boolean because the only other way to read it over HTTP was
+   * substring-matching the human-readable `error` text, which changes whenever
+   * a message is reworded. Independent of `artifactAtRisk` — a fallback inside
+   * the window risks the artifact without missing any deadline.
+   */
+  ackDeadlineMissed?: boolean
+
   // ---- UI extension: not in INTERFACES.md §5 ----
   /** Human label for the run. */
   name?: string
