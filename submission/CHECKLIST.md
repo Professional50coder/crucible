@@ -57,7 +57,7 @@ Judging weights, for prioritisation when time runs short:
 - [x] Re-count the word limit after any edit — re-counted 2026-08-15, still 29
 - [x] Short summary covering all three required points:
   - [x] **What it does** — one upload replaces 0G's twelve-step fine-tuning CLI flow; the run's cryptographic lineage becomes a public, independently checkable Model Passport
-  - [x] **What problem it solves** — a 48-hour acknowledge deadline with no notification that costs users their model plus 30% of the fee; a documented bug that permanently locks accounts; and a complete provenance chain that 0G already produces and then discards
+  - [x] **What problem it solves** — a 48-hour acknowledge deadline with no notification that costs users their model plus 30% of the fee; a documented bug that strands a user's deliverable queue with a provider; and a complete provenance chain that 0G already produces and then discards
   - [x] **Which 0G components it uses** — Compute, Storage, Chain, and Agentic ID (ERC-7857)
 
 ---

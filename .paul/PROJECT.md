@@ -11,10 +11,11 @@ about: "crucible"
 Crucible turns fine-tuning on the 0G Compute Network into a single upload, and turns the
 cryptographic exhaust that flow already produces — base-model hash, dataset root hash,
 training config, TEE-verified delivery — into a permanent, public, independently checkable
-**Model Passport**, minted as an ERC-7857 Agentic ID on 0G mainnet.
+**Model Passport**, minted as an ERC-7857-*style* Agentic ID on 0G. (Deployed and minted on
+Galileo testnet; mainnet is the Wave 3 target and is not deployed yet.)
 
 Today that provenance chain is printed to a terminal and lost. Today the flow has five
-documented footguns, one of which can permanently lock a user out of the network.
+documented footguns, one of which strands a user's deliverable queue with a provider.
 
 ## Core Value
 

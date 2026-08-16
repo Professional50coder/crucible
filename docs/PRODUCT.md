@@ -64,7 +64,7 @@ Four facts that together answer *"where did this model come from?"* — printed 
 and lost when the buffer scrolls. **Nothing surfaces them. Nothing persists them. Nothing
 makes them checkable by a third party.**
 
-### Problem 2 — A documented bug permanently locks users out of the network
+### Problem 2 — A documented bug blocks a user's deliverable queue with a provider
 
 From the SDK's own source comments, describing a **May 2026 hackathon bug report (Bug #4)**:
 
@@ -74,8 +74,18 @@ From the SDK's own source comments, describing a **May 2026 hackathon bug report
 > was **permanently locked** — every subsequent `addDeliverable` reverted with *"previous
 > deliverable not acknowledged"*.
 
-Real users have been permanently locked out. The escape hatch exists but is undocumented
-outside a TSDoc comment.
+**The precise scope, because it is easy to overstate.** What blocks is the user's *deliverable
+queue with that provider*: no further task can be delivered until the outstanding one is
+acknowledged. It is not an account ban and not a network-wide lockout. "Permanently" is the bug
+report's own word and is quoted as such — the SDK's own source names
+`acknowledgeDeliverable(provider, taskId)` as the escape hatch for an already-stuck queue, which
+is why Crucible exposes it as `POST /jobs/:id/unlock`. We have not had a locked queue to run it
+against, so that is 0G's claim about their contract, not our measurement.
+
+What *is* permanent is the loss of the model: once the artifact has been garbage-collected from
+both 0G Storage and the TEE buffer, no call brings it back. The queue recovers; the weights do
+not. The escape hatch is real but undocumented outside a TSDoc comment, which is the part that
+makes this bite.
 
 ### Problem 3 — A 48-hour deadline with no warning
 

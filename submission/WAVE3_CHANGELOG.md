@@ -104,13 +104,15 @@ exercise — change one byte and the chain says no.
   the provider's compute resources."* No notification of any kind exists. Crucible's daemon acts
   at +1h rather than at the buzzer, retries with backoff, and falls back at +36h with 12 hours of
   deadline still in hand. 21 tests.
-- **The permanently-locked-queue bug, made unreachable.** The 0G SDK's own source records a May
+- **The locked-deliverable-queue bug, made unreachable.** The 0G SDK's own source records a May
   2026 hackathon bug report: a user took the legacy `downloadModelFrom0GStorage` + `decryptModel`
   path without acknowledging, the artifact was later garbage-collected from both 0G Storage and
   the TEE buffer, `acknowledgeModel` could no longer succeed, and every subsequent
-  `addDeliverable` reverted with *"previous deliverable not acknowledged"* — the account's queue
-  was locked permanently. Crucible only ever calls `acknowledgeModel`, so it cannot reach that
-  state, and it exposes `acknowledgeDeliverable` as a one-click unlock for accounts already stuck.
+  `addDeliverable` reverted with *"previous deliverable not acknowledged"*. What blocks is that
+  user's deliverable queue with that provider — the report calls it permanent, though the same
+  SDK names `acknowledgeDeliverable` as the escape hatch; what is genuinely unrecoverable is the
+  garbage-collected model. Crucible only ever calls `acknowledgeModel`, so it cannot reach that
+  state, and it exposes `acknowledgeDeliverable` as a one-click unlock for queues already stuck.
 
 ---
 

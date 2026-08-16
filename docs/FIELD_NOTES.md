@@ -132,8 +132,14 @@ The SDK's own docs describe a failure from a **"May 2026 hackathon bug report"**
 - Always use `acknowledgeModel` — it downloads, verifies the on-chain hash, and acks in one call.
 - `acknowledgeDeliverable(provider, taskId)` is the escape hatch for an already-stuck queue.
 
-**This is a headline Crucible feature.** Users get locked out of the network by a documented
-bug; Crucible's daemon makes it structurally impossible to hit.
+**Scope, stated precisely.** What locks is the user's **deliverable queue with that provider** —
+not their account, not their access to the network. The report's word is "permanently", and the
+same SDK names `acknowledgeDeliverable` as the escape hatch two lines later, so the two cannot
+both be taken literally. What is genuinely unrecoverable is the model: once garbage-collected
+from Storage and the TEE buffer, nothing brings it back.
+
+**This is a headline Crucible feature.** The deprecated pair is not on the orchestrator's broker
+port at all, so no amount of later editing downstream can reach the state that strands a queue.
 
 ### The 48-hour deadline
 After a task reaches `Delivered`, you have **48 hours** to acknowledge or you lose the model

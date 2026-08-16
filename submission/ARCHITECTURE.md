@@ -156,8 +156,8 @@ stateDiagram-v2
     note right of UserAcknowledged
         Only ever reached via acknowledgeModel.
         The deprecated downloadModelFrom0GStorage
-        + decryptModel path can strand the queue
-        permanently. See the May 2026 SDK bug report.
+        + decryptModel path strands this provider's
+        deliverable queue. See the May 2026 SDK bug report.
     end note
 ```
 

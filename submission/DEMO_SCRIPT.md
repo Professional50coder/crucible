@@ -111,13 +111,14 @@ or replayed run; state this in the description if asked.)
 
 ### 6 · 1:14–1:32 — The deadline, handled (18s)
 
-**On screen:** state hits `Delivered`. A countdown appears. The daemon's log line shows the
-acknowledgement firing immediately, not at the buzzer. Then the "unlock stuck queue" button.
+**On screen:** state hits `Delivered`. The daemon's log line shows the acknowledgement scheduled
+on arrival and firing an hour later — 47 hours of margin, not a race to the buzzer.
 
 **Voiceover:**
-> Delivered — the 48-hour clock. Crucible's daemon acknowledges the moment it sees this, always
-> through the safe call. There's a documented bug where the wrong download path locks an account
-> out of 0G permanently. Crucible can't reach it — and it can unlock accounts already stuck.
+> Delivered — the 48-hour clock. Crucible's daemon schedules the acknowledgement the moment it
+> sees this and acts at plus-one-hour, always through the safe call. There's a documented bug
+> where the wrong download path strands your deliverable queue with a provider. Crucible can't
+> reach it — and it exposes the unlock for queues already stuck.
 
 ---
 

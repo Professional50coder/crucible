@@ -238,7 +238,7 @@ export async function createJob(input: CreateJobRequest): Promise<Job> {
   return request<Job>('/jobs', { method: 'POST', body: JSON.stringify(input) })
 }
 
-/** Bug #4 escape hatch. One click, for an account already locked out. */
+/** Bug #4 escape hatch. One click, for a deliverable queue already stranded. */
 export async function unlockJob(id: string): Promise<UnlockResult> {
   if (MOCK_MODE) return delay(mockUnlockJob(id), 600)
   return request<UnlockResult>(`/jobs/${encodeURIComponent(id)}/unlock`, { method: 'POST' })
