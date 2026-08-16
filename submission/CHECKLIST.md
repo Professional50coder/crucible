@@ -151,10 +151,10 @@ Follow `submission/DEMO_SCRIPT.md`; it is timed to 2:50.
 - [ ] **Runtime under 3:00 in the uploaded file**, not just in the edit timeline
 - [ ] Shows core functionality
 - [ ] Shows the user flow end to end
-- [ ] Shows the 0G integration explicitly (Compute execution, Storage, chainscan, Agentic ID mint)
+- [ ] Shows the 0G integration explicitly (Compute execution, Storage, chainscan, the passport on chain). **Not a mint** — the app has no mint path and the demo script deliberately does not film one; both passports were minted by contracts/scripts.
 - [ ] Uploaded to YouTube (unlisted-but-public) or Loom (anyone with the link)
 - [ ] **Playable while logged out**, in a private window
-- [ ] Description contains: one-line summary, repo URL, mainnet contract address, explorer link, the four 0G components
+- [ ] Description contains: one-line summary, repo URL, explorer link, the four 0G components — **and the mainnet contract address only once it exists.** Nothing is deployed to 16661 today, so a description promising one is a claim the first click disproves.
 - [ ] URL recorded: `PLACEHOLDER_DEMO_URL`
 - [ ] Watched once at full screen looking for leaked secrets in any frame
 
@@ -226,8 +226,8 @@ Do not start any of these while a hard requirement is outstanding.
 - [ ] Every `PLACEHOLDER_*` token in `submission/` and the root README is replaced: `grep -rn "PLACEHOLDER" README.md submission/`
 - [ ] Every link opens in a logged-out private window: repo, video, X post, chainscan, storagescan, frontend
 - [ ] The README's status table is honest — ⚠️ **one row is not, and it is the most consequential one.** "End-to-end authenticated fine-tune ✅ **Completed on testnet** — ran `Init → Finished`" is contradicted by the chain: the deliverable for task `10551604-…` reads `acknowledged: false`, `settled: true`, `encryptedSecret` empty, and the `FeesSettled` event charged **exactly 30%** of the fee (0.00355584 of 0.0118528 0G) — 0G's documented penalty for a model the user never acknowledged. A provider-side status of `Finished` means the provider closed the task out, not that the acknowledgement happened. The task was delivered and lost. **Fix this row before submitting; it is exactly the kind of claim a technical judge can disprove in one `eth_call`**
-- [x] `apps/web` produces a clean `next build` — 7 routes, 88.8 kB shared JS, re-run 2026-08-15
-- [ ] `npm test` passes from a clean clone — and note that the root `workspaces` glob is `packages/*`, so root `npm test` does not reach orchestrator, web or contracts. The full 808 requires running each from inside its own directory
+- [x] `apps/web` produces a clean `next build` — **8 routes** (the per-passport Open Graph image added one), 88.8 kB shared JS, re-run 2026-08-16
+- [ ] `npm test` passes from a clean clone — and note that the root `workspaces` glob is `packages/*`, so root `npm test` does not reach orchestrator, web or contracts. The full 1,117 requires running each from inside its own directory — core 147, cli 62, ml 320, orchestrator 200, web 310, contracts 104
 - [ ] Nothing in the submission claims a completed end-to-end fine-tune
 - [ ] Submitted with **at least 24 hours** to spare
 - [ ] Submission confirmation screenshotted and saved
