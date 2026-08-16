@@ -9,8 +9,11 @@ the single largest weight. It is worth writing properly.
 > changelog claiming something that isn't in the repo is worse than a shorter changelog, because
 > a judge can check the repo in thirty seconds. Deletion is free; a caught overclaim is not.
 >
-> **Audited 2026-08-15** against the repo and the live chain. Every claim below was checked;
-> unsupported ones were removed rather than reworded. What remains is checkable.
+> **Audited 2026-08-15, re-audited 2026-08-16** against the repo and the live chain. Every claim
+> below was checked; unsupported ones were removed rather than reworded. What remains is checkable.
+> The 2026-08-16 pass disproved nine claims this repository had already published — they are listed
+> in full below rather than quietly deleted, because a correction found by its author is evidence
+> the checking is real, and a changelog whose claims only ever grow is one nobody has checked.
 
 ---
 
@@ -21,11 +24,11 @@ the single largest weight. It is worth writing properly.
 **What it is:** Crucible turns fine-tuning on the 0G Compute Network into a single upload and
 issues every resulting model a verifiable birth certificate — base model, dataset,
 hyperparameters and TEE provider — canonically hashed, anchored on 0G Chain, and minted as an
-ERC-7857 Agentic ID.
+ERC-7857-*style* Agentic ID.
 
 Crucible went from an empty directory to a tested system with a live contract on 0G inside this
-wave: **808 tests**, a `Passport.sol` deployment on 0G Galileo testnet, a minted passport, and
-on-chain verification anyone can call themselves.
+wave: **1,117 tests**, a `Passport.sol` deployment on 0G Galileo testnet, two minted passports,
+three paid fine-tuning runs, and on-chain verification anyone can call themselves.
 
 **Where it is not finished:** `Passport.sol` is **not yet on 0G mainnet (16661)**. That is the
 Wave 3 hard requirement and it is the largest thing still open. It is stated here rather than
@@ -41,9 +44,10 @@ left for a judge to discover.
 | Source verified | ✅ [`#code`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code) — `v0.8.19+commit.7dd6d404`, evmVersion `paris`, optimizer 200 |
 | Deployment tx | [`0x302a4278…8a6dd1`](https://chainscan-galileo.0g.ai/tx/0x302a4278b9759f985f2e43964a4d5db1c2b6f14ef453935f230441ce728a6dd1) · block 49596815 · gas 2,238,586 |
 | Passport #1 mint tx | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) · block 49597171 · gas 327,702 |
-| Dataset on 0G Storage | root `0xa5051ae7…9e7dbfd` · upload tx `0xc38e4131…d7da52` |
-| 0G Compute fine-tuning task | `10551604-2664-4516-86cf-269a62f93bfc` on provider `0xA02b95Aa…1E31A09` |
-
+| Passport #2 mint tx | [`0x60094f63…420324`](https://chainscan-galileo.0g.ai/tx/0x60094f63) · block 49612106 · gas 293,514 — the run that **kept** its model |
+| Dataset on 0G Storage | root `0xa5051ae7…9e7dbfd` · upload tx `0xc38e4131…d7da52` · resolves to `datasets/sentiment/train.jsonl`, 11,695 bytes, verifiable with `node tools/identify-dataset.mjs` |
+| 0G Compute fine-tuning tasks | **three, all paid**: `10551604-…` · `3e385c46-…` · `b1807e85-…` on provider `0xA02b95Aa…1E31A09` |
+| Daemon acknowledgement tx | [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa) · block 49716408 · gas 49,263 — sent by the orchestrator itself, not by a script |
 | Manifest on 0G Storage | root `0xc757a7e6…e1140` · upload tx `0x8372e7de…6ca10` · 584 bytes |
 
 **The whole verification loop, walkable by a stranger with no wallet and no clone of this repo:**
@@ -68,10 +72,112 @@ exercise — change one byte and the chain says no.
 
 ---
 
+### The headline: the daemon did the thing it claims
+
+Crucible's pitch is a daemon that sits at the CLI so you do not have to, and acknowledges before
+the 48-hour deadline destroys your model. Until **2026-08-16 that daemon had never once done it
+against 0G.** Runs 1 and 2 were driven by scripts. The component was thoroughly tested against
+fakes, which is not the same thing as true, and the difference is exactly the kind a judge should
+catch.
+
+A third task was submitted through the daemon's own HTTP API and then left alone:
+
+```
+POST /jobs                    → job df56bffb-…, submitted by the Submitter as task b1807e85-…
+delivered      08:53:57Z      → detected by the Poller
+scheduled      09:53:57Z      → +1h, the real default. 47 hours of margin
+downloaded     09:54:15Z → 09:55:50Z   93,642,471 bytes from 0G Storage
+acknowledged   09:56:05Z      → tx 0x4e2c81e2…7e4cfa, block 49716408
+```
+
+Read back from the `FineTuningServing` contract rather than the provider's API — because this
+project has already published one conclusion it inferred from a status field and had to retract
+it — `getDeliverables` returns `acknowledged: true` with model root `0x3bdc74ea…fbad6`.
+
+Two details matter more than the result. The daemon ran on its **own default**
+`downloadMethod: 'auto'`, which tries 0G Storage first and therefore spawns the bundled Linux
+binary that fails on Windows; forcing the TEE path would have proven less. And **nothing was
+shortened for the demonstration** — the acknowledgement fired a full hour after delivery, exactly
+as designed. Recorded with four explicit non-claims in `runs/run3-daemon.json`.
+
+### ERC-8004: checked against the chain, not the docs
+
+0G's Agentic ID documentation states that Agentic IDs are *"compatible with ERC-8004, the
+Trustless Agent standard that 0G officially supports"*. Neither that page nor the EIP names a
+deployed address, so we resolved it by `eth_call` instead of by reading. **The Identity and
+Reputation registries are live on both 0G networks** — mainnet identity
+`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` answers `name()` with `AgentIdentity`.
+
+And the finding that decides it: **there is no Validation Registry**, on 0G or anywhere; the
+ERC-8004 contracts repository says that portion is still under discussion with the TEE community.
+A Model Passport is structurally a validation attestation, so the registry that fits is the one
+that does not exist, and the two that do exist are the half that fits worst — the score field is a
+`uint8` 0–100 for which a lineage record has no honest value. `docs/ERC8004.md` therefore
+recommends documentation-only alignment now rather than self-deploying a non-canonical singleton,
+and states plainly what registering would *not* let us claim.
+
+### Corrections this wave — nine claims that were wrong
+
+Progress is not only what was added. Every item here was believed, published, and then disproved
+by checking:
+
+| We said | Actually | How we know |
+|---|---|---|
+| `databricks-dolly-15k` is **Apache 2.0** — in seven places | **CC BY-SA 3.0.** Share-alike is an obligation, so the derived slice inherits it and cannot sit under this repo's MIT licence. It now carries its own `LICENSE` | the dataset card's own front matter, `license: cc-by-sa-3.0` |
+| Two 0G example repos are reusable — `PRIOR_ART` planned to "lift patterns" and "use directly" | **Both are unlicensed.** No `LICENSE`, no `license` field. Default copyright: readable, not reusable. Both actions corrected to read-only | GitHub API returns `"license": null` and 404 on `/license` for all three |
+| A duplicate upload to 0G Storage reverts with `CALL_EXCEPTION` — taught in four places including a public training dataset | **It does not revert.** A second submission of the same root was accepted and charged again. The error is inverted: trusting the documented behaviour means paying twice silently | submissions 146937 and 146938, identical root |
+| The minimum Compute deposit is 3 OG — taught in our own public dataset | **Client-side SDK guard.** `MIN_ACCOUNT_BALANCE()` reads 0.1 0G on testnet; our ledger was created with 0.3 | one `eth_call` |
+| LoRA adapter is "~100 MB" | **93,642,469 bytes, measured.** Close, which is only knowable because it was checked | the retrieved artifact, sha256 `0x9f788764…` |
+| "ERC-7857 Agentic ID", unqualified, in eleven places | **ERC-7857-*style*.** `authorizeUsage` and the identity surface are implemented; `transfer()` with oracle re-encryption and `clone()` are not | the contract |
+| The bug "permanently locks a user out of the network", in seven files | It strands **that user's deliverable queue with that provider**. Several of those files offered the escape hatch two lines later, contradicting themselves | the SDK's own source |
+| The architecture doc's sample manifest showed `network: mainnet` and `attestationVerified: true` | Nothing is on mainnet, and no real run can produce `true` because `verifyService()` is never called | the code |
+| `@crucible/core` "converts" datasets — claimed in five places | It did not. There was no converter. **So one was built**, rather than deleting a fifth capability claim | `packages/core/src/convert.ts`, 16 tests |
+
+### Shipped alongside those corrections
+
+- **A dataset converter that refuses to lose a field.** Converts between 0G's three formats;
+  `instruction` and `chat` round-trip byte-exactly, and a record that cannot convert without
+  dropping something — a multi-turn conversation, a second system prompt — is skipped and reported
+  by line rather than silently truncated. Converting *to* `text` is supported and flagged lossy;
+  converting *from* it is refused, because there is no structure to recover and guessing one would
+  be inventing provenance.
+- **The library is reachable.** `packages/cli` had one command and no tests. It now exposes
+  `validate`, `convert` and `config` over the same core rules, with 62 tests, and its cost display
+  no longer prices every run at a hardcoded 10,000 tokens while calling it an estimate — `--dataset`
+  prices your file, and the fallback is relabelled as 0G's documented reference figure.
+- **A passport that stays checkable after you download it.** The certificate exports as SVG with
+  the canonical manifest embedded as base64 inside it, so a downloaded file can be keccak256'd and
+  compared against `passportOf(tokenId).manifestRootHash` without trusting the page it came from.
+  Round-trip proven against both real passports. Mechanism credited to Excalidraw (MIT) in
+  `docs/PRIOR_ART.md`.
+- **An Open Graph card per passport**, keyed off the manifest hash so it is immutable, and honest
+  at thumbnail size: passport #1 renders `ADAPTER NOT RETRIEVED` in red, passport #2 renders
+  `ADAPTER RETRIEVED` in green, demo records carry a `DEMO RECORD` band, and nothing prints as
+  attested.
+- **A Hugging Face model card emitter**, so a passport's provenance travels to the largest model
+  registry there is — `base_model_relation: adapter` (a LoRA is not a finetune), with the
+  unverified attestation, the sentinel adapter, and "proves lineage, not honest training" all
+  stated on the card rather than omitted from it.
+- **One generic mint script**, parameterised and dry-run by default, replacing two scripts whose
+  task IDs and hashes were hardcoded constants. It preserves the refusal to mint an unacknowledged
+  deliverable, and it reproduces both existing passports' hashes byte-identically from their
+  recorded inputs — a correctness proof that costs no gas.
+- **The daemon tells you what it knows.** Full state-transition history and an explicit
+  `ackDeadlineMissed` flag are now on the wire; previously a client could detect the worst outcome
+  in the system — model lost, 30% forfeit — only by substring-matching human-readable error text.
+  And the queue-recovery API is routed at last: `detectLock`/`unlock` were implemented and tested
+  but reachable only for accounts that already had a local job, which is precisely not the account
+  that arrives with a stranded queue.
+- **The launch page stopped contradicting the landing page.** `/new` opened with mainnet
+  pre-selected and asserted 0G fine-tuning "is available" there, two clicks from a page listing
+  "not mainnet" under what this project does not claim.
+
+---
+
 ### Core improvements
 
 - **`@crucible/core` — the library that makes 0G's documented footguns unreachable.** Pure and
-  network-free: 105 tests across 6 files, none of which requires a private key, funds, or a live
+  network-free: 147 tests across 8 files, none of which requires a private key, funds, or a live
   network.
 - **Training-config validation.** 0G rejects a fine-tuning config with extra *or* missing keys.
   Crucible enforces the exact five-parameter template — `neftune_noise_alpha`,
@@ -254,11 +360,11 @@ window is **48h** and is documentation, not a contract constant.
   acknowledgement state, current price per token, estimated cost of a demo run, and wallet
   readiness. It needs no private key for the provider half.
 - **Orchestrator** — job store, 0G task poller, auto-acknowledge daemon, stuck-queue recovery,
-  and an HTTP + SSE API. 155 tests across 11 files.
+  and an HTTP + SSE API. 174 tests across 11 files.
 - **Web app** — upload, validate, configure, cost estimate and launch (`/new`); a live training
   view driven by the real task states (`/jobs`, `/jobs/[id]`); a public Model Passport page with
   every hash rendered next to its verification link (`/passport/[id]`); and a public gallery
-  (`/gallery`). 158 tests across 13 files. It runs against the orchestrator when
+  (`/gallery`). 310 tests across 24 files. It runs against the orchestrator when
   `NEXT_PUBLIC_CRUCIBLE_API_URL` is set and against an in-memory fixture store when it is not, so
   the UI can be demonstrated with no backend running.
 - **Independent verification path, documented.** The root README carries a step-by-step procedure
