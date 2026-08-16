@@ -141,6 +141,43 @@ from Storage and the TEE buffer, nothing brings it back.
 **This is a headline Crucible feature.** The deprecated pair is not on the orchestrator's broker
 port at all, so no amount of later editing downstream can reach the state that strands a queue.
 
+### ✅ `verifyService()` passes — and what it does not check — 2026-08-16
+
+Every passport minted so far carries `tee.attestationVerified: false`, and the app says plainly
+that this is because `verifyService()` is never called. It has now been called against the live
+testnet provider with `node tools/verify-attestation.mjs`:
+
+```
+success       : true          tee verifier : dstack
+signer on-chain : 0x24135b4Bd964872284728F79F5f17eB874C5583A   all match : true
+compose passed  : true
+  calculated = 8779f38c1cc5d1e643fbfc7238bae2c227f7ffa4c72c049802942658acfc5bee
+  eventLog   = 8779f38c1cc5d1e643fbfc7238bae2c227f7ffa4c72c049802942658acfc5bee
+```
+
+**What that establishes.** Two real things: the TEE signer inside the provider's attestation
+report is the same address registered on-chain for that provider, and the compose hash computed
+from the report matches the one in its event log. The provider is not presenting a signer it never
+registered, and its declared software composition matches what the enclave logged.
+
+**What it does not establish.** The SDK's own output names three steps that constitute complete
+verification and points at an external service to run them: quote verification via `dcap-qvl`
+(signature and TCB status), event-log replay to check RTMR values, and OS image hash verification
+via `dstack-mr` — all behind `docker run -p 8080:8080 dstacktee/dstack-verifier:0.5.4`. **We have
+not run it.** The Intel TDX quote has not been cryptographically validated on this end. The 55 KB
+report is saved at `runs/attestation-testnet/fine_tuning_attestation_report.json` precisely so
+that anyone can run the verifier against it themselves.
+
+**So `attestationVerified` is a decision now, not a blocker.** It can be earned — but only for a
+stated meaning. Flipping it to `true` on the strength of two checks while the quote itself is
+unvalidated would be the same species of error as reading `progress: Finished` and concluding the
+model was acknowledged. Whatever the field asserts, the passport must name which steps stand
+behind it.
+
+One incidental oddity, recorded because it is checkable and unexplained: the report's Docker image
+list reads `leechael/phala-cloud-nextjs-starter:latest\\n` — a Next.js starter image, carrying a
+literal escaped newline. That is what the provider published.
+
 ### The 48-hour deadline
 After a task reaches `Delivered`, you have **48 hours** to acknowledge or you lose the model
 *and* 30% of the fee is deducted. Nothing warns you. Crucible automates this.

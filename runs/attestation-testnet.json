@@ -1,0 +1,33 @@
+{
+  "network": "testnet",
+  "chainId": 16602,
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "success": true,
+  "teeVerifier": "dstack",
+  "signerVerification": {
+    "contractAddress": "0x24135b4Bd964872284728F79F5f17eB874C5583A",
+    "reportAddresses": [
+      {
+        "reportType": "combined",
+        "address": "0x24135b4Bd964872284728F79F5f17eB874C5583A",
+        "match": true
+      }
+    ],
+    "allMatch": true
+  },
+  "composeVerification": {
+    "passed": true,
+    "details": {
+      "combined": {
+        "calculatedHash": "8779f38c1cc5d1e643fbfc7238bae2c227f7ffa4c72c049802942658acfc5bee",
+        "eventLogHash": "8779f38c1cc5d1e643fbfc7238bae2c227f7ffa4c72c049802942658acfc5bee"
+      }
+    }
+  },
+  "dockerImages": [
+    "leechael/phala-cloud-nextjs-starter:latest\\\\n"
+  ],
+  "reportsGenerated": [
+    "combined"
+  ]
+}
