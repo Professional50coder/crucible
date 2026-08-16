@@ -10,6 +10,9 @@
     "coverage": "hardhat coverage",
     "clean": "hardhat clean",
     "export-abi": "hardhat run scripts/export-abi.js",
+    "mint": "node scripts/mint.js",
+    "mint:offline": "node scripts/mint.js --offline",
+    "mint:galileo": "hardhat run scripts/mint.js --network galileo",
     "deploy:galileo": "hardhat run scripts/deploy.js --network galileo",
     "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet"
   },
