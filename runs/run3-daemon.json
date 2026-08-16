@@ -1,0 +1,77 @@
+{
+  "what": "The first fine-tuning run driven end to end by the orchestrator daemon rather than by a script.",
+  "why": "Runs 1 and 2 were created by tools/run2-create.mjs and acknowledged by tools/ack-now.mjs. Both worked, and neither exercised services/orchestrator — the component the project's headline claim is about. Until this run, 'the daemon acknowledges before the deadline' was well tested against fakes and never demonstrated against 0G.",
+  "jobId": "df56bffb-a2cc-48ec-9835-450f4200ebdc",
+  "taskId": "b1807e85-a942-46f5-9d04-ec23fdff020a",
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "network": "testnet",
+  "chainId": 16602,
+  "outcome": "RETRIEVED_AND_ACKNOWLEDGED_BY_THE_DAEMON",
+  "platform": "WSL2 Ubuntu, Node v22.23.2, orchestrator dist/main.js",
+  "driver": {
+    "submitted_by": "services/orchestrator Submitter, via POST /jobs",
+    "polled_by": "services/orchestrator Poller",
+    "acknowledged_by": "services/orchestrator Acknowledger",
+    "human_actions": [
+      "started the daemon (tools/run3-daemon.sh)",
+      "POSTed one job to its API",
+      "watched"
+    ]
+  },
+  "configuration": {
+    "downloadMethod": "auto",
+    "note": "Left on the daemon's own default deliberately. 'auto' tries 0G Storage first, which shells out to the bundled 0g-storage-client — the Linux ELF that ENOENTs on Windows and cost run 1 its model. Forcing the TEE path would have proven less: the point was to find out whether the daemon works unmodified. It does, on Linux."
+  },
+  "timeline": {
+    "job_created": "2026-08-16T08:48:22.973Z",
+    "task_submitted": "2026-08-16T08:48:59.163Z",
+    "delivered": "2026-08-16T08:53:57.648Z",
+    "acknowledgement_scheduled": "2026-08-16T09:53:57.648Z",
+    "download_started": "2026-08-16T09:54:15.162Z",
+    "download_finished": "2026-08-16T09:55:50.318Z",
+    "acknowledged": "2026-08-16T09:56:05.089Z",
+    "scheduling_note": "Scheduled at delivery + 1h with 47h of margin, which is the daemon's real ACK_TARGET_DELAY_MS. Nothing was shortened to make the demonstration faster."
+  },
+  "onChain": {
+    "acknowledgeTxHash": "0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa",
+    "blockNumber": 49716408,
+    "gasUsed": 49263,
+    "status": 1,
+    "deliverable": {
+      "acknowledged": true,
+      "modelRootHash": "0x3bdc74eabb496fec1818c5f186c907d928d2a641336e8d18f5c4e83f0e8fbad6",
+      "encryptedSecret": "0x",
+      "readWith": "node tools/deliverable-status.mjs b1807e85",
+      "note": "encryptedSecret was still empty immediately after acknowledgement. The provider publishes the key when the task settles to Finished, roughly a minute later; run 2's deliverable carries 129 bytes there. Read from the contract, not from the provider's API."
+    }
+  },
+  "artifact": {
+    "path": "services/orchestrator/data/models/df56bffb-a2cc-48ec-9835-450f4200ebdc/model_b1807e85-a942-46f5-9d04-ec23fdff020a.bin",
+    "sizeBytes": 93642471,
+    "sha256": "0x722c710a54fa169067c4e79563f021367b6d31b85862c4e1bc4e0aae7dcd1ed6",
+    "note": "Encrypted artifact as delivered, downloaded and hash-verified by acknowledgeModel against the provider's on-chain root before the acknowledgement transaction was sent. Kept on disk, excluded from git; referenced by hash so the claim is checkable without shipping 89 MB of weights.",
+    "sizeComparison": "Run 2's artifact was 93,642,469 bytes for the same base model and config. A 2-byte difference between two encrypted artifacts of different tasks is unremarkable; it is recorded here only so nobody later reads the two numbers as a contradiction."
+  },
+  "dataset": {
+    "rootHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+    "file": "datasets/sentiment/train.jsonl",
+    "format": "chat",
+    "exampleCount": 61,
+    "resolvedWith": "node tools/identify-dataset.mjs"
+  },
+  "fee": {
+    "estimatedByDaemon": {
+      "trainingNeuron": "6943200000000000",
+      "storageReserveNeuron": "10000000000000000",
+      "totalNeuron": "16943200000000000"
+    },
+    "note": "Estimate only, and it is known to run high — the changelog records the estimator at roughly 2.3x on short chat records. Runs 1 and 2, on the same dataset and config, were each charged 11,852,800,000,000,000 neuron. The settled fee for this run is not recorded here because the daemon does not yet read it back; that is an open item, not an omission."
+  },
+  "whatThisDoesNotProve": [
+    "That the daemon works on Windows. It does not — the 0G Storage path spawns a Linux ELF, which is DEFECT-01 and unchanged.",
+    "That the TEE download path works. It was never reached, because the storage path succeeded first.",
+    "That the attestation was verified. verifyService() is still never called, so tee.attestationVerified remains false.",
+    "That a passport was minted for this run. It was not; minting is still a Hardhat script."
+  ],
+  "recordedAt": "2026-08-16"
+}
