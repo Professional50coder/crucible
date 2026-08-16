@@ -64,9 +64,19 @@ roadmap: today Crucible proves lineage; VFT-style ZK circuits would prove *hones
 |---|---|---|---|
 | **OpenSSF Model Signing (`model-signing` Python pkg)** | Sign the LoRA adapter with a standard signature instead of inventing our own. Anchor the OMS signature + our manifest hash on 0G. | Spec is Community Specification License 1.0; **verify the library's own license before depending on it** | **Integrate.** Standards-compliance is a differentiator, and it's how we avoid reinventing signing. |
 | **`databricks-dolly-15k`** | Demo dataset. **Apache 2.0**, JSONL, `instruction / context / response` — maps almost directly onto 0G's Format 1 (`instruction / input / output`). | Apache 2.0 | **Use.** Field remap is exactly what `crucible-core`'s converter is for. |
-| **`0gfoundation/agenticID-examples`** | Contract patterns for ERC-7857, Next.js + wagmi + RainbowKit scaffolding | Check repo | **Lift patterns**, cite in README |
-| **`0gfoundation/0g-deployment-scripts`** | Hardhat/Foundry configs already verified for Galileo + mainnet | Check repo | **Use directly** |
-| **`0gfoundation/fine-tuning-example`** | Reference for the end-to-end job flow | Check repo | **Read before the day-1 spike** |
+| **`0gfoundation/agenticID-examples`** | Contract patterns for ERC-7857, Next.js + wagmi + RainbowKit scaffolding | **None found** — no `LICENSE` file, no `license` field in `package.json` | **Read only.** Reimplement; nothing copied |
+| **`0gfoundation/0g-deployment-scripts`** | Hardhat/Foundry configs already verified for Galileo + mainnet | **None found** — no `LICENSE` file and no `package.json` on `main` | **Read only.** Our Hardhat config is written here |
+| **`0gfoundation/fine-tuning-example`** | Reference for the end-to-end job flow | **MIT**, declared in `package.json` only — the repository ships no `LICENSE` file | **Read**, cite what it taught |
+
+**Checked 2026-08-16** against the GitHub API: `GET /repos/0gfoundation/<repo>` reports
+`"license": null` for all three, and `GET /repos/0gfoundation/<repo>/license` returns 404 for all
+three. Only `fine-tuning-example` declares a licence at all, and only inside `package.json`.
+
+Two of these three are therefore **unlicensed**, which means default copyright: readable, not
+reusable. The first two rows previously read *"Check repo"* in this column while the Action column
+said *"Lift patterns"* and *"Use directly"* — a reuse plan resting on a licence nobody had looked
+up. Both actions are corrected above. This also sharpens `.paul/STATE.md`, which recorded that
+`fine-tuning-example` "declares MIT": true, but in `package.json`, not in a `LICENSE` file.
 
 ### 🟡 Study, don't copy
 

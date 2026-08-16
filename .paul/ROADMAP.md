@@ -124,7 +124,8 @@ requires a key, funds or a live endpoint.
 
 **Goal:** `Passport.sol` live and verified on 0G mainnet — satisfies the Wave 3 hard requirement.
 **Depends on:** Phase 2 (manifest schema fixes the on-chain fields)
-**Research:** Unlikely — patterns lifted from `agenticID-examples`
+**Research:** Unlikely — patterns read from `agenticID-examples` and reimplemented. That repo
+ships no licence, so nothing may be lifted from it; see `docs/PRIOR_ART.md`
 **Days:** 5–7
 
 **Scope:**
