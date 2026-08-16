@@ -44,7 +44,7 @@ left for a judge to discover.
 | Source verified | ✅ [`#code`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code) — `v0.8.19+commit.7dd6d404`, evmVersion `paris`, optimizer 200 |
 | Deployment tx | [`0x302a4278…8a6dd1`](https://chainscan-galileo.0g.ai/tx/0x302a4278b9759f985f2e43964a4d5db1c2b6f14ef453935f230441ce728a6dd1) · block 49596815 · gas 2,238,586 |
 | Passport #1 mint tx | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) · block 49597171 · gas 327,702 |
-| Passport #2 mint tx | [`0x60094f63…420324`](https://chainscan-galileo.0g.ai/tx/0x60094f63) · block 49612106 · gas 293,514 — the run that **kept** its model |
+| Passport #2 mint tx | [`0x60094f63…420324`](https://chainscan-galileo.0g.ai/tx/0x60094f63813827391266d7f77c02649342b435d86d297964d499d2deae420324) · block 49612106 · gas 293,514 — the run that **kept** its model |
 | Dataset on 0G Storage | root `0xa5051ae7…9e7dbfd` · upload tx `0xc38e4131…d7da52` · resolves to `datasets/sentiment/train.jsonl`, 11,695 bytes, verifiable with `node tools/identify-dataset.mjs` |
 | 0G Compute fine-tuning tasks | **three, all paid**: `10551604-…` · `3e385c46-…` · `b1807e85-…` on provider `0xA02b95Aa…1E31A09` |
 | Daemon acknowledgement tx | [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa) · block 49716408 · gas 49,263 — sent by the orchestrator itself, not by a script |
