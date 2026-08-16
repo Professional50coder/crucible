@@ -168,17 +168,19 @@ error — there is exactly one fine-tuning provider per network and tasks run on
 
 ## 4. The Model Passport
 
-The manifest is the artifact everything else points at. The block below is the **schema shape**,
-with illustrative values — it is not passport #1. (Passport #1 is on testnet, its `state` never
+The manifest is the artifact everything else points at. The block below is the **schema shape**
+with illustrative values — it is not passport #1, and it is not a record of a run. It is written
+against testnet because testnet is the only network anything here has run on; a sample labelled
+`mainnet` would depict a run that does not exist. (Passport #1 is on testnet, its `state` never
 reached `Finished`, and its `adapter.rootHash` is a labelled sentinel; see §4.1.)
 
 ```jsonc
 {
   "version": 1,
-  "network": "mainnet",
-  "chainId": 16661,
+  "network": "testnet",
+  "chainId": 16602,
   "createdAt": "…",
-  "task":     { "id": "…", "provider": "0x940b4a10…", "state": "Finished" },
+  "task":     { "id": "…", "provider": "0xA02b95Aa…", "state": "Finished" },
   "base":     { "model": "Qwen2.5-0.5B-Instruct", "modelHash": "0x…", "tokenizer": "Qwen/…" },
   "dataset":  { "rootHash": "0x…", "format": "instruction", "exampleCount": 50, "tokenCount": 10000 },
   "training": { "neftune_noise_alpha": 5, "num_train_epochs": 3,
@@ -284,9 +286,9 @@ SDK: `@0gfoundation/0g-compute-ts-sdk@0.9.0`.
   root hash is persisted before task creation, so a crash between upload and task creation never
   costs a second upload.
   - Not yet implemented, and named here rather than implied: **automatic sub-account funding.**
-    0G's `transfer-fund` silently routes to the *inference* sub-account unless
-    `--service fine-tuning` is passed, surfacing much later as an unexplained
-    `MinimumDepositRequired`. The footgun is documented in `docs/FIELD_NOTES.md` and was handled
+    0G's own documentation records that `transfer-fund` routes to the *inference*
+    sub-account unless `--service fine-tuning` is passed, surfacing much later as an
+    unexplained `MinimumDepositRequired`. Documented by 0G, not measured by us. The footgun is documented in `docs/FIELD_NOTES.md` and was handled
     by hand during the spike; there is no `transferFund` call in this codebase yet.
 
 ### 5.2 0G Storage — where the evidence lives

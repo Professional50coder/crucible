@@ -95,9 +95,11 @@ reminder. You are expected to poll a CLI.
 
 ### Problem 4 — The funding footgun
 
-`transfer-fund` silently routes to the *inference* sub-account unless you pass
+`transfer-fund` routes to the *inference* sub-account unless you pass
 `--service fine-tuning`. The failure appears much later as an unexplained
-`MinimumDepositRequired` when you try to create a task.
+`MinimumDepositRequired` when you try to create a task. This one is from 0G's
+documentation rather than our own run — we funded the sub-account by hand and never
+tripped it, so "silently" was our embellishment and is gone.
 
 ### Problem 5 — Getting from "done" to "usable" is a research project
 
