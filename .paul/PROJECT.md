@@ -45,7 +45,7 @@ of exactly how it was made — without touching a CLI or losing their model to a
 - Live task progress mirroring 0G's real state machine
 - **Automatic acknowledgement** before the 48-hour deadline expires
 - A public Model Passport page per completed fine-tune, with every hash independently checkable
-- Mint a passport as an ERC-7857 Agentic ID on 0G mainnet
+- Mint a passport as an ERC-7857-style Agentic ID on 0G mainnet
 - Public gallery of all passports
 
 ### Validated (Shipped)
@@ -59,7 +59,7 @@ of exactly how it was made — without touching a CLI or losing their model to a
 
 ### Planned (Next)
 
-- [ ] `Passport.sol` — ERC-7857 contract, 0G mainnet
+- [ ] `Passport.sol` — ERC-7857-style contract, 0G mainnet
 - [ ] Orchestrator API with auto-acknowledge daemon
 - [ ] Next.js web app + passport gallery
 - [ ] Submission package (demo video, architecture diagram, X post)

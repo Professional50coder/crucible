@@ -159,7 +159,7 @@ tampered hash → `false`.
 **On screen:** mint flow → token ID appears. Cut to the public gallery of passports.
 
 **Voiceover:**
-> Each passport mints as an ERC-7857 Agentic ID, so the provenance travels with the model instead
+> Each passport mints as an ERC-7857-style Agentic ID, so the provenance travels with the model instead
 > of living in someone's database. Every passport is public and linkable.
 
 ---

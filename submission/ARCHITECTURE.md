@@ -4,7 +4,7 @@ Technical description for the 0G Bridge Buildathon, Wave 3.
 
 Crucible turns a fine-tuning run on the 0G Compute Network into a **Model Passport**: a
 canonical manifest recording the base model, dataset, hyperparameters, fee and TEE provider,
-stored on 0G Storage, hash-anchored on 0G Chain, and minted as an ERC-7857 Agentic ID.
+stored on 0G Storage, hash-anchored on 0G Chain, and minted as an ERC-7857-*style* Agentic ID.
 
 Every network value in this document was verified against the live 0G network on 2026-08-14
 and is recorded in [../docs/FIELD_NOTES.md](../docs/FIELD_NOTES.md). Component boundaries are
@@ -33,7 +33,7 @@ flowchart TB
         CHAIN["0G Chain<br/>chain 16661 mainnet<br/>chain 16602 testnet"]
     end
 
-    PASSPORT["Passport.sol<br/>ERC-7857 Agentic ID<br/>lineage hashes · verifyManifest"]
+    PASSPORT["Passport.sol<br/>ERC-7857-style Agentic ID<br/>lineage hashes · verifyManifest"]
 
     WEB -->|"POST /jobs · GET /jobs/:id/stream"| ORCH
     WEB -->|"read passports, verifyManifest"| PASSPORT
@@ -110,7 +110,7 @@ sequenceDiagram
 
     W-->>U: passport page — every hash with its verification link
     U->>X: mint(to, PassportData, encryptedURI)
-    X-->>U: tokenId — ERC-7857 Agentic ID
+    X-->>U: tokenId — ERC-7857-style Agentic ID
 
     Note over U,X: anyone can now recompute the manifest hash<br/>and call verifyManifest(tokenId, hash) — no wallet needed
 ```
@@ -185,9 +185,15 @@ reached `Finished`, and its `adapter.rootHash` is a labelled sentinel; see §4.1
                 "per_device_train_batch_size": 2, "learning_rate": 0.0002, "max_steps": 45 },
   "adapter":  { "rootHash": "0x…", "sizeBytes": 0 },
   "fee":      { "trainingNeuron": "…", "storageReserveNeuron": "…", "totalNeuron": "…" },
-  "tee":      { "signerAddress": "0x24135b4B…", "acknowledged": true, "attestationVerified": true }
+  "tee":      { "signerAddress": "0x24135b4B…", "acknowledged": true, "attestationVerified": false }
 }
 ```
+
+`attestationVerified` is `false` here and in every passport minted so far, deliberately. Crucible
+records the TEE signer and whether the provider has acknowledged it on-chain, both of which are
+readable without a key — but it does not yet call `verifyService()` to check the attestation
+itself. Until it does, no real run can produce `true`, so a sample showing `true` would be a
+shape no reader could ever reproduce. Earning that field is a roadmap item, named as one.
 
 **Canonicalization is the load-bearing invariant.** `canonicalize(manifest)` emits JSON with
 every key sorted recursively and no whitespace; `manifestHash = keccak256(utf8(canonical))`.

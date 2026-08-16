@@ -53,7 +53,7 @@ it will not submit without them.
 |---|---|---|---|---|---|
 | 2.1 | Product icon | ✅ | image | `brand/icon.png` (inherits from the team) | ✅ |
 | 2.2 | Product name | ✅ | — | `Crucible` | ✅ |
-| 2.3 | Tagline | ✅ | **≤ 100 words**; the buildathon separately asks for **≤ 30 words** | *"Crucible turns fine-tuning on 0G into one upload and issues every model a verifiable birth certificate: base model, dataset, hyperparameters and provider, hashed on-chain as an ERC-7857 Agentic ID."* — **29 words** | ✅ |
+| 2.3 | Tagline | ✅ | **≤ 100 words**; the buildathon separately asks for **≤ 30 words** | *"Crucible turns fine-tuning on 0G into one upload and issues every model a verifiable birth certificate: base model, dataset, hyperparameters and provider, hashed on-chain as an ERC-7857-style Agentic ID."* — **29 words** | ✅ |
 | 2.4 | Product type | ✅ | `Idea` · `Prototype` · `Functional` | **Functional** once the mainnet mint exists; **Prototype** until then. Do not overstate — the repo is checkable | 🟡 |
 | 2.5 | **Image gallery** | ✅ | **1–5 images** | 1 architecture diagram · 2 lifecycle diagram · 3 verification diagram · 4 passport page screenshot · 5 gallery screenshot | 🟡 diagrams done, app screenshots pending |
 | 2.6 | About | ✅ | Markdown, pre-templated: *What it does · The problem it solves · Challenges I ran into · What we learned · What's next* | keep their headings; fill each honestly | 🟡 |

@@ -52,7 +52,7 @@ Judging weights, for prioritisation when time runs short:
 - [x] Project name: **Crucible**
 - [x] One-line description, **max 30 words** — counted programmatically at **29 words**:
 
-  > Crucible turns fine-tuning on 0G into one upload and issues every model a verifiable birth certificate: base model, dataset, hyperparameters and provider, hashed on-chain as an ERC-7857 Agentic ID.
+  > Crucible turns fine-tuning on 0G into one upload and issues every model a verifiable birth certificate: base model, dataset, hyperparameters and provider, hashed on-chain as an ERC-7857-style Agentic ID.
 
 - [x] Re-count the word limit after any edit — re-counted 2026-08-15, still 29
 - [x] Short summary covering all three required points:
@@ -162,7 +162,7 @@ Drafts and counts in `submission/X_POST.md`. Nothing posted yet.
 - [ ] Tags `@0G_Builders`
 - [ ] Tags `@AKINDO_io`
 - [ ] All of the above are in the **root post**, not scattered across a thread
-- [x] Under 280 characters — re-counted programmatically 2026-08-15: Draft A **265**, Draft B **265** literal (the file's 268 counts `PLACEHOLDER_DEMO_URL` as X's fixed 23-char t.co length, which is the right way to count it), Draft C **252**. All three fit
+- [x] Under 280 characters — re-counted programmatically 2026-08-16, after "ERC-7857" was qualified to "ERC-7857-style" in drafts A and B (+6 each): Draft A **271**, Draft B **271** literal / **274** counting `PLACEHOLDER_DEMO_URL` as X's fixed 23-char t.co length, which is the right way to count it, Draft C **252** unchanged. All three still fit; B now has 6 characters of headroom, so re-count again after any further edit
 - [ ] No secret visible in the attached image
 - [ ] Post URL recorded: `PLACEHOLDER_X_POST_URL`
 - [ ] Opens correctly for a logged-out visitor

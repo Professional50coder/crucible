@@ -120,7 +120,7 @@ We lost hours to this. Every 0G builder loses the same hours.
 
 | Problem | What Crucible does |
 |---|---|
-| Lineage discarded | Captures it into a signed, public **Model Passport** — manifest on 0G Storage, hash anchored on 0G Chain, minted as an ERC-7857 Agentic ID |
+| Lineage discarded | Captures it into a signed, public **Model Passport** — manifest on 0G Storage, hash anchored on 0G Chain, minted as an ERC-7857-*style* Agentic ID |
 | Bug #4 queue lock | Only ever calls `acknowledgeModel`; exposes `acknowledgeDeliverable` as a one-click unlock for already-stuck accounts |
 | 48-hour deadline | A daemon acknowledges on arrival rather than at the buzzer. It cannot retrieve a model the SDK cannot retrieve — see DEFECT-01 — but it never lets the window lapse unnoticed |
 | Funding footgun | Documented with its exact failure mode in FIELD_NOTES. Automatic sub-account funding is not implemented |

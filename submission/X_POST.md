@@ -28,13 +28,13 @@ it describes a loss, not a feature.
 ```text
 Fine-tuning on 0G gives you 48 hours to acknowledge or you lose the model. Nothing warns you.
 
-Crucible fixes that, and turns the lineage 0G already emits into a Model Passport minted as an ERC-7857 Agentic ID.
+Crucible fixes that, and turns the lineage 0G already emits into a Model Passport minted as an ERC-7857-style Agentic ID.
 
 #0GBridge #BuildOn0G @0G_labs @0G_Builders @AKINDO_io
 ```
 <!-- DRAFT-A-END -->
 
-**Length: 265 characters.** (280 limit — 15 to spare.)
+**Length: 271 characters.** (280 limit — 9 to spare.)
 
 **Asset needed:** a screenshot of the live task view at `Delivered` with the 48-hour countdown
 visible *and* the daemon's auto-acknowledge log line beside it. One image that shows the problem
@@ -52,7 +52,7 @@ you most want clicked.
 ```text
 Crucible: verifiable fine-tuning on 0G.
 
-Every model gets a birth certificate — base model, dataset, hyperparameters, provider — hashed on 0G Chain, minted as an ERC-7857 Agentic ID.
+Every model gets a birth certificate — base model, dataset, hyperparameters, provider — hashed on 0G Chain, minted as an ERC-7857-style Agentic ID.
 
 Demo: PLACEHOLDER_DEMO_URL
 
@@ -60,8 +60,8 @@ Demo: PLACEHOLDER_DEMO_URL
 ```
 <!-- DRAFT-B-END -->
 
-**Length: 268 characters as posted** — counting `PLACEHOLDER_DEMO_URL` as X's fixed 23-character
-URL weight. Any real URL, however long, counts the same. **12 to spare.**
+**Length: 274 characters as posted** — counting `PLACEHOLDER_DEMO_URL` as X's fixed 23-character
+URL weight. Any real URL, however long, counts the same. **6 to spare.**
 
 **Asset needed:** the Model Passport page, scrolled so the dataset root hash, the training
 parameters and the manifest hash are all visible at once. Crop tight; hashes must be readable in
