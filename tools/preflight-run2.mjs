@@ -64,4 +64,5 @@ try {
 }
 
 console.log('\ndataset already on 0G Storage:', DATASET_ROOT)
-console.log('(reuse it — re-uploading an identical file reverts with CALL_EXCEPTION)')
+console.log('(reuse it — a duplicate upload is NOT rejected: submissions 146937 and 146938')
+console.log(' carry the same root and were both charged. Nothing stops you paying twice.)')

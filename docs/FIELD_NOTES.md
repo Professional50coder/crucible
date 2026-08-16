@@ -145,10 +145,19 @@ port at all, so no amount of later editing downstream can reach the state that s
 After a task reaches `Delivered`, you have **48 hours** to acknowledge or you lose the model
 *and* 30% of the fee is deducted. Nothing warns you. Crucible automates this.
 
-### Duplicate upload reverts — and that's fine
-Re-uploading an identical file reverts with `execution reverted` / `CALL_EXCEPTION`, because
-the flow contract rejects a root hash it already has. **This is expected** — catch it and
-reuse the existing root hash. (Learned from `fine-tuning-example/src/upload-dataset.ts`.)
+### Duplicate upload does NOT revert — corrected 2026-08-16
+`fine-tuning-example/src/upload-dataset.ts` warns that re-uploading an identical file reverts
+with `execution reverted` / `CALL_EXCEPTION`, because the flow contract rejects a root hash it
+already holds, and tells you to catch it and reuse the hash. This file repeated that.
+
+**It did not happen.** On `0g-storage-ts-sdk@1.2.11` a second submission of the same root hash
+was **accepted and charged again** — submissions 146937 and 146938, identical root. We never
+reproduced the revert, and the behaviour we did observe is the opposite one.
+
+That matters more than a wrong error string: a developer who trusts the documented behaviour
+writes `try { upload() } catch { reuseHash() }`, no exception is thrown, and they pay twice
+without noticing. Check whether the root hash already exists before uploading; do not rely on a
+revert to stop you.
 
 ### Decrypt-too-early
 `decryptModel` before status reaches `Finished` fails with `second arg must be public key`.

@@ -17,8 +17,9 @@ import { ethers } from 'ethers'
 const PROVIDER = '0xA02b95Aa6886b1116C4f334eDe00381511E31A09'
 const RPC = 'https://evmrpc-testnet.0g.ai'
 const MODEL = 'Qwen2.5-0.5B-Instruct'
-// Already on 0G Storage from the first run. Re-uploading the identical file reverts
-// with a bare CALL_EXCEPTION, so the root hash is reused deliberately.
+// Already on 0G Storage from the first run, and reused deliberately. Note that nothing
+// enforces this: a duplicate upload is accepted and charged again — submissions 146937
+// and 146938 carry the same root. The official example's CALL_EXCEPTION never fired.
 const DATASET_ROOT = '0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd'
 
 const CONFIG = {
