@@ -4,7 +4,9 @@
   "type": "module",
   "bin": { "crucible": "./src/index.ts" },
   "scripts": {
-    "doctor": "tsx src/index.ts doctor"
+    "doctor": "tsx src/index.ts doctor",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.9.0",
@@ -13,7 +15,9 @@
     "ethers": "^6.17.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

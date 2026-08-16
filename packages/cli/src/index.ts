@@ -1,190 +1,131 @@
 #!/usr/bin/env tsx
 /**
- * crucible doctor — preflight for 0G fine-tuning.
+ * crucible — the terminal front end for @crucible/core.
  *
- * Answers, in one command, everything the 0G CLI makes you discover across a
- * dozen steps and two failed transactions:
- *   - is there a fine-tuning provider, and is it free right now?
- *   - what will my run actually cost?
- *   - is my wallet funded enough to start?
- *
- * Provider discovery needs no wallet, so most of this works before you have
- * a single token.
+ * This file is wiring only: parse argv, read files, construct the real broker
+ * and wallet, print. Every rule and every decision lives in a module that can be
+ * tested without a network (see doctor.ts, commands.ts, cli.ts). The split
+ * exists because this package previously had one command and no tests, and the
+ * untestable part was exactly the part that touched money.
  */
 import { createZGComputeNetworkReadOnlyBroker } from '@0gfoundation/0g-compute-ts-sdk'
-import { estimateFee, formatOg, networkFor, type NetworkConfig } from '@crucible/core'
+import { networkFor, type NetworkConfig } from '@crucible/core'
 import { JsonRpcProvider, Wallet, formatEther } from 'ethers'
 import dotenv from 'dotenv'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+
+import { parseArgs, USAGE } from './cli.js'
+import { configCommand, convertCommand, validateCommand, type CommandResult } from './commands.js'
+import { doctor, REFERENCE_TOKEN_COUNT, type TokenSource, type WalletState } from './doctor.js'
+import { bad } from './format.js'
+import { estimateTokenCount, parseJsonlLoosely } from './tokens.js'
 
 // The .env lives at the monorepo root, not beside this package.
 const here = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: path.resolve(here, '../../../.env') })
 
-const c = {
-  dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
-  bold: (s: string) => `\x1b[1m${s}\x1b[0m`,
-  green: (s: string) => `\x1b[32m${s}\x1b[0m`,
-  red: (s: string) => `\x1b[31m${s}\x1b[0m`,
-  yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
-  cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
-}
-
-const ok = c.green('✓')
-const bad = c.red('✗')
-const warn = c.yellow('!')
-
-/** Estimated tokens for the demo dataset; the broker counts the real figure. */
-const DEMO_TOKEN_COUNT = 10_000
-const DEMO_EPOCHS = 3
-
-interface ProviderInfo {
-  provider: string
-  url: string
-  quota: string[]
-  pricePerToken: bigint
-  occupied: boolean
-  teeSignerAcknowledged: boolean
-}
-
-async function inspectNetwork(net: NetworkConfig): Promise<ProviderInfo[]> {
-  const broker = await createZGComputeNetworkReadOnlyBroker(net.rpcUrl)
-  const services = await broker.fineTuning.listService(true)
-
-  return services.map((s: Record<string, unknown>) => ({
-    provider: String(s['provider']),
-    url: String(s['url']),
-    quota: (s['quota'] as unknown[]).map(String),
-    pricePerToken: BigInt(String(s['pricePerToken'])),
-    occupied: Boolean(s['occupied']),
-    teeSignerAcknowledged: Boolean(s['teeSignerAcknowledged']),
-  }))
-}
-
-async function doctor(networkName: string): Promise<number> {
-  const net = networkFor(networkName)
-
-  console.log()
-  console.log(c.bold(`  CRUCIBLE DOCTOR`) + c.dim(`  ·  ${net.name}  ·  chain ${net.chainId}`))
-  console.log(c.dim(`  ${'─'.repeat(64)}`))
-
-  let problems = 0
-
-  // ── Providers ──────────────────────────────────────────────────────────
-  console.log()
-  console.log(c.bold('  FINE-TUNING PROVIDERS'))
-
-  let providers: ProviderInfo[] = []
+function read(file: string): string {
   try {
-    providers = await inspectNetwork(net)
+    return readFileSync(file, 'utf8')
   } catch (e) {
-    console.log(`  ${bad} could not reach ${net.rpcUrl}`)
-    console.log(c.dim(`     ${e instanceof Error ? e.message : String(e)}`))
-    return 1
+    console.error(`  ${bad} cannot read ${file}`)
+    console.error(`     ${e instanceof Error ? e.message : String(e)}`)
+    process.exit(1)
   }
+}
 
-  if (providers.length === 0) {
-    console.log(`  ${bad} no fine-tuning providers registered on ${net.name}`)
-    problems++
+function report(result: CommandResult): void {
+  for (const line of result.lines) console.error(line)
+}
+
+/**
+ * Token figure for the cost section.
+ *
+ * With a dataset, count it and label the result an estimate. Without one, fall
+ * back to 0G's documented 10,000-token example — which `costSection` prints
+ * under a different heading precisely so it is not mistaken for a measurement
+ * of anything the user owns.
+ */
+function tokenSource(dataset: string | undefined): TokenSource {
+  if (dataset === undefined) return { kind: 'reference', tokens: REFERENCE_TOKEN_COUNT }
+
+  const records = parseJsonlLoosely(read(dataset))
+  return {
+    kind: 'estimated',
+    tokens: estimateTokenCount(records),
+    records: records.length,
+    label: path.basename(dataset),
   }
+}
 
-  for (const p of providers) {
-    const [cpu, mem, gpus, disk, gpu] = p.quota
-    const free = p.occupied ? c.yellow('BUSY') : c.green('AVAILABLE')
-
-    console.log(`  ${p.occupied ? warn : ok} ${p.provider}  ${free}`)
-    console.log(c.dim(`     hardware   ${gpus}x ${gpu} · ${cpu} vCPU · ${mem} GB RAM · ${disk} GB disk`))
-    console.log(c.dim(`     price      ${p.pricePerToken} neuron/token  (${formatOg(p.pricePerToken * 1_000_000n)} 0G per 1M tokens)`))
-    console.log(
-      c.dim(`     TEE        ${p.teeSignerAcknowledged ? 'signer acknowledged on-chain' : 'NOT acknowledged'}`),
-    )
-
-    if (p.occupied) {
-      console.log(c.dim(`     note       tasks queue one at a time; yours will wait`))
-      problems++
-    }
-  }
-
-  // ── Cost ───────────────────────────────────────────────────────────────
-  const cheapest = providers
-    .filter((p) => !p.occupied)
-    .sort((a, b) => (a.pricePerToken < b.pricePerToken ? -1 : 1))[0]
-
-  console.log()
-  console.log(c.bold('  ESTIMATED COST') + c.dim(`  (${DEMO_TOKEN_COUNT} tokens x ${DEMO_EPOCHS} epochs)`))
-
-  if (cheapest) {
-    for (const model of net.models) {
-      const fee = estimateFee({
-        tokenCount: DEMO_TOKEN_COUNT,
-        epochs: DEMO_EPOCHS,
-        pricePerTokenNeuron: cheapest.pricePerToken,
-        model,
-      })
-      console.log(
-        `  ${c.cyan(model.padEnd(24))} ${fee.totalOg} 0G` +
-          c.dim(`   (training ${fee.trainingOg} + storage reserve ${fee.storageReserveOg})`),
-      )
-    }
-  } else {
-    console.log(`  ${warn} no free provider — cannot price a run right now`)
-  }
-
-  // ── Wallet ─────────────────────────────────────────────────────────────
-  console.log()
-  console.log(c.bold('  WALLET'))
-
+async function readWallet(net: NetworkConfig): Promise<WalletState | undefined> {
   const key = process.env['PRIVATE_KEY']
-  if (!key) {
-    console.log(`  ${warn} PRIVATE_KEY not set — provider discovery works, but you cannot train`)
-    problems++
-  } else {
-    try {
-      const rpc = new JsonRpcProvider(net.rpcUrl)
-      const wallet = new Wallet(key, rpc)
-      const balance = await rpc.getBalance(wallet.address)
-      const balanceOg = Number(formatEther(balance))
+  if (!key) return undefined
 
-      console.log(`  ${c.dim('address')}  ${wallet.address}`)
-      console.log(`  ${c.dim('balance')}  ${formatEther(balance)} 0G`)
+  const rpc = new JsonRpcProvider(net.rpcUrl)
+  const wallet = new Wallet(key, rpc)
+  return { address: wallet.address, balance: await rpc.getBalance(wallet.address) }
+}
 
-      if (balance === 0n) {
-        console.log(`  ${bad} empty. Fund it at https://faucet.0g.ai (testnet, 0.1 0G/day)`)
-        problems++
-      } else if (balanceOg < 3) {
-        console.log(
-          `  ${warn} below the 3 0G the docs use to create a ledger ` +
-            c.dim(`(deposit --amount 3)`),
-        )
-        problems++
-      } else {
-        console.log(`  ${ok} funded enough to create a ledger`)
-      }
-    } catch (e) {
-      console.log(`  ${bad} ${e instanceof Error ? e.message : String(e)}`)
-      problems++
-    }
+const command = parseArgs(process.argv.slice(2), process.env['ZG_NETWORK'] ?? 'testnet')
+
+switch (command.kind) {
+  case 'help': {
+    console.log(USAGE)
+    process.exit(0)
+    break
   }
 
-  console.log()
-  console.log(c.dim(`  ${'─'.repeat(64)}`))
-  console.log(
-    problems === 0
-      ? `  ${ok} ${c.bold('ready to train')}`
-      : `  ${warn} ${problems} thing${problems === 1 ? '' : 's'} to resolve before training`,
-  )
-  console.log()
+  case 'error': {
+    console.error(command.message)
+    console.error()
+    console.error(USAGE)
+    process.exit(1)
+    break
+  }
 
-  return 0
+  case 'validate': {
+    const result = validateCommand(read(command.file), path.basename(command.file))
+    report(result)
+    process.exit(result.code)
+    break
+  }
+
+  case 'config': {
+    const result = configCommand(read(command.file), path.basename(command.file))
+    report(result)
+    process.exit(result.code)
+    break
+  }
+
+  case 'convert': {
+    const result = convertCommand(read(command.file), command.to, path.basename(command.file))
+    report(result)
+
+    // Status goes to stderr, the dataset to stdout, so `crucible convert x --to
+    // chat > y.jsonl` produces a clean file rather than one with a report in it.
+    if (result.output !== undefined) {
+      if (command.out !== undefined) {
+        writeFileSync(command.out, result.output, 'utf8')
+        console.error(`  wrote ${command.out}`)
+      } else {
+        process.stdout.write(result.output)
+      }
+    }
+
+    process.exit(result.code)
+    break
+  }
+
+  case 'doctor': {
+    const code = await doctor(networkFor(command.network), tokenSource(command.dataset), {
+      createBroker: (rpcUrl) => createZGComputeNetworkReadOnlyBroker(rpcUrl),
+      readWallet,
+      formatEther,
+      log: (line) => console.log(line),
+    })
+    process.exit(code)
+  }
 }
-
-const [command = 'doctor', networkArg = process.env['ZG_NETWORK'] ?? 'testnet'] =
-  process.argv.slice(2)
-
-if (command !== 'doctor') {
-  console.error(`Unknown command "${command}". Available: doctor [testnet|mainnet]`)
-  process.exit(1)
-}
-
-process.exit(await doctor(networkArg))
