@@ -2,7 +2,7 @@
   "source": {
     "dataset": "databricks/databricks-dolly-15k",
     "url": "https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl",
-    "licence": "Apache-2.0",
+    "licence": "CC-BY-SA-3.0",
     "attribution": "Databricks, Inc. — databricks-dolly-15k, human-authored instruction records.",
     "sha256": "2df9083338b4abd6bceb5635764dab5d833b393b55759dffb0959b6fcbf794ec",
     "totalLines": 15011,

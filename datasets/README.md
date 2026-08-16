@@ -200,7 +200,7 @@ curated in-house examples — and demonstrate the `instruction` format alongside
 the chat format used elsewhere.
 
 **Source.** [`databricks/databricks-dolly-15k`](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
-— **Apache 2.0**, 15,011 records, human-authored by Databricks employees.
+— **CC BY-SA 3.0**, 15,011 records, human-authored by Databricks employees.
 
 Chosen deliberately: a provenance product must be able to state its own training
 data's provenance, and Dolly's is unambiguous — human-written, explicitly
