@@ -78,6 +78,20 @@ said *"Lift patterns"* and *"Use directly"* — a reuse plan resting on a licenc
 up. Both actions are corrected above. This also sharpens `.paul/STATE.md`, which recorded that
 `fine-tuning-example` "declares MIT": true, but in `package.json`, not in a `LICENSE` file.
 
+### 🟢 Patterns reimplemented, with the source named
+
+| Source | Licence | What was taken, and what was changed |
+|---|---|---|
+| **Excalidraw — `exportEmbedScene`** | MIT | The mechanism of embedding the source document inside the exported image, as a base64 payload between explicit markers in a metadata element, so an export is not a dead raster. Excalidraw embeds its scene JSON so the file stays *editable*; Crucible embeds the canonical manifest so the file stays *checkable* — a downloaded certificate can be keccak256'd and compared against `passportOf(tokenId).manifestRootHash` without trusting the page it came from. Reimplemented in `apps/web/src/lib/passport-export.ts`; no code copied. |
+| **Documenso — certificate separate from audit log** | AGPL-3.0 | The structural idea only, and deliberately no code: a signed artifact is presented as a short scannable certificate plus a separate exhaustive evidence trail, both stamped with the same identifier so a third party can prove the two describe the same object. Informs how a passport separates its verification hero from its decoded manifest and chain-of-custody disclosures. AGPL means read, describe, reimplement — never paste. |
+
+Ten open-source projects were surveyed for interface patterns on 2026-08-16. Seven of the ten
+(AppFlowy, Immich, Documenso, ListMonk, Dub, RustDesk, FluidVoice) are AGPL-3.0 or GPL-3.0, and
+Dub additionally carries proprietary enterprise directories; from all of those, only an idea may
+be taken and only reimplemented from scratch. Excalidraw and Cal.DIY are MIT, and Penpot is
+MPL-2.0 — file-level copyleft, so a copied file would carry its licence into this repository and
+was therefore avoided too. Nothing was copied from any of them.
+
 ### 🟡 Study, don't copy
 
 - **Cisco Model Provenance Kit** — its "do these two models share an origin?" check is a

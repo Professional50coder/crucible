@@ -71,6 +71,7 @@ import { DEPLOYMENT_BLOCKS, isDeployed, passportAddress } from '@/lib/passport-c
 import type { PassportRecord } from '@/lib/types'
 import { Disclosure } from './Disclosure'
 import { CopyButton, Hash, TypedRow, TypedRows } from './Hash'
+import { PassportExport } from './PassportExport'
 import { LineageGraph } from './LineageGraph'
 import {
   AdapterIcon,
@@ -1192,6 +1193,10 @@ export function PassportView({
         }
         document={manifest}
       />
+
+      {/* Last, because it is only worth taking away once the reader has seen
+          what it contains — and it takes away the documents, not a screenshot. */}
+      <PassportExport record={record} />
 
       <p className="mt-6 text-xs leading-relaxed text-faint text-pretty">
         A passport proves lineage, not honest training. It shows which weights, which data, which
