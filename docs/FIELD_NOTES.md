@@ -588,3 +588,54 @@ broker.fineTuning.acknowledgeModel(provider, taskId, outDir, { downloadMethod: '
 ```
 
 Do not rely on `'auto'`, and do not rely on `'tee'` at all until the stream bug is fixed.
+
+---
+
+## 🔴 The Agentic ID interface on build.0g.ai does not match the deployed contract — 2026-08-26
+
+Verified with `eth_getCode` and `eth_call` against 0G Galileo (chain 16602). The official Agentic
+ID at `0x2700F6A3e505402C9daB154C5c6ab9cAEC98EF1F` — `name() = "Agentic ID"`, `symbol() = "AID"`,
+`totalSupply() = 138`, `paused() = false`, `mintFee() = 0` — does not expose three of the four
+methods that [`build.0g.ai/agentic-id`](https://build.0g.ai/agentic-id) documents.
+
+| Documented | Selector | Present in bytecode | Actually deployed |
+|---|---|---|---|
+| `mint(address,string,bytes32)` | `0xd34047b6` | **no** | `mint(address)` `0x6a627842`, `iMint(address,(string,bytes32)[])` `0x69280041` |
+| `authorizeUsage(uint256,address,bytes)` | `0x7b297a6f` | **no** | `authorizeUsage(uint256,address)` `0xfa83d14e` |
+| `iTransferFrom(address,address,uint256,bytes,bytes)` | `0x2bbd478f` | **no** | `iTransferFrom(address,address,uint256,TransferValidityProof[])` |
+| `revokeAuthorization(uint256,address)` | `0xc3612ef7` | yes | matches |
+
+`IERC7857.sol` in `0gfoundation/agenticID-examples` confirms the real transfer signature takes a
+`TransferValidityProof[]`, not two loose `bytes` arguments.
+
+### Why this wastes an afternoon
+
+The page calls the testnet address "pre-configured in beginner example". Code against the
+documented `mint` and you get:
+
+```
+execution reverted   (no revert data)
+```
+
+An empty revert is what a **missing selector** produces — the call falls through to the fallback.
+It is indistinguishable, from the error alone, from a permission failure. The contract really does
+use `AccessControl` with a `MINTER_ROLE` (`0x9f2df0fe…56a6`), so the natural next move is to go
+hunting for that role — which is a dead end, because you never needed it:
+
+```
+mint(address)                       open, payable, whenNotPaused
+iMint(address,(string,bytes32)[])   open, payable, whenNotPaused
+mintWithRole(address)               onlyRole(MINTER_ROLE)
+iMintWithRole(...)                  onlyRole(MINTER_ROLE)
+```
+
+Simulated from an unprivileged, unfunded address, `iMint` succeeds and would return `tokenId 138`.
+`mintFee` is `0`. Anyone can anchor data into 0G's registry for gas alone.
+
+### The fix
+
+Publish the deployed ABI, or generate the page from it. Until then, read the signatures from
+`agenticID-examples/…/contracts/AgenticID.sol`, not from the Builder Hub.
+
+Full analysis, including how Crucible's `Passport.sol` relates to this contract and why both exist:
+[`AGENTIC_ID_ALIGNMENT.md`](AGENTIC_ID_ALIGNMENT.md).

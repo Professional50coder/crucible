@@ -4,7 +4,8 @@ This file is the source text for AKINDO's **"Updates in this Wave"** field. That
 the **Progress & Momentum** criterion reads, and Progress & Momentum is **40%** of the score —
 the single largest weight. It is worth writing properly.
 
-> **Before pasting:** every `PLACEHOLDER_*` token below must be replaced with a real value, and
+> **Placeholder status: clear as of 2026-08-26.** Both remaining `PLACEHOLDER_*` tokens were
+> resolved — see the closing section. The rule still stands for any future edit:
 > **any line describing work that did not actually land must be deleted, not softened.** A
 > changelog claiming something that isn't in the repo is worse than a shorter changelog, because
 > a judge can check the repo in thirty seconds. Deletion is free; a caught overclaim is not.
@@ -270,9 +271,35 @@ Crucible uses all four 0G components. Each is described below at the level it ac
     `hardhat-verify` receives the SPA's HTML shell and fails with `Unexpected token <`. Sourcify
     does not help either: 0G is not on its supported-chain list. Written up in
     `contracts/README.md` so nobody else loses the afternoon.
-  - **0G mainnet (16661): not deployed.** `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` — **still open.**
-    The same verification command is now known to work, so the mainnet deploy should verify too.
-  - **Mainnet explorer activity:** `PLACEHOLDER_CHAINSCAN_ACTIVITY_URL` — **still open**
+  - **0G mainnet (16661): not deployed, and we would rather say so than imply otherwise.**
+    Everything upstream of the transaction is finished and was rehearsed against the live mainnet
+    RPC on 2026-08-26: `Passport.sol` compiles to the pinned target, 104 contract tests pass, and
+    the deploy script runs end-to-end against `evmrpc.0g.ai`, halting exactly where it should —
+    `network: mainnet (chainId 16661)`, `balance: 0.0 0G`, `Deployer holds no 0G on mainnet`.
+    Measured cost, using that day's mainnet gas price (4.000000007 gwei) and the Galileo-measured
+    gas for byte-identical bytecode: **0.008954 0G to deploy, 0.001311 0G to mint, 0.010265 0G
+    total** — roughly **US$0.0016**. This is not blocked on engineering, design or cost. It is
+    blocked on holding any mainnet 0G at all, an amount too small for an exchange to sell. The
+    verification path is already known-good from Galileo, so the same command with
+    `--network mainnet` should verify on the first attempt.
+  - **Mainnet explorer activity:** none — there is no mainnet contract, so there is nothing for it
+    to show. Said plainly, rather than pointing at a testnet link and leaving the network ambiguous.
+- **The lineage is now also anchored in a contract we do not control.** 0G ships an official Agentic
+  ID at `0x2700F6A3e505402C9daB154C5c6ab9cAEC98EF1F` on Galileo. Its `iMint` is open to any address
+  and its `mintFee` is 0 — both read off the deployed bytecode, not off the docs. Crucible's six
+  lineage hashes were minted into it as **token #138** on 2026-08-26, tx
+  `0x6e38a421581bc2f0895666694c89221394b946a9b925d41f39e37c417bc8ef68`, block 51,470,421, 715,109
+  gas. The point is the cross-check: read the manifest root out of **0G's** registry, hand it to
+  **Crucible's** contract, and `verifyManifest(2, …)` returns `true`, while `keccak256("tampered")`
+  returns `false`. Both are `view` calls needing no wallet. Verifying against our own contract asks
+  you to trust our contract; this does not.
+  - **Getting there produced defect #15.** Three of the four methods documented at
+    `build.0g.ai/agentic-id` — `mint(address,string,bytes32)`,
+    `authorizeUsage(uint256,address,bytes)` and `iTransferFrom(…,bytes,bytes)` — have **no selector
+    in the deployed bytecode**. Calling the documented `mint` returns an empty `execution reverted`,
+    which is what a missing selector produces and is indistinguishable from a permission failure, so
+    the natural next move is to hunt for the `MINTER_ROLE` the contract really does have — and never
+    needed. Reproducible with two `eth_call`s. Full analysis in `docs/AGENTIC_ID_ALIGNMENT.md`.
 - **0G Agentic ID — ERC-7857-*style*, and the qualifier is deliberate.** One fine-tune mints one
   token carrying its lineage hashes, so provenance travels with ownership instead of living in a
   database row. Implemented: `authorizeUsage` / `revokeAuthorization` (capped at 100 per token,
@@ -434,17 +461,26 @@ model-licensing flow.
 
 ---
 
-## Placeholders that must be filled before this is pasted
+## Placeholders — resolved 2026-08-26
 
-Only two remain, and both are blocked on the same thing: a funded mainnet wallet.
+**None remain.** The two that were open, `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` and
+`PLACEHOLDER_CHAINSCAN_ACTIVITY_URL`, were both blocked on the same thing: any balance at all in a
+mainnet wallet. Rather than leave two unfilled tokens in the field that the 40% Progress criterion
+reads, both were **replaced with the stated limitation and the measured cost** — see the 0G Chain
+section above. An honest gap, priced and rehearsed, reads better than an unfilled placeholder, and
+far better than a claim a judge can disprove in one click.
 
-| Token | Source |
-|---|---|
-| `PLACEHOLDER_MAINNET_CONTRACT_ADDRESS` | output of the mainnet deploy |
-| `PLACEHOLDER_CHAINSCAN_ACTIVITY_URL` | the contract's transactions tab, or a specific mint tx |
+**If the mainnet deploy does land before 2026-08-30 20:30**, replace that limitation paragraph with:
 
-If mainnet is still not deployed at submission time, **delete both bullets and leave the
-"Nothing is on mainnet" limitation** — an honest gap reads better than an unfilled placeholder.
+```
+- 0G mainnet (16661): Passport.sol deployed at <ADDRESS>, source-verified.
+  Deploy tx <TX> - block <N> - <GAS> gas. Passport #1 minted: <MINT_TX>.
+  Explorer: https://chainscan.0g.ai/address/<ADDRESS>
+```
+
+and update `README.md`, `submission/CHECKLIST.md`, and the AKINDO product type
+(Prototype → Functional) in the same pass. Deploy command, already rehearsed and known-good up to
+the funding check: `npm run deploy:mainnet` from `contracts/`.
 
 ## Lines to delete if the work did not land
 

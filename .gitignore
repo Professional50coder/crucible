@@ -47,6 +47,16 @@ encrypted_model.bin
 model_output.zip
 lora_adapter/
 
+# Private submission helpers — not for judges, not for repo
+submission/PASTE_THIS.txt
+submission/AKINDO_FORM_FILLED.md
+submission/COMMUNITY_ACTIONS.md
+submission/X_POST.md
+YOUTUBE_SCRIPT.md
+SCRIPT.md
+*SCRIPT*.local.md
+*script*.local.md
+
 # Hardhat / Foundry
 artifacts/
 cache/

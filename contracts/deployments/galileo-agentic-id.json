@@ -1,0 +1,40 @@
+{
+  "contract": "0x2700F6A3e505402C9daB154C5c6ab9cAEC98EF1F",
+  "contractName": "0G official Agentic ID (AID)",
+  "network": "galileo",
+  "chainId": 16602,
+  "tokenId": "138",
+  "owner": "0xDe018836935507375bb9103dFDEAC62580b9881D",
+  "txHash": "0x6e38a421581bc2f0895666694c89221394b946a9b925d41f39e37c417bc8ef68",
+  "blockNumber": 51470421,
+  "gasUsed": "715109",
+  "mintFee": "0",
+  "mintedAt": "2026-08-26T10:07:57.645Z",
+  "intelligentData": [
+    {
+      "dataDescription": "crucible: manifest root (keccak256, canonical JSON)",
+      "dataHash": "0x0f46406e90c548205a0f59481f6c8c35e4a91a8ad5139cb8332382acd23b93a7"
+    },
+    {
+      "dataDescription": "crucible: base model (Qwen2.5-0.5B-Instruct)",
+      "dataHash": "0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7"
+    },
+    {
+      "dataDescription": "crucible: dataset root (0G Storage)",
+      "dataHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd"
+    },
+    {
+      "dataDescription": "crucible: training config",
+      "dataHash": "0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1"
+    },
+    {
+      "dataDescription": "crucible: LoRA adapter root (0G Storage)",
+      "dataHash": "0x40a5f256ff464106f6be38ef146614bd78d5ddfe07af16b156d3efcddb561b4d"
+    },
+    {
+      "dataDescription": "crucible: delivered artifact sha256 (93,642,469 bytes)",
+      "dataHash": "0x9f78876467e409cdcf4b95fbb3aacb6958d6cd487295c31d208996838026ae1d"
+    }
+  ],
+  "note": "Crucible's lineage hashes anchored in a registry 0G deployed and Crucible does not control. Verifying against this contract requires trusting 0G, not us."
+}
