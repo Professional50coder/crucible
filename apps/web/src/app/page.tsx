@@ -111,13 +111,13 @@ const VERIFY_STEPS: readonly { comment: string; command: string }[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// What the two real runs cost.
+// What the runs cost — and what the fix recovered.
 // ---------------------------------------------------------------------------
 
 const LEDGER: readonly { readout: string; label: string; tone: string }[] = [
-  { readout: '2', label: 'runs reached Delivered', tone: 'text-fg' },
-  { readout: '1', label: 'model retrieved — from Linux', tone: 'text-ok' },
-  { readout: '30.0000%', label: 'deducted on the one that was lost', tone: 'text-danger' },
+  { readout: '4', label: 'runs reached Delivered', tone: 'text-fg' },
+  { readout: '3', label: 'models retrieved — the last on Windows', tone: 'text-ok' },
+  { readout: '30.0000%', label: 'deducted on the first, before the fix', tone: 'text-danger' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ const FOOTGUNS: readonly Footgun[] = [
     sev: 'critical',
     title: 'acknowledgeModel retrieves nothing on Windows — two separate defects',
     body: 'They are not one bug. The TEE path fails identically on every platform, at 0 bytes, with stream.on is not a function — that one is in the SDK. The 0G Storage path fails only on Windows, with spawn …/binary/0g-storage-client ENOENT, because the bundled client ships as an ELF 64-bit executable for GNU/Linux. With both dead the documented happy path is impossible on Windows, and one model was lost proving it.',
-    evidence: 'storage path succeeds from WSL2 Linux · TEE path still fails on both',
+    evidence: 'was fatal on Windows · fixed 2026-09-18 — passport #3 retrieved + acknowledged on win32 over HTTP',
   },
   {
     sev: 'critical',
@@ -208,8 +208,8 @@ const NOT_CLAIMED = [
     body: 'Nothing is deployed to 0G mainnet. Passport.sol lives on 0G Galileo, chain 16602. Mainnet is the one outstanding requirement and it is blocked on gas, not on code.',
   },
   {
-    head: 'Not retrieval.',
-    body: 'Crucible does not fetch your model. It detects the delivery, exhausts every download path the SDK offers, records the failure with its evidence, and releases the queue with acknowledgeDeliverable. Task 1 lost its model regardless, and passport #1 carries a published sentinel where the adapter root hash would go.',
+    head: 'Not yet the daemon, on Windows.',
+    body: 'Retrieval is fixed: HttpModelRetriever pulls the model straight from 0G Storage over HTTP, re-derives its root, and passport #3 was retrieved and acknowledged end-to-end on Windows. But that run was driven by scripts calling the retriever directly — the orchestrator daemon’s own path (POST /jobs) is not yet proven on Windows for a >60 MB model, whose download needed a resumed transport. And the first run’s model is still gone: passport #1 carries a published sentinel where its adapter root hash would go.',
   },
   {
     head: 'Not honest training.',

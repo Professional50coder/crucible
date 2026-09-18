@@ -189,8 +189,15 @@ export async function getSiblingPassport(
 ): Promise<PassportRecord | null> {
   if ((record.provenance ?? 'demo') !== 'chain') return null
 
+  // Deterministic pairing by token id: the two original OS-pair runs (#1, #2)
+  // stay each other's sibling, and a later on-chain record pairs with the
+  // earliest one that is not itself. Sorting keeps this stable no matter what
+  // order `listPassports` returns.
   const summaries = await listPassports()
-  const sibling = summaries.find((item) => item.provenance === 'chain' && item.id !== record.id)
+  const chain = summaries
+    .filter((item) => item.provenance === 'chain' && item.id !== record.id)
+    .sort((a, b) => Number(a.tokenId ?? 0) - Number(b.tokenId ?? 0))
+  const sibling = chain[0]
   return sibling ? await getPassport(sibling.id) : null
 }
 

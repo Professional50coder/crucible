@@ -110,9 +110,13 @@ export default function GalleryPage() {
       .then(async (list) => {
         setPassports(list)
 
-        // Pull the full record for the on-chain one, so the feature panel can
-        // show the hashes it links out with rather than a summary of them.
-        const real = list.find((p) => p.provenance === 'chain')
+        // Pull the full record for the flagship, so the feature panel can show
+        // the hashes it links out with rather than a summary of them. The
+        // flagship is the honest end-to-end one — the on-chain record whose
+        // attestation is verified — falling back to any on-chain record.
+        const real =
+          list.find((p) => p.provenance === 'chain' && p.attestationVerified) ??
+          list.find((p) => p.provenance === 'chain')
         if (real) {
           const record = await getPassport(real.id).catch(() => null)
           setFeatured(record)
@@ -346,6 +350,11 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
   const { manifest, mint } = record
   const network = NETWORKS[manifest.network]
   const sentinel = record.adapterOrigin?.kind === 'sentinel'
+  const adapterVerified = manifest.adapter.hashSource === 'onchain-verified'
+  const attested = manifest.tee.attestationVerified
+  // The flagship: a real adapter re-verified against the chain AND an earned
+  // attestation. Its honest, complete caption replaces the generic one.
+  const flagship = adapterVerified && attested
 
   return (
     <article className="overflow-hidden rounded-lg border border-phosphor/35 bg-panel shadow-panel">
@@ -386,14 +395,41 @@ function FeaturedPassport({ record }: { record: PassportRecord }) {
               <CheckIcon className="h-3 w-3" />
               every link resolves
             </Badge>
+            {/* Adapter provenance, stated plainly. A sentinel is unmistakable
+                from a real, chain-verified root. */}
             {sentinel ? (
               <Badge tone="danger">
                 <AlertIcon className="h-3 w-3" />
-                adapter never retrieved
+                adapter · sentinel (not retrieved)
               </Badge>
-            ) : null}
-            <Badge tone="warn">task {manifest.task.state} on 0G</Badge>
+            ) : adapterVerified ? (
+              <Badge tone="ok">
+                <CheckIcon className="h-3 w-3" />
+                adapter · on-chain verified
+              </Badge>
+            ) : (
+              <Badge>adapter · retrieved</Badge>
+            )}
+            {/* Attestation, verified vs not, in its own terms. */}
+            {attested ? (
+              <Badge tone="ok">
+                <CheckIcon className="h-3 w-3" />
+                attestation · verified
+              </Badge>
+            ) : (
+              <Badge tone="warn">
+                <AlertIcon className="h-3 w-3" />
+                attestation · not verified
+              </Badge>
+            )}
           </div>
+
+          {flagship ? (
+            <p className="mt-3 font-mono text-2xs leading-relaxed text-ok/90 text-pretty">
+              First fine-tune completed and acknowledged end to end on Windows — real adapter,
+              verified attestation.
+            </p>
+          ) : null}
 
           <Link
             href={`/passport/${encodeURIComponent(record.id)}`}

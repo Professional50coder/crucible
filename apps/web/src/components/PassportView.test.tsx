@@ -206,6 +206,61 @@ describe('<PassportView> — the verification hero', () => {
   })
 })
 
+describe('<PassportView> — passport #3, the honest complete run', () => {
+  const honest = records.find((r) => r.id === 'p-000003')!
+
+  it('is a third real on-chain record carrying a real, chain-verified adapter', () => {
+    expect(honest.provenance).toBe('chain')
+    expect(honest.mint.tokenId).toBe('3')
+    expect(honest.adapterOrigin?.kind).toBe('retrieved')
+    expect(honest.manifest.adapter.hashSource).toBe('onchain-verified')
+    // Its adapter root is a real root, not passport #1's sentinel.
+    expect(honest.manifest.adapter.rootHash).not.toBe(real.manifest.adapter.rootHash)
+    expect(honest.manifest.adapter.rootHash).toMatch(/^0x[0-9a-f]{64}$/)
+  })
+
+  it('is the first record whose attestation is genuinely verified', () => {
+    expect(honest.manifest.tee.attestationVerified).toBe(true)
+    expect(real.manifest.tee.attestationVerified).toBe(false)
+    expect(retrieved.manifest.tee.attestationVerified).toBe(false)
+  })
+
+  it('renders adapter provenance and attestation as distinct verified states', () => {
+    render(<PassportView record={honest} />)
+
+    const badges = screen.getByTestId('provenance-badges')
+    expect(badges).toHaveTextContent(/adapter · on-chain verified/i)
+    expect(badges).toHaveTextContent(/attestation · verified/i)
+    expect(badges).not.toHaveTextContent(/sentinel/i)
+    expect(badges).not.toHaveTextContent(/not verified/i)
+  })
+
+  it('verifies the anchored hash in the browser, since the manifest reproduces it', async () => {
+    render(<PassportView record={honest} />)
+    expect(
+      await screen.findByText(/matches the value anchored/i),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('verify-manifest-return')).toHaveTextContent('true')
+  })
+
+  it('carries none of passport #1’s lost-model language', () => {
+    render(<PassportView record={honest} />)
+    expect(screen.queryByText(/the model is gone/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/never retrieved/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/30\.0000%/)).not.toBeInTheDocument()
+  })
+})
+
+describe('<PassportView> — a sentinel adapter is never mistakable for a real root', () => {
+  it('marks passport #1 as a sentinel, not verified, in the provenance badges', () => {
+    render(<PassportView record={real} />)
+    const badges = screen.getByTestId('provenance-badges')
+    expect(badges).toHaveTextContent(/adapter · sentinel \(not retrieved\)/i)
+    expect(badges).toHaveTextContent(/attestation · not verified/i)
+    expect(badges).not.toHaveTextContent(/on-chain verified/i)
+  })
+})
+
 describe('<PassportView> — a demo record', () => {
   it('labels itself as one, at the top', () => {
     render(<PassportView record={demo} />)

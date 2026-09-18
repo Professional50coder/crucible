@@ -440,6 +440,175 @@ export function realPassport2(): PassportRecord {
 }
 
 // ---------------------------------------------------------------------------
+// Passport #3 — the first honest, complete end-to-end run
+// ---------------------------------------------------------------------------
+
+/**
+ * The 2026-09-18 run driven end to end on NATIVE WINDOWS: created, trained,
+ * delivered, retrieved over the Windows-safe HTTP path, acknowledged on chain,
+ * and minted with a REAL adapter root and an EARNED attestation flag.
+ *
+ * #1 lost its model at acknowledgement on Windows. #2 recovered only by moving
+ * to WSL2 Linux. #3 is the first that completes on win32 AND carries
+ * `adapter.hashSource: 'onchain-verified'` together with
+ * `tee.attestationVerified: true`. Every value is verified on 0G Galileo and
+ * recorded in runs/run4/mint.json and runs/run4-e2e.json.
+ *
+ * The full v1 manifest below IS the document anchored on chain (runs/run4/
+ * manifest-4.json, 1027 canonical bytes) — so `canonicalHash(manifest)`
+ * reproduces `manifestRootHash` in the reader's browser with no separate
+ * `anchoredManifest`. That equality is pinned by the fixture hash test.
+ */
+export const REAL3 = {
+  taskId: 'd06d00e2-965b-430c-bf46-4d6444ee1c47',
+  provider: TESTNET_PROVIDER,
+  model: 'Qwen2.5-0.5B-Instruct',
+  baseModelHash: REAL.baseModelHash,
+  datasetRootHash: REAL.datasetRootHash,
+  /** Read off FineTuningServing.getDeliverables() and re-derived on win32 to match. */
+  adapterRootHash: '0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c',
+  /** sha256 of the 93,642,471 bytes that landed on disk. */
+  artifactSha256: '0x1209dc978678b280a0bd35182f2024c590acde396c0d761ee482a6bf5b37d3a0',
+  artifactSizeBytes: 93_642_471,
+  acknowledgeTx: '0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1',
+  acknowledgeBlock: 55456191,
+  manifestRootHash: '0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13',
+  tokenId: '3',
+  mintTx: '0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3',
+  mintBlock: 55457526,
+  /** The exact instant baked into the anchored manifest — must not change. */
+  createdAt: '2026-09-18T05:03:40.723Z',
+  mintedAt: '2026-09-18T05:04:14.665Z',
+  deliveredAt: '2026-09-18T04:46:53.074Z',
+  owner: REAL.owner,
+  training: REAL.training,
+  exampleCount: REAL.exampleCount,
+  /** From the settled fee: 11852800000000000 / 800000000000 = 14816 tokens. */
+  tokenCount: 14816,
+  totalNeuron: '11852800000000000',
+  /** This run reserved no extra storage; the fee is training only. */
+  storageReserveNeuron: '0',
+  trainingNeuron: '11852800000000000',
+  manifestStorageRoot: '0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7',
+  manifestStorageUploadTx: '0x990ea1f49214a1182fa0e51e712ddb5ad8c30b6d0363a0f6bc7d4a501a3cc015',
+  manifestStorageBytes: 1027,
+} as const
+
+export const ADAPTER_RETRIEVED_ON_WINDOWS =
+  "downloadMethod 'http' (the DEFECT-01 HttpModelRetriever), on native Windows 11 (win32, Node " +
+  '22.14.0, curl 8.12.1 schannel). The exact failure that cost run 1 its model occurred and was ' +
+  'survived: the first fetch died mid-stream at 61,351,230 bytes with schannel “server closed ' +
+  'abruptly”, and curl resume + retry completed the full 93,642,471 bytes on the second attempt. ' +
+  "The retriever then recomputed the 0G Storage Merkle root and it matched the provider's " +
+  'on-chain model root EXACTLY before anything was acknowledged. This is the Windows-safe path; ' +
+  "it deliberately does not use the SDK's own download, which does not work on Windows."
+
+/** Passport #3, assembled from the values above and nothing else. */
+export function realPassport3(): PassportRecord {
+  const manifest: PassportManifest = {
+    version: 1,
+    network: 'testnet',
+    chainId: 16602,
+    createdAt: REAL3.createdAt,
+    task: {
+      id: REAL3.taskId,
+      provider: REAL3.provider,
+      // The on-chain state at capture. Acknowledged on chain, one step short of
+      // the provider's own `Finished`; recorded faithfully rather than rounded up.
+      state: 'UserAcknowledged',
+    },
+    base: {
+      model: REAL3.model,
+      modelHash: REAL3.baseModelHash,
+      tokenizer: TOKENIZERS[REAL3.model]!,
+    },
+    dataset: {
+      rootHash: REAL3.datasetRootHash,
+      format: 'chat',
+      exampleCount: REAL3.exampleCount,
+      tokenCount: REAL3.tokenCount,
+    },
+    training: REAL3.training,
+    adapter: {
+      rootHash: REAL3.adapterRootHash,
+      sizeBytes: REAL3.artifactSizeBytes,
+      // A REAL root, re-derived on win32 and matched against the chain — not a
+      // sentinel. This field is part of the anchored document.
+      hashSource: 'onchain-verified',
+    },
+    fee: {
+      trainingNeuron: REAL3.trainingNeuron,
+      storageReserveNeuron: REAL3.storageReserveNeuron,
+      totalNeuron: REAL3.totalNeuron,
+    },
+    tee: {
+      signerAddress: TEE_SIGNER,
+      acknowledged: true,
+      // EARNED, and the first time on this project: verifyService passed
+      // (runs/attestation-testnet.json) — the TEE signer matches the on-chain
+      // value and the compose hash matches. So this is true, and shown as true.
+      attestationVerified: true,
+    },
+  }
+
+  return {
+    id: 'p-000003',
+    name: 'sentiment-verified-03',
+    summary:
+      'The first fine-tune Crucible completed and acknowledged end to end on native Windows: a ' +
+      'real 93.6 MB adapter retrieved and re-verified against the on-chain root on win32, and an ' +
+      'attestation flag that is earned rather than assumed. The first honest, complete passport.',
+    provenance: 'chain',
+    manifest,
+    adapterOrigin: {
+      kind: 'retrieved',
+      hashSource: 'onchain-verified',
+      artifactSha256: REAL3.artifactSha256,
+      retrievedVia: ADAPTER_RETRIEVED_ON_WINDOWS,
+    },
+    deliveredAt: REAL3.deliveredAt,
+    manifestStorage: {
+      rootHash: REAL3.manifestStorageRoot,
+      uploadTx: REAL3.manifestStorageUploadTx,
+      sizeBytes: REAL3.manifestStorageBytes,
+    },
+    settlement: {
+      acknowledged: true,
+      note:
+        'getDeliverables returns acknowledged: true for this task, with a 129-byte encryptedSecret ' +
+        'filled once the provider settled. The full fee was paid and no penalty was deducted — the ' +
+        'deliverable was collected on Windows. Acknowledge transaction ' + REAL3.acknowledgeTx + '.',
+    },
+    caveat: {
+      title: 'This is the first complete passport. Here is exactly what that does and does not mean.',
+      body:
+        'Everything below is real on 0G Galileo: the adapter root was read off the chain and the ' +
+        '93,642,471-byte artifact was independently retrieved on native Windows and its 0G Storage ' +
+        'root re-derived to match before acknowledgement, so adapter.hashSource is ' +
+        'onchain-verified. The attestation flag is earned: verifyService passed, the TEE signer ' +
+        'matches the acknowledged on-chain value and the compose hash matches, so ' +
+        'tee.attestationVerified is true — the first Crucible passport for which both are true. ' +
+        'What it still does not claim is that the provider trained honestly on the dataset: ' +
+        'Crucible proves lineage, not honest training, and a provider returning arbitrary weights ' +
+        'would produce a passport that verifies the same way. That needs proofs over the training ' +
+        'computation, which no amount of hashing establishes.',
+    },
+    mint: {
+      status: 'minted',
+      manifestRootHash: REAL3.manifestRootHash,
+      configHash: configHash(REAL3.training),
+      contractAddress: '0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7',
+      tokenId: REAL3.tokenId,
+      txHash: REAL3.mintTx,
+      owner: REAL3.owner,
+      blockNumber: REAL3.mintBlock,
+      mintedAt: REAL3.mintedAt,
+    },
+    hardware: HARDWARE,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
 
@@ -800,7 +969,7 @@ export function buildPassports(now: number = Date.now()): PassportRecord[] {
 
   // Newest first, and the real one keeps its true issue date rather than being
   // floated to the top by fiat. The gallery features it explicitly instead.
-  return [realPassport(), realPassport2(), ...demo].sort(
+  return [realPassport(), realPassport2(), realPassport3(), ...demo].sort(
     (a, b) =>
       new Date(b.manifest.createdAt).getTime() - new Date(a.manifest.createdAt).getTime(),
   )
