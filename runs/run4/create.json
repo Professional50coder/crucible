@@ -1,0 +1,18 @@
+{
+  "taskId": "d06d00e2-965b-430c-bf46-4d6444ee1c47",
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "model": "Qwen2.5-0.5B-Instruct",
+  "datasetRoot": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+  "config": {
+    "neftune_noise_alpha": 5,
+    "num_train_epochs": 3,
+    "per_device_train_batch_size": 2,
+    "learning_rate": 0.0002,
+    "max_steps": 10
+  },
+  "createTxHash": null,
+  "createTxAll": [],
+  "createdAt": "2026-09-18T04:42:41.530Z",
+  "network": "testnet",
+  "chainId": 16602
+}

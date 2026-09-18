@@ -1,0 +1,70 @@
+{
+  "tokenId": "3",
+  "txHash": "0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3",
+  "blockNumber": 55457526,
+  "gasUsed": "293502",
+  "manifest": {
+    "version": 1,
+    "network": "testnet",
+    "chainId": 16602,
+    "createdAt": "2026-09-18T05:03:40.723Z",
+    "task": {
+      "id": "d06d00e2-965b-430c-bf46-4d6444ee1c47",
+      "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+      "state": "UserAcknowledged"
+    },
+    "base": {
+      "model": "Qwen2.5-0.5B-Instruct",
+      "modelHash": "0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7",
+      "tokenizer": "Qwen/Qwen2.5-0.5B-Instruct"
+    },
+    "dataset": {
+      "rootHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+      "format": "chat",
+      "exampleCount": 61,
+      "tokenCount": 14816
+    },
+    "training": {
+      "neftune_noise_alpha": 5,
+      "num_train_epochs": 3,
+      "per_device_train_batch_size": 2,
+      "learning_rate": 0.0002,
+      "max_steps": 10
+    },
+    "adapter": {
+      "rootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+      "sizeBytes": 93642471,
+      "hashSource": "onchain-verified"
+    },
+    "fee": {
+      "trainingNeuron": "11852800000000000",
+      "storageReserveNeuron": "0",
+      "totalNeuron": "11852800000000000"
+    },
+    "tee": {
+      "signerAddress": "0x24135b4Bd964872284728F79F5f17eB874C5583A",
+      "acknowledged": true,
+      "attestationVerified": true
+    }
+  },
+  "manifestRootHash": "0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13",
+  "mintedAt": "2026-09-18T05:04:14.665Z",
+  "storage": {
+    "rootHash": "0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7",
+    "uploadTx": "0x990ea1f49214a1182fa0e51e712ddb5ad8c30b6d0363a0f6bc7d4a501a3cc015",
+    "alreadyStored": false,
+    "indexerUrl": "https://indexer-storage-testnet-turbo.0g.ai",
+    "storageScanByRootHash": "https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7"
+  },
+  "verifyManifestCorrect": true,
+  "verifyManifestWrong": false,
+  "downloadVerify": {
+    "bytes": 1027,
+    "keccak": "0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13",
+    "matchesAnchor": true,
+    "verifyManifest": true
+  },
+  "configHash": "0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1",
+  "adapterRootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+  "spent0G": "0.0024564336725233"
+}

@@ -1,0 +1,33 @@
+{
+  "taskId": "d06d00e2-965b-430c-bf46-4d6444ee1c47",
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "finalProgress": "Delivered",
+  "fee": "11852800000000000",
+  "transitions": [
+    {
+      "at": "2026-09-18T04:43:10.276Z",
+      "progress": "SettingUp"
+    },
+    {
+      "at": "2026-09-18T04:43:26.157Z",
+      "progress": "SetUp"
+    },
+    {
+      "at": "2026-09-18T04:44:13.793Z",
+      "progress": "Training"
+    },
+    {
+      "at": "2026-09-18T04:45:33.790Z",
+      "progress": "Trained"
+    },
+    {
+      "at": "2026-09-18T04:46:05.521Z",
+      "progress": "Delivering"
+    },
+    {
+      "at": "2026-09-18T04:46:53.074Z",
+      "progress": "Delivered"
+    }
+  ],
+  "watchedAt": "2026-09-18T04:46:53.074Z"
+}
