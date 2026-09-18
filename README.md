@@ -16,7 +16,7 @@ Hitansh Gopani · 16 August 2026
 
 `Passport.sol 0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` · verified · passports #1 and #2 minted · chain 16602
 
-0G Bridge Buildathon — Wave 3 · [@Hitansh54](https://x.com/Hitansh54)
+0G Bridge Buildathon — Wave 4 · [@Hitansh54](https://x.com/Hitansh54)
 
 </div>
 
@@ -37,13 +37,15 @@ The other half of the question I did not expect to answer. To produce a passport
 The second time, I retrieved it. The only thing I changed was the operating system. That comparison — two runs, one variable, both recorded on the same contract — is § 04, and it is the most useful thing in this repository.
 
 > [!WARNING]
-> **`acknowledgeModel` cannot retrieve a delivered model on Windows + Node 22 — on either path**, and there are two separate defects behind that.
+> **The 0G SDK's `acknowledgeModel` cannot retrieve a delivered model on Windows + Node 22 — on either path**, and there are two separate defects behind that.
 >
 > The **TEE path fails on every platform**: `stream.on is not a function` at 0 bytes, every attempt, then HTTP 429. That is an SDK bug, independent of the operating system. The **0G Storage path fails only on Windows**, because the bundled client is `ELF 64-bit LSB executable … for GNU/Linux` — a Linux binary spawned on whatever host installs it.
 >
-> Because `downloadMethod: 'auto'` tries storage first and falls back to the TEE, a Windows user hits both and has no path left. My first task force-settled unacknowledged: `getDeliverables` shows `acknowledged: false`, an empty `encryptedSecret`, and my sub-account debited **exactly 30.0000%** of the fee — 0G's documented penalty for a model you never collected.
+> Because `downloadMethod: 'auto'` tries storage first and falls back to the TEE, a Windows user on the SDK's documented path hits both and has no path left. My first task force-settled unacknowledged: `getDeliverables` shows `acknowledged: false`, an empty `encryptedSecret`, and my sub-account debited **exactly 30.0000%** of the fee — 0G's documented penalty for a model you never collected.
 >
-> **The same code retrieved the model from WSL2 Linux**: 93,642,469 bytes, validated against the provider's on-chain root hash, `acknowledged: true`. Reproduction, both ways, in [DEFECT-01](#section-05--defects).
+> **The same code retrieved the model from WSL2 Linux**: 93,642,469 bytes, validated against the provider's on-chain root hash, `acknowledged: true`.
+>
+> **Fixed 2026-09-18 (commit `5e089f4`).** Crucible no longer routes retrieval through the broken SDK on Windows: `HttpModelRetriever` pulls the delivered model straight from the 0G Storage indexer over plain HTTP, re-derives the 0G Storage Merkle root of the bytes, and refuses to acknowledge unless it matches the on-chain `modelRootHash`. Proven on **this Windows machine** on 2026-09-18 — the 584-byte Passport #1 manifest downloaded from the indexer and its `zgStorageRoot` recomputed to `0xc757a7e6…e1140`, an exact match. That is a Windows-verified retrieval + integrity check; it is not a new fine-tune. Reproduction of both the original defect and the fix in [DEFECT-01](#section-05--defects).
 
 ---
 
@@ -77,7 +79,8 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
 + PASS  Source-verified on the explorer         0.8.19 / paris / 200 runs · 78,649 chars
 + PASS  Passport #1 minted                      block 49597171 · 327,702 gas
 + PASS  verifyManifest proven both ways         true for the anchor, false for a tamper
-- OPEN  Mainnet (16661)                         nothing deployed — the Wave 3 requirement
++ PASS  ERC-8004 registered on testnet          agentId 420 in 0G's live Identity Registry · 6 lineage writes read back byte-equal · registered, not verified
+- OPEN  Mainnet (16661)                         nothing deployed — the requirement carried over from Wave 3
 
   ## the network, with real money
 + PASS  Ledger + sub-account funded             true cost 0.15 0G, not the 3 0G the SDK demands
@@ -85,10 +88,17 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
 + PASS  Fine-tuning task created, three times   Init → SettingUp → … → Delivered, ~4 min
 + PASS  Manifest uploaded to 0G Storage         584 B · submission 146937
 + PASS  Manifest hash == on-chain anchor        the whole verification loop closes
-- FAIL  Model retrieval — task 1, on Windows    both download paths broken · model lost, 30% taken
+- WAS   Model retrieval — task 1, on Windows    both SDK download paths broken · model lost, 30% taken — now fixed, below
++ PASS  Windows retrieval fixed                 HttpModelRetriever downloads over HTTP + re-derives the 0G Storage root; win32-verified 2026-09-18
++ PASS  Adapter-hash provenance                 sentinel vs onchain-verified typed; a sentinel can never publish as a real adapter root
++ PASS  Failed runs recoverable in place        retrieveAndUpgrade() + POST /jobs/:id/retrieve upgrade a failed run · no duplicate passport
 + PASS  Model retrieval — task 2, from Linux    93,642,469 bytes · validated · acknowledged=true
 + PASS  Passport #2 minted from the real adapter  adapter hash read off-chain, not from our notes
 + PASS  Run 3 acknowledged by the daemon itself   tx 0x4e2c81e2…7e4cfa · no script involved
+
+  ## the app
++ PASS  3D forged-core hero + passport seal     react-three-fiber, lazy client-only, static SVG fallback (no-WebGL / reduced-motion)
++ PASS  Passport still server-renders           3D is ssr:false, so on-chain values render without WebGL · next build green · 7 routes
 
   ## what I am not claiming
 - NONE  Passport #1's adapter was never retrieved  it carries an explicit sentinel, not a hash
@@ -200,10 +210,15 @@ I initially read that as success — 0G's own state table lists `UserAcknowledge
 advisory; the contract is authoritative. **I published the wrong conclusion before I checked the
 contract, and [CHANGELOG.md](CHANGELOG.md) records the correction rather than quietly editing it away.**
 
-This is precisely the failure Crucible's daemon exists to prevent — and on this platform the daemon
-*cannot* prevent it, because the retrieval itself is broken. What it can still do is detect the
-delivery immediately, exhaust every download path, record the failure with evidence, and release the
-queue with `acknowledgeDeliverable`. Claiming more than that would be a lie a judge could check.
+This is precisely the failure Crucible's daemon exists to prevent. When this run happened the daemon
+*could not* prevent it on Windows, because the SDK's retrieval itself was broken; all it could do was
+detect the delivery immediately, exhaust every download path, record the failure with evidence, and
+release the queue with `acknowledgeDeliverable`. **Since 2026-09-18 (`5e089f4`) that gap is closed:**
+`HttpModelRetriever` pulls the model from the 0G Storage indexer over plain HTTP and re-derives its
+0G Storage root before acknowledging, so on Windows the daemon now retrieves rather than merely
+releasing the queue — verified on this machine as a retrieval + integrity check on the manifest
+bytes. What did not change is the honesty rule: it acknowledges only against a root that matches the
+on-chain `modelRootHash`, and claiming more than that would be a lie a judge could check.
 
 **On Linux it does prevent it, and that is no longer an argument.** On 2026-08-16 the daemon ran a
 third task end to end with no script involved and no setting changed: delivered 08:53:57Z,
@@ -221,7 +236,7 @@ Fourteen findings from four days against the live network. 🔴 costs you money 
 
 | # | Sev | Finding | Evidence |
 |---|---|---|---|
-| 01 | 🔴 | **`acknowledgeModel` cannot retrieve a model on Windows/Node 22 — two separate defects.** The **TEE path fails on every platform**: `stream.on is not a function` at 0 bytes, every attempt, then 429 — an SDK bug independent of the OS. The **0G Storage path fails only on Windows**: `spawn …/binary/0g-storage-client ENOENT`, because the bundled client is `ELF 64-bit … for GNU/Linux`. Since `'auto'` tries storage then falls back to the TEE, a Windows user hits both and loses the model | isolated by running the identical code from WSL2: storage path downloaded 93.6 MB, validated, `acknowledged: true`. Windows run: `acknowledged: false`, 30% debited |
+| 01 | 🔴 | **The SDK's `acknowledgeModel` cannot retrieve a model on Windows/Node 22 — two separate defects.** The **TEE path fails on every platform**: `stream.on is not a function` at 0 bytes, every attempt, then 429 — an SDK bug independent of the OS. The **0G Storage path fails only on Windows**: `spawn …/binary/0g-storage-client ENOENT`, because the bundled client is `ELF 64-bit … for GNU/Linux`. Since `'auto'` tries storage then falls back to the TEE, a Windows user on the SDK path hits both and loses the model. **Resolved 2026-09-18 (commit `5e089f4`):** `HttpModelRetriever` bypasses the SDK — `GET {indexer}/file?root=<modelRootHash>`, re-derive the 0G Storage Merkle root of the bytes (`storage-hash.ts`, a dependency-free SDK-exact reimplementation pinned by known-answer tests), and refuse to acknowledge on mismatch; `preferHttpRetrieval()` selects it on win32, the SDK path is kept elsewhere. Failed runs upgrade in place via `retrieveAndUpgrade()` / `POST /jobs/:id/retrieve`, sentinel → onchain-verified, with no duplicate passport | original defect isolated by running the identical code from WSL2: storage path downloaded 93.6 MB, validated, `acknowledged: true`; Windows run: `acknowledged: false`, 30% debited. Fix verified on win32 2026-09-18: the manifest downloaded over HTTP and its 0G Storage root recomputed to `0xc757a7e6…e1140`, an exact match to the on-chain value |
 | 02 | 🔴 | **The provider settles long before the 48-hour window closes** — six hours in my case. Anyone budgeting against the documented deadline is budgeting against the wrong number | delivered 11:18:42Z, settled 17:19:27Z |
 | 03 | 🟠 | **The SDK demands 3 0G to create a ledger on every network.** `addLedger()` applies a hardcoded client-side guard; `LedgerManager.MIN_ACCOUNT_BALANCE()` reads **0.1 0G** on testnet. A 30× overstatement that reads as a funding blocker | one `eth_call` |
 | 04 | 🟠 | **`getLockedTime()` returns 86400 — 24 hours — and is the *refund* lock, not the acknowledge window.** Used as `lockTime - (now - refund.createdAt)`. Read it as the 48-hour deadline and your daemon fires at the wrong time | SDK source, `service.js` |
@@ -272,12 +287,15 @@ Stated in full rather than glossed, because a 0G judge checks this first.
 
 ```
 packages/core/           @crucible/core — validation, format conversion, fee estimation,
-                         canonical manifest + keccak256, task-state, model card.  147 tests
+                         canonical manifest + keccak256, task-state, model card,
+                         adapter-hash provenance guards.  172 tests
 packages/cli/            crucible doctor · validate · convert · config — no private key  62 tests
 packages/ml/             dataset analysis (balance, leakage, PII) + eval harness.  320 tests
-services/orchestrator/   job store, poller, SSE, auto-acknowledge daemon.  174 tests
+services/orchestrator/   job store, poller, SSE, auto-acknowledge daemon, HTTP model
+                         retrieval + 0G Storage root check, in-place queue recovery.  239 tests
 apps/web/                Next.js: upload → configure → launch → watch → passport → gallery.
-                         Self-verifying export, per-passport OG card.  310 tests
+                         Self-verifying export, per-passport OG card, react-three-fiber
+                         3D hero + passport seal (client-only, SVG fallback).  349 tests
 contracts/               Passport.sol + deploy, generic mint and verification scripts.  104 tests
 tools/                   read-only diagnostics: task status, deliverable state, dataset
                          identification, manifest upload, TEE attestation, verification
@@ -328,25 +346,31 @@ that way.
 ## SECTION 08 · WHAT I'D FIX FIRST
 
 1. **Deploy to mainnet.** Priced at 4 gwei this is 2,238,586 gas to deploy and 327,702 to mint —
-   **0.0103 0G**, about a cent. It is the one hard Wave 3 requirement outstanding, and it is
-   blocked on acquiring gas, not on code: the same command that verified on Galileo is already
-   configured for 16661.
-2. ~~Retrieve one adapter~~ ~~and run it through the daemon~~ — **both done.** Passport #2 carries a
-   real root hash retrieved from WSL2 Linux, and on 2026-08-16 the orchestrator daemon ran a third
-   task end to end on its own: submitted through `POST /jobs`, tracked by the poller, and
-   acknowledged by the acknowledger at delivery + 1h with 47 hours of margin — download 93,642,471
-   bytes from 0G Storage, then tx
-   [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa),
-   block 49716408. `getDeliverables` reads `acknowledged: true`. The headline feature is now
-   demonstrated by the component that claims it, on the daemon's own default settings rather than
-   a configuration chosen to make it work. Recorded in `runs/run3-daemon.json`.
-3. **Call `verifyService()` and put the result in the passport.** The manifest carries
+   **0.0103 0G**, about a cent. It is the one hard requirement carried over from Wave 3 and still
+   outstanding, and it is blocked on acquiring gas, not on code: the same command that verified on
+   Galileo is already configured for 16661.
+2. **Call `verifyService()` and put the result in the passport.** The manifest carries
    `attestationVerified: false` today because I record the TEE signer without checking the
    attestation myself. That field should be earned.
-4. **A mint path in the web app.** Passport #1 was minted by a Hardhat script, not by the UI. The
+3. **A mint path in the web app.** Passport #1 was minted by a Hardhat script, not by the UI. The
    demo should not film a button that does not exist.
-5. **Spread the work across days.** Every commit in this repository is dated inside the Wave, but
+4. **Spread the work across days.** Every commit in this repository is dated inside the Wave, but
    clustered. A judge reading commit history reads cadence as well as content.
+5. ~~Retrieve one adapter~~ ~~and run it through the daemon~~ — **both done.** Passport #2 carries a
+   real root hash retrieved from WSL2 Linux, and on 2026-08-16 the orchestrator daemon ran a third
+   task end to end on its own — tx
+   [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa),
+   block 49716408, `getDeliverables` reads `acknowledged: true`. Recorded in `runs/run3-daemon.json`.
+6. ~~Fix model retrieval on Windows~~ — **done 2026-09-18 (`5e089f4`).** `HttpModelRetriever`
+   pulls the delivered model from the 0G Storage indexer over plain HTTP and re-derives the 0G
+   Storage root before acknowledging, so the flow no longer depends on the SDK's Linux-only bundled
+   binary; verified on this Windows machine. Failed runs upgrade in place (sentinel →
+   onchain-verified) via `retrieveAndUpgrade()` / `POST /jobs/:id/retrieve`. This answers judge
+   notmartin's Wave 3 feedback directly.
+7. ~~Register the passport lineage in a contract we do not control~~ — **done 2026-09-18
+   (`55d1f32`).** Passport #1 is now registered in 0G's live ERC-8004 Identity Registry on Galileo
+   testnet as agentId 420, with six `setMetadata` lineage writes read back byte-equal on chain.
+   Registered, not verified — see [docs/ERC8004.md §7](docs/ERC8004.md).
 
 ---
 

@@ -23,6 +23,7 @@ export {
 export {
   type Task,
   type ProviderService,
+  type Deliverable,
   type FineTuningPort,
   type AcknowledgeModelOptions,
   createRealBroker,
@@ -32,11 +33,24 @@ export {
 } from './broker.js'
 
 export {
+  type ModelRetriever,
+  type RetrieveRequest,
+  type RetrieveResult,
+  type FetchLike,
+  type HttpModelRetrieverOptions,
+  HttpModelRetriever,
+  preferHttpRetrieval,
+} from './retrieval.js'
+
+export { zgStorageRoot } from './storage-hash.js'
+
+export {
   type Job,
   type JobPatch,
   type CreateJobInput,
   type NetworkName,
   type AckMethod,
+  type AdapterHashSource,
   type StateTransition,
   type TrainingConfig,
   type JobFee,
@@ -76,6 +90,7 @@ export {
   type QueueRecoveryOptions,
   type LockDetection,
   type UnlockResult,
+  type UpgradeResult,
 } from './recovery.js'
 export { Orchestrator, type OrchestratorOptions } from './orchestrator.js'
 export { createApi, type ApiOptions, type ApiHandle } from './api.js'

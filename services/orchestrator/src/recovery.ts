@@ -1,8 +1,10 @@
+import { join } from 'node:path'
 import { systemClock, type Clock } from './clock.js'
 import { errorMessage, type FineTuningPort } from './broker.js'
+import { type ModelRetriever } from './retrieval.js'
 import { normalizeState, canTransition } from './states.js'
 import type { JobStore } from './store.js'
-import type { JobPatch } from './types.js'
+import type { AdapterHashSource, JobPatch } from './types.js'
 
 /**
  * ## Failure mode 2: "Bug #4" — the permanently locked deliverable queue
@@ -43,10 +45,32 @@ export interface UnlockResult {
   alreadyAcknowledged?: boolean
 }
 
+/**
+ * The outcome of retrieving a real artifact for a run that had failed, and
+ * upgrading its passport in place from a sentinel to an on-chain-verified root.
+ */
+export interface UpgradeResult {
+  ok: true
+  jobId: string
+  taskId: string
+  /** The validated on-chain model root now recorded on the job. */
+  adapterRootHash: string
+  adapterHashSource: 'onchain-verified'
+  sizeBytes: number
+  /** Provenance the job carried before this call — `null` if it had none. */
+  previousHashSource: AdapterHashSource | null
+  /** True when the job had been recorded as a sentinel/at-risk loss before now. */
+  upgraded: boolean
+}
+
 export interface QueueRecoveryOptions {
   store: JobStore
   broker: FineTuningPort
   clock?: Clock
+  /** Root directory for downloaded adapters; required for the retrieve-and-upgrade flow. */
+  modelsDir?: string
+  /** The Windows-safe HTTP retriever; required for the retrieve-and-upgrade flow. */
+  retriever?: ModelRetriever
   onLog?: (level: 'info' | 'warn' | 'error', message: string) => void
 }
 
@@ -54,12 +78,16 @@ export class QueueRecovery {
   readonly #store: JobStore
   readonly #broker: FineTuningPort
   readonly #clock: Clock
+  readonly #modelsDir?: string
+  readonly #retriever?: ModelRetriever
   readonly #log: (level: 'info' | 'warn' | 'error', message: string) => void
 
   constructor(options: QueueRecoveryOptions) {
     this.#store = options.store
     this.#broker = options.broker
     this.#clock = options.clock ?? systemClock
+    this.#modelsDir = options.modelsDir
+    this.#retriever = options.retriever
     this.#log = options.onLog ?? (() => undefined)
   }
 
@@ -124,6 +152,109 @@ export class QueueRecovery {
     }
   }
 
+  /**
+   * ## Failure mode 3: a failed run made whole
+   *
+   * A run whose retrieval or acknowledgement failed is not a dead end. Once the
+   * artifact is available again — the Windows-safe HTTP path works even where the
+   * SDK could not reach it — this retrieves it, validates its bytes against the
+   * provider's on-chain model root, releases the queue if it was not already
+   * acknowledged, and UPGRADES THE EXISTING JOB IN PLACE from a sentinel to an
+   * `onchain-verified` root.
+   *
+   * It never creates a second job: there is exactly one record per run, so there
+   * can never be a confused second passport. Re-running it once a job is already
+   * `onchain-verified` is a no-op success (idempotent).
+   */
+  async retrieveAndUpgrade(jobId: string): Promise<UpgradeResult> {
+    if (!this.#retriever || !this.#modelsDir) {
+      throw new Error(
+        'Recovery is not configured for artifact retrieval: no HTTP retriever/modelsDir. ' +
+          'Construct the orchestrator with a retriever to enable passport upgrades.',
+      )
+    }
+
+    const job = this.#store.get(jobId)
+    if (!job) throw new Error(`No such job: ${jobId}`)
+    if (!job.taskId) {
+      throw new Error(`Job ${jobId} has no on-chain task; there is nothing to retrieve.`)
+    }
+
+    const previousHashSource = job.adapterHashSource ?? null
+
+    // Already whole: nothing to do, and definitely no second passport.
+    if (job.adapterHashSource === 'onchain-verified' && job.adapterRootHash) {
+      return {
+        ok: true,
+        jobId,
+        taskId: job.taskId,
+        adapterRootHash: job.adapterRootHash,
+        adapterHashSource: 'onchain-verified',
+        sizeBytes: 0,
+        previousHashSource,
+        upgraded: false,
+      }
+    }
+
+    const deliverable = await this.#broker.getDeliverable(job.provider, job.taskId)
+    if (!deliverable) {
+      throw new Error(
+        `No on-chain deliverable for task ${job.taskId}. The provider may have settled and cleared ` +
+          `it, in which case the artifact is unrecoverable and the sentinel stands.`,
+      )
+    }
+
+    const dataPath = join(this.#modelsDir, job.id)
+    const result = await this.#retriever.retrieve({
+      network: job.network,
+      rootHash: deliverable.modelRootHash,
+      destPath: join(dataPath, 'model.bin'),
+    })
+
+    // Release the queue on-chain only if it has not already been acknowledged
+    // (e.g. by the earlier acknowledgeDeliverable fallback). Acknowledging twice
+    // reverts, so we guard on the chain's own view.
+    if (!deliverable.acknowledged) {
+      await this.#broker.acknowledgeDeliverable(job.provider, job.taskId)
+    }
+
+    const now = this.#clock.now()
+    const patch: JobPatch = {
+      adapterPath: dataPath,
+      adapterRootHash: deliverable.modelRootHash,
+      adapterHashSource: 'onchain-verified',
+      artifactAtRisk: false,
+      acknowledgedAt: job.acknowledgedAt ?? now,
+      ackMethod: 'acknowledgeModel',
+      nextAckAttemptAt: undefined,
+      lastAckError: undefined,
+      error: undefined,
+    }
+    if (canTransition(job.state, 'UserAcknowledged')) {
+      patch.state = 'UserAcknowledged'
+      patch.transitions = [...job.transitions, { state: 'UserAcknowledged', at: now }]
+    }
+    this.#store.update(job.id, patch)
+
+    const upgraded = previousHashSource === 'sentinel' || Boolean(job.artifactAtRisk)
+    this.#log(
+      'info',
+      `job ${job.id}: passport upgraded to onchain-verified root ${deliverable.modelRootHash} ` +
+        `(${result.sizeBytes} bytes)${upgraded ? ' — was a sentinel' : ''}`,
+    )
+
+    return {
+      ok: true,
+      jobId,
+      taskId: job.taskId,
+      adapterRootHash: deliverable.modelRootHash,
+      adapterHashSource: 'onchain-verified',
+      sizeBytes: result.sizeBytes,
+      previousHashSource,
+      upgraded,
+    }
+  }
+
   #recordLocally(provider: string, taskId: string, alreadyAcknowledged: boolean): void {
     const job = this.#store
       .list()
@@ -135,6 +266,9 @@ export class QueueRecovery {
       acknowledgedAt: job.acknowledgedAt ?? now,
       ackMethod: 'acknowledgeDeliverable',
       artifactAtRisk: true,
+      // No download happened, so the adapter hash stands for nothing. Marked as a
+      // sentinel so `retrieveAndUpgrade` can later replace it with the real root.
+      adapterHashSource: 'sentinel',
       nextAckAttemptAt: undefined,
       error:
         `Deliverable queue unlocked: this task was acknowledged on-chain WITHOUT downloading the ` +

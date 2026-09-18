@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { HOUR, MINUTE, systemClock, type Clock } from './clock.js'
 import { errorMessage, type AcknowledgeModelOptions, type FineTuningPort } from './broker.js'
 import { Emitter } from './events.js'
+import { type ModelRetriever, preferHttpRetrieval } from './retrieval.js'
 import { canTransition } from './states.js'
 import type { JobStore } from './store.js'
 import type { Job, JobPatch } from './types.js'
@@ -58,6 +59,16 @@ export interface AcknowledgerOptions {
   downloadMethod?: AcknowledgeModelOptions['downloadMethod']
   teeIdleTimeoutMs?: number
   teeMaxRetries?: number
+  /**
+   * The Windows-safe HTTP retriever. When present AND the platform selects it
+   * (see `preferHttpRetrieval`), the daemon downloads the artifact from the 0G
+   * Storage indexer, validates it against the on-chain root, and then
+   * acknowledges — instead of the SDK's `acknowledgeModel`, which is broken on
+   * win32. When absent, behaviour is unchanged: the SDK path is used.
+   */
+  retriever?: ModelRetriever
+  /** Overridable for tests; defaults to `process.platform`. */
+  platform?: NodeJS.Platform
   onLog?: (level: 'info' | 'warn' | 'error', message: string) => void
 }
 
@@ -78,6 +89,8 @@ export class Acknowledger {
   readonly #latestMs: number
   readonly #deadlineMs: number
   readonly #ackOptions: AcknowledgeModelOptions
+  readonly #retriever?: ModelRetriever
+  readonly #platform: NodeJS.Platform
   readonly #log: (level: 'info' | 'warn' | 'error', message: string) => void
   readonly #emitter = new Emitter<AcknowledgerEvents>()
 
@@ -95,6 +108,8 @@ export class Acknowledger {
       ...(options.teeIdleTimeoutMs !== undefined ? { teeIdleTimeoutMs: options.teeIdleTimeoutMs } : {}),
       ...(options.teeMaxRetries !== undefined ? { teeMaxRetries: options.teeMaxRetries } : {}),
     }
+    this.#retriever = options.retriever
+    this.#platform = options.platform ?? process.platform
     this.#log = options.onLog ?? (() => undefined)
   }
 
@@ -161,14 +176,14 @@ export class Acknowledger {
       return
     }
 
-    // 4. Always try the safe path first — download, verify, acknowledge in one call.
+    // 4. Always try the safe path first — download, verify, acknowledge.
     //    The deprecated downloadModelFrom0GStorage/decryptModel pair is not even
     //    reachable from here: it is not on the port.
     const dataPath = join(this.#modelsDir, job.id)
     try {
       mkdirSync(dataPath, { recursive: true })
-      await this.#broker.acknowledgeModel(job.provider, job.taskId!, dataPath, this.#ackOptions)
-      this.#succeed(job, 'acknowledgeModel', { adapterPath: dataPath })
+      const extra = await this.#retrieveAndAcknowledge(job, dataPath)
+      this.#succeed(job, 'acknowledgeModel', extra)
       return
     } catch (error) {
       const message = errorMessage(error)
@@ -183,6 +198,10 @@ export class Acknowledger {
             ackAttempts: attempts,
             lastAckError: message,
             artifactAtRisk: true,
+            // The artifact was never retrieved: the passport's adapter hash is a
+            // sentinel, not a real root. Recorded explicitly so the recovery flow
+            // can later upgrade it to `onchain-verified` (see recovery.ts).
+            adapterHashSource: 'sentinel',
             error:
               `ARTIFACT MAY BE LOST: acknowledgeModel failed ${attempts} time(s) and the 48-hour ` +
               `window was closing, so the deliverable was acknowledged on-chain WITHOUT downloading. ` +
@@ -217,6 +236,53 @@ export class Acknowledger {
       this.#log('warn', `job ${job.id}: acknowledgeModel attempt ${attempts} failed: ${message}`)
       this.#emitter.emit('ackFailed', updated)
     }
+  }
+
+  /**
+   * The safe retrieval-and-acknowledge step. On win32 (or wherever the retriever
+   * is selected) it downloads the artifact over HTTP, validates it against the
+   * provider's on-chain model root, and acknowledges the deliverable — recording
+   * an `onchain-verified` adapter root. Everywhere else it falls back to the
+   * SDK's `acknowledgeModel`, which downloads-verifies-acks in one call.
+   *
+   * Returns the `JobPatch` extras describing the outcome. Throws on any failure,
+   * so the caller's existing retry / fallback logic handles it uniformly.
+   */
+  async #retrieveAndAcknowledge(job: Job, dataPath: string): Promise<JobPatch> {
+    if (this.#retriever && preferHttpRetrieval(this.#platform, this.#ackOptions.downloadMethod)) {
+      const deliverable = await this.#broker.getDeliverable(job.provider, job.taskId!)
+      if (!deliverable) {
+        throw new Error(
+          `No on-chain deliverable found for task ${job.taskId} — cannot validate a retrieval ` +
+            `against a root the chain does not have.`,
+        )
+      }
+      const result = await this.#retriever.retrieve({
+        network: job.network,
+        rootHash: deliverable.modelRootHash,
+        destPath: join(dataPath, 'model.bin'),
+      })
+      // The artifact is in hand and validated, so release the queue on-chain.
+      // acknowledgeModel's own download is what is broken on win32; the on-chain
+      // acknowledgement is not, so we drive it directly.
+      if (!deliverable.acknowledged) {
+        await this.#broker.acknowledgeDeliverable(job.provider, job.taskId!)
+      }
+      this.#log(
+        'info',
+        `job ${job.id}: retrieved ${result.sizeBytes} bytes over HTTP and validated against ` +
+          `on-chain root ${deliverable.modelRootHash}`,
+      )
+      return {
+        adapterPath: dataPath,
+        adapterRootHash: deliverable.modelRootHash,
+        adapterHashSource: 'onchain-verified',
+        artifactAtRisk: false,
+      }
+    }
+
+    await this.#broker.acknowledgeModel(job.provider, job.taskId!, dataPath, this.#ackOptions)
+    return { adapterPath: dataPath }
   }
 
   #succeed(job: Job, method: 'acknowledgeModel' | 'acknowledgeDeliverable', extra: JobPatch): void {

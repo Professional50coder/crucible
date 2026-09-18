@@ -47,6 +47,22 @@ export interface AcknowledgeModelOptions {
 }
 
 /**
+ * One on-chain deliverable, read from the `FineTuningServing` contract — the
+ * authoritative record of what the provider committed. The README's most
+ * expensive mistake was trusting the provider API's `progress` field over this;
+ * `modelRootHash` here is the hash a retrieved artifact must validate against,
+ * and `acknowledged` is the real settlement state, not a rumour.
+ */
+export interface Deliverable {
+  taskId: string
+  /** 0G Storage root hash of the delivered model, committed on-chain. */
+  modelRootHash: string
+  /** `0x` (empty) until the provider settles and publishes the key. */
+  encryptedSecret: string
+  acknowledged: boolean
+}
+
+/**
  * The subset of `broker.fineTuning` Crucible uses.
  *
  * Note what is deliberately ABSENT: `downloadModelFrom0GStorage` and
@@ -60,6 +76,12 @@ export interface FineTuningPort {
   listTask(provider: string): Promise<Task[]>
   getLog(provider: string, taskId?: string): Promise<string>
   listService(): Promise<ProviderService[]>
+  /**
+   * The on-chain deliverable for a task, or `undefined` if the provider has none
+   * recorded (e.g. it settled and cleared). Read straight from the serving
+   * contract — this is the authority the Windows-safe retrieval validates against.
+   */
+  getDeliverable(provider: string, taskId: string): Promise<Deliverable | undefined>
   uploadDataset(dataPath: string): Promise<string>
   createTask(
     provider: string,
@@ -140,11 +162,26 @@ interface SdkFineTuning {
   acknowledgeDeliverable(provider: string, taskId: string, gasPrice?: number): Promise<void>
 }
 
+/**
+ * `FineTuningServing` addresses, keyed by chain ID. Mirrors the compute SDK's
+ * own `CONTRACT_ADDRESSES` (v0.9.0). The public `broker.fineTuning` does not
+ * expose the deliverables read, so `getDeliverable` talks to this contract
+ * directly — exactly as the read-only `tools/deliverable-status.mjs` does.
+ */
+const FINE_TUNING_SERVING_BY_CHAIN: Record<number, string> = {
+  16602: '0xC6C075D8039763C8f1EbE580be5ADdf2fd6941bA', // testnet (Galileo)
+  16661: '0x4e3474095518883744ddf135b7E0A23301c7F9c0', // mainnet
+}
+
+const DELIVERABLES_ABI = [
+  'function getDeliverables(address user, address provider) view returns (tuple(bytes id, bytes modelRootHash, bytes encryptedSecret, bool acknowledged)[])',
+]
+
 export async function createRealBroker(options: {
   privateKey: string
   rpcUrl: string
 }): Promise<FineTuningPort> {
-  const { Wallet, JsonRpcProvider } = await import('ethers')
+  const { Wallet, JsonRpcProvider, Contract, getBytes, toUtf8String } = await import('ethers')
   const { createZGComputeNetworkBroker } = await import('@0gfoundation/0g-compute-ts-sdk')
 
   const provider = new JsonRpcProvider(options.rpcUrl)
@@ -152,10 +189,51 @@ export async function createRealBroker(options: {
   const broker = await createZGComputeNetworkBroker(signer as never)
   const ft = (broker as unknown as { fineTuning: SdkFineTuning }).fineTuning
 
+  // The task id is stored on-chain as UTF-8 bytes; decode defensively so a
+  // provider that ever stored a non-UTF-8 id degrades to "no match" not a throw.
+  const decodeId = (raw: string): string => {
+    try {
+      return toUtf8String(getBytes(raw))
+    } catch {
+      return raw
+    }
+  }
+
+  const getDeliverable = async (
+    providerAddress: string,
+    taskId: string,
+  ): Promise<Deliverable | undefined> => {
+    const network = await provider.getNetwork()
+    const serving = FINE_TUNING_SERVING_BY_CHAIN[Number(network.chainId)]
+    if (!serving) {
+      throw new Error(
+        `No FineTuningServing address known for chain ${network.chainId}; cannot read deliverables.`,
+      )
+    }
+    const contract = new Contract(serving, DELIVERABLES_ABI, provider) as unknown as {
+      getDeliverables(
+        user: string,
+        provider: string,
+      ): Promise<
+        Array<{ id: string; modelRootHash: string; encryptedSecret: string; acknowledged: boolean }>
+      >
+    }
+    const rows = await contract.getDeliverables(signer.address, providerAddress)
+    const match = rows.find((row) => decodeId(row.id) === taskId)
+    if (!match) return undefined
+    return {
+      taskId,
+      modelRootHash: match.modelRootHash,
+      encryptedSecret: match.encryptedSecret,
+      acknowledged: Boolean(match.acknowledged),
+    }
+  }
+
   return {
     getTask: (p, t) => ft.getTask(p, t),
     listTask: (p) => ft.listTask(p),
     getLog: (p, t) => ft.getLog(p, t),
+    getDeliverable,
     listService: async () => {
       const services = await ft.listService()
       return services.map((s) => ({

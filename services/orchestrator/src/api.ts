@@ -107,6 +107,18 @@ export function createApi(options: ApiOptions): ApiHandle {
         }
       }
 
+      // POST /jobs/:id/retrieve — retrieve the real artifact for a failed run and
+      // upgrade its passport from a sentinel to an onchain-verified root, in place.
+      if (sub === 'retrieve' && method === 'POST') {
+        if (!orch.getJob(id)) return sendError(res, 404, `Job not found: ${id}`, 'job_not_found')
+        try {
+          const result = await orch.retrieveJob(id)
+          return sendJson(res, 200, result)
+        } catch (error) {
+          return sendError(res, 502, message(error), 'retrieve_failed')
+        }
+      }
+
       return sendError(res, 404, `No such route: ${method} ${path}`, 'not_found')
     }
 

@@ -5,6 +5,19 @@ export type NetworkName = 'testnet' | 'mainnet'
 
 export type AckMethod = 'acknowledgeModel' | 'acknowledgeDeliverable'
 
+/**
+ * Provenance of the adapter root a job will anchor in its passport. Mirrors
+ * `AdapterHashSource` in `@crucible/core` (the manifest owner) — kept as a local
+ * copy for the same reason `TrainingConfig` is, so the orchestrator never has to
+ * import core over HTTP boundaries.
+ *
+ *   - `sentinel`         — the artifact was never retrieved; the passport carries
+ *                          a labelled placeholder, not a real root.
+ *   - `onchain-verified` — the artifact was downloaded and its bytes checked
+ *                          against the provider's on-chain model root hash.
+ */
+export type AdapterHashSource = 'sentinel' | 'onchain-verified'
+
 export interface StateTransition {
   state: TaskState
   at: number
@@ -95,6 +108,19 @@ export interface Job {
 
   /** Where the decrypted/downloaded adapter was written. */
   adapterPath?: string
+  /**
+   * The adapter root hash this job's passport should anchor. When
+   * `adapterHashSource` is `onchain-verified` this is the provider's on-chain
+   * model root, validated against the downloaded bytes. When `sentinel` it stands
+   * for an artifact that was never retrieved.
+   */
+  adapterRootHash?: string
+  /**
+   * Provenance of `adapterRootHash`, so a placeholder is never mistaken for a
+   * real root. A failed retrieval leaves this `sentinel`; a successful
+   * retrieve-and-validate upgrades it to `onchain-verified` (see recovery.ts).
+   */
+  adapterHashSource?: AdapterHashSource
   /** Last training log fetched from the provider. */
   log?: string
   logFetchedAt?: number

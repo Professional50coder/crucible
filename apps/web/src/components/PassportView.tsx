@@ -88,6 +88,7 @@ import {
   TerminalIcon,
 } from './icons'
 import { Badge, Dot, IconTile, NetworkBadge, Note, Panel, PanelHeader, Stat } from './ui'
+import { PassportSealVisual } from './three/PassportSealVisual'
 
 /** The result of the one check the reader performs without leaving the page. */
 type Integrity = 'verified' | 'mismatch' | 'demo'
@@ -238,7 +239,18 @@ export function PassportView({
             weight every hash below it carries. */}
         <ProvenanceRibbon onChain={onChain} network={manifest.network} tokenId={mint.tokenId} />
 
-        <div className="px-5 py-7 sm:px-8 sm:py-9">
+        {/* The forged core, sealed into the certificate as a watermark. Inert and
+            decorative — the content below sits on `relative z-10`, above it, so it
+            can never sit over a hash. Falls back to a static wireframe, and is
+            gone entirely for a reader who has asked for less motion. */}
+        <div
+          className="pointer-events-none absolute right-2 top-10 hidden aspect-square w-40 opacity-40 [mask-image:radial-gradient(closest-side,#000_60%,transparent_100%)] sm:block"
+          aria-hidden="true"
+        >
+          <PassportSealVisual className="h-full w-full" />
+        </div>
+
+        <div className="relative z-10 px-5 py-7 sm:px-8 sm:py-9">
           <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
             <div className="min-w-0 flex-1">
               <p className="label">Model Passport</p>

@@ -19,6 +19,13 @@ export function SiteHeader() {
 
   return (
     <header className="no-print sticky top-0 z-40 border-b border-line bg-ink/90 backdrop-blur">
+      {/* A faint phosphor sheen along the header's lower edge — the same forged
+          accent the 3D hero carries, kept to a static hairline so the chrome
+          stays an instrument rather than a light show. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-phosphor/30 to-transparent"
+      />
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
         <Link
           href="/"

@@ -1,7 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { FineTuningPort, ProviderService, Task } from '../src/broker.js'
+import type { Deliverable, FineTuningPort, ProviderService, Task } from '../src/broker.js'
+import type { ModelRetriever, RetrieveRequest, RetrieveResult } from '../src/retrieval.js'
 import { openJobStore, type JobStore } from '../src/store.js'
 import { ManualClock } from '../src/clock.js'
 
@@ -15,18 +16,25 @@ export class FakeBroker implements FineTuningPort {
   tasks = new Map<string, Task>()
   logs = new Map<string, string>()
   services: ProviderService[] = []
+  deliverables = new Map<string, Deliverable>()
 
   calls: string[] = []
   acknowledgeModelCalls: Array<{ provider: string; taskId: string; dataPath: string; options?: unknown }> = []
   acknowledgeDeliverableCalls: Array<{ provider: string; taskId: string }> = []
   createTaskCalls: Array<{ provider: string; model: string; datasetHash: string; configPath: string }> = []
   uploadDatasetCalls: string[] = []
+  getDeliverableCalls: Array<{ provider: string; taskId: string }> = []
 
   /** Queue of errors to throw from acknowledgeModel, one per call. */
   acknowledgeModelErrors: Array<Error | null> = []
   acknowledgeDeliverableErrors: Array<Error | null> = []
   createTaskErrors: Array<Error | null> = []
   getTaskErrors: Array<Error | null> = []
+
+  /** Record an on-chain deliverable a test can hand back from getDeliverable. */
+  setDeliverable(taskId: string, modelRootHash: string, acknowledged = false, encryptedSecret = '0x'): void {
+    this.deliverables.set(taskId, { taskId, modelRootHash, encryptedSecret, acknowledged })
+  }
 
   nextTaskId = 'task-1'
 
@@ -66,6 +74,12 @@ export class FakeBroker implements FineTuningPort {
   async listService(): Promise<ProviderService[]> {
     this.calls.push('listService')
     return this.services
+  }
+
+  async getDeliverable(provider: string, taskId: string): Promise<Deliverable | undefined> {
+    this.calls.push('getDeliverable')
+    this.getDeliverableCalls.push({ provider, taskId })
+    return this.deliverables.get(taskId)
   }
 
   /** Convenience for tests that only care about the live price. */
@@ -126,6 +140,24 @@ export class FakeBroker implements FineTuningPort {
     return (
       this.calls.includes('downloadModelFrom0GStorage') || this.calls.includes('decryptModel')
     )
+  }
+}
+
+/**
+ * A fake {@link ModelRetriever}. It never touches the network: it "succeeds" by
+ * recording the request and reporting a fixed size, or throws a queued error to
+ * simulate a failed/validation-rejected download.
+ */
+export class FakeModelRetriever implements ModelRetriever {
+  calls: RetrieveRequest[] = []
+  errors: Array<Error | null> = []
+  sizeBytes = 93_642_469
+
+  async retrieve(request: RetrieveRequest): Promise<RetrieveResult> {
+    this.calls.push(request)
+    const err = this.errors.shift()
+    if (err) throw err
+    return { path: request.destPath, sizeBytes: this.sizeBytes, rootHash: request.rootHash }
   }
 }
 

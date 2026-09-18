@@ -25,6 +25,26 @@ import { type Network, NETWORKS, networkFor } from './networks.js'
 import type { TaskState } from './task-state.js'
 import { type TrainingConfig, validateTrainingConfig } from './training-config.js'
 
+/**
+ * Where a passport's `adapter.rootHash` came from, recorded explicitly so a
+ * sentinel can never be mistaken for a retrieved artifact.
+ *
+ *   - `sentinel`        — no adapter was ever retrieved. `rootHash` is a labelled
+ *                         placeholder, `keccak256("crucible:adapter-not-retrieved:<taskId>")`,
+ *                         which addresses nothing on 0G Storage.
+ *   - `onchain-verified`— the artifact was downloaded and its bytes were checked
+ *                         against the provider's on-chain model root hash before
+ *                         the passport recorded it.
+ *
+ * The two are structurally distinct values, and `assertAdapterProvenance`
+ * (modelcard.ts) refuses any manifest that pairs `onchain-verified` with a hash
+ * that is actually a sentinel — see the guard for the full rule.
+ */
+export type AdapterHashSource = 'sentinel' | 'onchain-verified'
+
+/** The two values `adapter.hashSource` may take. */
+export const ADAPTER_HASH_SOURCES: readonly AdapterHashSource[] = ['sentinel', 'onchain-verified']
+
 export interface PassportManifest {
   version: 1
   network: Network
@@ -51,6 +71,14 @@ export interface PassportManifest {
   adapter: {
     rootHash: string
     sizeBytes?: number
+    /**
+     * Provenance of `rootHash`. Optional so manifests written before this field
+     * existed canonicalize (and therefore hash) identically — an absent key and
+     * an `undefined` key are the same to `canonicalize`. When present it is the
+     * authoritative record of whether `rootHash` is a real, verified root or a
+     * sentinel, and `assertAdapterProvenance` enforces that it never lies.
+     */
+    hashSource?: AdapterHashSource
   }
   /**
    * Decimal neuron amounts as **strings**. Fees exceed Number.MAX_SAFE_INTEGER
@@ -236,6 +264,22 @@ export function buildManifest(input: PassportInput): PassportManifest {
   const sizeBytes = adapter['sizeBytes']
   if (sizeBytes !== undefined) {
     manifest.adapter.sizeBytes = num(adapter, 'sizeBytes', 'adapter.sizeBytes')
+  }
+
+  // Provenance of the adapter hash, when the caller records it. A sentinel and a
+  // verified root must never be confusable, so an out-of-range value is a hard
+  // error rather than a silently dropped key.
+  const hashSource = adapter['hashSource']
+  if (hashSource !== undefined) {
+    if (!ADAPTER_HASH_SOURCES.includes(hashSource as AdapterHashSource)) {
+      errors.push(
+        `Field "adapter.hashSource" must be one of ${ADAPTER_HASH_SOURCES.map((s) => `"${s}"`).join(
+          ' | ',
+        )}, got ${JSON.stringify(hashSource)}.`,
+      )
+    } else {
+      manifest.adapter.hashSource = hashSource as AdapterHashSource
+    }
   }
 
   if (!isPlainObject(input?.training)) {

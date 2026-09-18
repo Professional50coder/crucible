@@ -4,6 +4,7 @@ import { createRealBroker } from './broker.js'
 import { MINUTE } from './clock.js'
 import { networkFor } from './networks.js'
 import { Orchestrator } from './orchestrator.js'
+import { HttpModelRetriever } from './retrieval.js'
 
 /**
  * Production entrypoint. This is the ONLY file that reads environment variables
@@ -38,7 +39,13 @@ async function main(): Promise<void> {
   log('info', `connecting to ${networkName} (chain ${network.chainId}) via ${rpcUrl}`)
   const broker = await createRealBroker({ privateKey, rpcUrl })
 
-  const orchestrator = new Orchestrator({ broker, dataDir, pollIntervalMs, onLog: log })
+  // The Windows-safe retrieval path (DEFECT-01): download from the 0G Storage
+  // indexer over HTTP and validate against the on-chain root, instead of spawning
+  // the Linux-only bundled client. Available everywhere; selected automatically on
+  // win32 where the SDK download is broken both ways.
+  const retriever = new HttpModelRetriever()
+
+  const orchestrator = new Orchestrator({ broker, dataDir, pollIntervalMs, onLog: log, retriever })
   const api = createApi({
     orchestrator,
     version: process.env.npm_package_version ?? '0.1.0',

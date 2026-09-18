@@ -8,9 +8,11 @@ import {
   ACK_FALLBACK_AFTER_MS,
 } from '../src/acknowledger.js'
 import { ManualClock, HOUR, MINUTE } from '../src/clock.js'
-import { FakeBroker, tempStore, TESTNET_PROVIDER } from './fakes.js'
+import { FakeBroker, FakeModelRetriever, tempStore, TESTNET_PROVIDER } from './fakes.js'
 import type { JobStore } from '../src/store.js'
 import type { Job } from '../src/types.js'
+
+const REAL_ROOT = '0x40a5f256ff464106f6be38ef146614bd78d5ddfe07af16b156d3efcddb561b4d'
 
 let clock: ManualClock
 let store: JobStore
@@ -159,6 +161,104 @@ describe('acknowledging', () => {
     clock.advance(ACK_TARGET_DELAY_MS)
     await ack.tick()
     expect(seen).toEqual(['acknowledgeModel'])
+  })
+})
+
+describe('Windows-safe HTTP retrieval path', () => {
+  function winAck(retriever: FakeModelRetriever): Acknowledger {
+    return new Acknowledger({
+      store,
+      broker,
+      clock,
+      modelsDir: join(dir, 'models'),
+      retriever,
+      platform: 'win32',
+    })
+  }
+
+  it('on win32, retrieves + validates over HTTP then acknowledges the deliverable', async () => {
+    const retriever = new FakeModelRetriever()
+    const winner = winAck(retriever)
+    const job = delivered()
+    broker.setDeliverable('task-1', REAL_ROOT)
+
+    await winner.tick()
+    clock.advance(ACK_TARGET_DELAY_MS)
+    await winner.tick()
+
+    // It read the on-chain deliverable, downloaded via the retriever, and did NOT
+    // use the broken SDK acknowledgeModel download.
+    expect(broker.getDeliverableCalls).toHaveLength(1)
+    expect(retriever.calls).toHaveLength(1)
+    expect(retriever.calls[0]!.rootHash).toBe(REAL_ROOT)
+    expect(retriever.calls[0]!.network).toBe('testnet')
+    expect(broker.acknowledgeModelCalls).toHaveLength(0)
+    // The queue is released on-chain because the artifact is in hand and validated.
+    expect(broker.acknowledgeDeliverableCalls).toEqual([
+      { provider: TESTNET_PROVIDER, taskId: 'task-1' },
+    ])
+
+    const after = store.get(job.id)!
+    expect(after.state).toBe('UserAcknowledged')
+    expect(after.ackMethod).toBe('acknowledgeModel')
+    expect(after.adapterRootHash).toBe(REAL_ROOT)
+    expect(after.adapterHashSource).toBe('onchain-verified')
+    expect(after.artifactAtRisk).toBeFalsy()
+  })
+
+  it('does not double-acknowledge a deliverable already acknowledged on-chain', async () => {
+    const retriever = new FakeModelRetriever()
+    const winner = winAck(retriever)
+    delivered()
+    broker.setDeliverable('task-1', REAL_ROOT, /* acknowledged */ true)
+
+    await winner.tick()
+    clock.advance(ACK_TARGET_DELAY_MS)
+    await winner.tick()
+
+    expect(retriever.calls).toHaveLength(1)
+    expect(broker.acknowledgeDeliverableCalls).toHaveLength(0)
+  })
+
+  it('a failed HTTP retrieval backs off and retries, it does not silently pass', async () => {
+    const retriever = new FakeModelRetriever()
+    retriever.errors.push(new Error('indexer 503'))
+    const winner = winAck(retriever)
+    const job = delivered()
+    broker.setDeliverable('task-1', REAL_ROOT)
+
+    await winner.tick()
+    clock.advance(ACK_TARGET_DELAY_MS)
+    await winner.tick()
+
+    const after = store.get(job.id)!
+    expect(after.acknowledgedAt).toBeUndefined()
+    expect(after.ackAttempts).toBe(1)
+    expect(after.lastAckError).toMatch(/indexer 503/)
+    expect(after.nextAckAttemptAt).toBeDefined()
+  })
+
+  it('when a retriever is present but the platform is not win32, keeps the SDK path', async () => {
+    const retriever = new FakeModelRetriever()
+    const linuxAck = new Acknowledger({
+      store,
+      broker,
+      clock,
+      modelsDir: join(dir, 'models'),
+      retriever,
+      platform: 'linux',
+    })
+    const job = delivered()
+    broker.setDeliverable('task-1', REAL_ROOT)
+
+    await linuxAck.tick()
+    clock.advance(ACK_TARGET_DELAY_MS)
+    await linuxAck.tick()
+
+    // The retriever is untouched; the SDK acknowledgeModel path ran.
+    expect(retriever.calls).toHaveLength(0)
+    expect(broker.acknowledgeModelCalls).toHaveLength(1)
+    expect(store.get(job.id)!.ackMethod).toBe('acknowledgeModel')
   })
 })
 

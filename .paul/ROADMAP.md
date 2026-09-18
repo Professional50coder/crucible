@@ -19,9 +19,10 @@ pivot to inference provenance was never needed.
 
 ## Current Milestone
 
-**v1.0 Wave 3 Submission**
-Status: In progress — everything buildable is built; the mainnet deployment is not done
-Phases: **4 of 6 complete**
+**v1.1 Wave 4** (Wave 3 closed 2026-08-30, scored **3 points / 202.5 USDC**)
+Status: In progress — three Wave 4 tracks landed 2026-09-18 (DEFECT-01 fixed, ERC-8004 registered on
+testnet, 3D UI); the mainnet deployment carried over from Wave 3 is still not done
+Wave 3 phases: **4 of 6 complete** (Phase 3 mainnet and Phase 6 publish/AKINDO still open)
 
 ## Phases
 
@@ -39,8 +40,9 @@ Phase 3 is the only phase blocking the submission, and only its last plan. Mainn
 3.0 0G `MIN_ACCOUNT_BALANCE()` gates *running a fine-tune* on mainnet, not deploying a contract —
 do not conflate the two.
 
-**Verified totals as of 2026-08-15: 808 tests** — core 105, ml 320, orchestrator 155, web 158,
-contracts 70. `apps/web` also produces a clean `next build`: 7 routes, 88.8 kB shared JS.
+**Verified totals as of 2026-09-18: 1,246 tests** — core 172, cli 62, ml 320, orchestrator 239,
+web 349, contracts 104, every suite re-run this session. `apps/web` also produces a clean
+`next build`: 7 routes. (The 2026-08-15 baseline was 808.)
 
 ## Phase Details
 
@@ -163,7 +165,14 @@ blocker was the API path — 0G chainscan is a Conflux-Scan derivative whose Eth
 API lives at `/open/api`, not `/api`; the latter is an SPA route that returns HTML. Same command
 should now work for mainnet.
 
+**ERC-8004 alignment — executed on testnet (Wave 4, 2026-09-18).** Passport #1's manifest is now
+registered in 0G's live Galileo Identity Registry `0x8004A818…BD9e` as agentId 420, with six
+`setMetadata` lineage writes read back byte-equal on chain (register tx `0x2a2e86d0…d2c85a`, block
+55,445,626, commit `55d1f32`). Described as **registered, not verified** — see `docs/ERC8004.md` §7.
+No mainnet write was attempted.
+
 **Mainnet status — not started.** Nothing deployed, no code at any address, wallet balance 0.
+Applies to both `Passport.sol` and the ERC-8004 mainnet registration.
 
 ---
 
@@ -186,10 +195,13 @@ should now work for mainnet.
 - [x] 04-02: Auto-acknowledge daemon + 48h scheduling — `acknowledger.ts`, 21 tests
 - [x] 04-03: Stuck-queue recovery (Bug #4 unlock) — `recovery.ts`, `POST /jobs/:id/unlock`
 
-**Status: complete.** 155 tests across 11 files. The daemon acts at +1h after `Delivered`, retries
-with backoff, and falls back to `acknowledgeDeliverable` at +36h — 12 hours of deadline still in
-hand. It was **not** in the loop for the 2026-08-14 run, which is why that model was lost; the
-daemon is the response to that failure, not evidence against it.
+**Status: complete.** 155 tests at Wave 3 close, **239 as of 2026-09-18** after the Wave 4
+HTTP-retrieval and in-place-recovery work landed here. The daemon acts at +1h after `Delivered`,
+retries with backoff, and falls back to `acknowledgeDeliverable` at +36h — 12 hours of deadline
+still in hand. It was **not** in the loop for the 2026-08-14 run, which is why that model was lost;
+the daemon is the response to that failure, not evidence against it. Since Wave 4 the retrieval no
+longer depends on the SDK on Windows — `HttpModelRetriever` downloads over plain HTTP and re-derives
+the 0G Storage root before acknowledging.
 
 **Exit criteria (BDD):**
 > **Given** a task that has reached `Delivered`
@@ -226,8 +238,9 @@ daemon is the response to that failure, not evidence against it.
 > **Then** they can independently verify the dataset on Storage Scan, the mint on chainscan,
 > and the provider's TEE attestation — without connecting anything.
 
-**Status: built and tested — 158 tests across 13 files, plus a clean `next build` (7 routes,
-88.8 kB shared JS) — with two caveats to keep straight.**
+**Status: built and tested — 158 tests at Wave 3 close, **349 as of 2026-09-18** after the Wave 4
+react-three-fiber 3D layer (hero + passport seal, `ssr:false`, SVG fallback) — plus a clean
+`next build` (7 routes) — with two caveats to keep straight.**
 
 1. **The app defaults to mock mode.** With `NEXT_PUBLIC_CRUCIBLE_API_URL` unset it serves an
    in-memory fixture store; setting it switches to the live orchestrator. Good for demoing with
@@ -276,18 +289,27 @@ platform steps are gated on an OAuth grant only the account owner can make.
 
 ---
 
-## 📋 Planned Milestone: v1.1 — Wave 4
+## 📋 Milestone: v1.1 — Wave 4 (in progress)
 
-**Goal:** Depth on the integration score and the first real users.
-**Prerequisite:** v1.0 submitted
+**Goal:** Depth on the integration score, and answer the Wave 3 judge feedback.
 **Deadline:** 2026-09-20 20:30
 
-| Phase | Focus | Research |
-|-------|-------|----------|
-| 7 | TEE attestation verification in-passport (`verifyService`) | Likely |
-| 8 | OpenSSF Model Signing (OMS) interop — standards-compliant signatures | Likely |
-| 9 | Hosted inference against fine-tuned adapters | Unlikely |
-| 10 | Passport marketplace — `authorizeUsage` as model licensing | Unlikely |
+**Landed 2026-09-18** (ahead of the phase list below):
+- **DEFECT-01 fixed** — `HttpModelRetriever` retrieves on Windows over HTTP + re-derives the 0G
+  Storage root, refuses on mismatch; provenance typed; failed runs upgrade in place. `5e089f4`.
+  Directly answers judge notmartin's Wave 3 feedback.
+- **ERC-8004 registered on Galileo testnet** — agentId 420, six lineage writes byte-equal, register
+  tx `0x2a2e86d0…d2c85a`. `55d1f32`. Registered, not verified; no mainnet write.
+- **3D UI** — react-three-fiber hero + passport seal, `ssr:false`, SVG fallback. `a709f33`.
+
+**Still open:** mainnet deploy (16661); `verifyService()` → `attestationVerified` (Phase 7 below).
+
+| Phase | Focus | Research | Status |
+|-------|-------|----------|--------|
+| 7 | TEE attestation verification in-passport (`verifyService`) | Likely | ⏳ pending — `attestationVerified` still honestly `false` |
+| 8 | OpenSSF Model Signing (OMS) interop — standards-compliant signatures | Likely | ⏳ not started |
+| 9 | Hosted inference against fine-tuned adapters | Unlikely | ⏳ not started |
+| 10 | Passport marketplace — `authorizeUsage` as model licensing | Unlikely | ⏳ not started |
 
 ## 📋 Planned Milestone: v2.0 — Wave 5 & beyond
 

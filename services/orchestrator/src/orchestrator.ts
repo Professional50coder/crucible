@@ -4,7 +4,8 @@ import type { FineTuningPort } from './broker.js'
 import { Emitter } from './events.js'
 import { Acknowledger, type AcknowledgerOptions } from './acknowledger.js'
 import { Poller } from './poller.js'
-import { QueueRecovery, type LockDetection, type UnlockResult } from './recovery.js'
+import { QueueRecovery, type LockDetection, type UnlockResult, type UpgradeResult } from './recovery.js'
+import type { ModelRetriever } from './retrieval.js'
 import { Submitter } from './submitter.js'
 import { openJobStore, type JobStore } from './store.js'
 import type { CreateJobInput, Job } from './types.js'
@@ -20,6 +21,15 @@ export interface OrchestratorOptions {
   /** How often `tick()` runs when `start()` is used. Ignored in tests. */
   pollIntervalMs?: number
   onLog?: (level: LogLevel, message: string) => void
+  /**
+   * The Windows-safe HTTP model retriever. When provided it is used both by the
+   * auto-acknowledge daemon (on platforms where the SDK download is broken) and
+   * by the recovery flow that upgrades a failed run's passport. Omitting it keeps
+   * the pure SDK behaviour — which is why the whole test suite runs without one.
+   */
+  retriever?: ModelRetriever
+  /** Overridable platform for retrieval-path selection; defaults to `process.platform`. */
+  platform?: NodeJS.Platform
   acknowledger?: Pick<
     AcknowledgerOptions,
     'targetDelayMs' | 'fallbackAfterMs' | 'latestMs' | 'deadlineMs' | 'downloadMethod' | 'teeIdleTimeoutMs' | 'teeMaxRetries'
@@ -72,19 +82,24 @@ export class Orchestrator {
       broker: options.broker,
       clock: this.#clock,
     })
+    const modelsDir = join(options.dataDir, 'models')
     this.#acknowledger = new Acknowledger({
       store: this.#store,
       broker: options.broker,
       clock: this.#clock,
-      modelsDir: join(options.dataDir, 'models'),
+      modelsDir,
       onLog: log,
+      ...(options.retriever !== undefined ? { retriever: options.retriever } : {}),
+      ...(options.platform !== undefined ? { platform: options.platform } : {}),
       ...(options.acknowledger ?? {}),
     })
     this.#recovery = new QueueRecovery({
       store: this.#store,
       broker: options.broker,
       clock: this.#clock,
+      modelsDir,
       onLog: log,
+      ...(options.retriever !== undefined ? { retriever: options.retriever } : {}),
     })
 
     // Fan every component's events out to one stream for the SSE endpoint.
@@ -170,6 +185,19 @@ export class Orchestrator {
   /** One-call escape hatch, by raw provider/task — for accounts with no local job. */
   unlock(provider: string, taskId?: string): Promise<UnlockResult> {
     return this.#recovery.unlock(provider, taskId)
+  }
+
+  /**
+   * Retrieve the real artifact for a job whose retrieval/acknowledgement had
+   * failed, validate it against the on-chain root, and upgrade its passport in
+   * place from a sentinel to an `onchain-verified` root. No second passport is
+   * ever created.
+   */
+  async retrieveJob(jobId: string): Promise<UpgradeResult> {
+    const result = await this.#recovery.retrieveAndUpgrade(jobId)
+    const updated = this.#store.get(jobId)
+    if (updated) this.#emitter.emit('job', updated)
+    return result
   }
 
   close(): void {
