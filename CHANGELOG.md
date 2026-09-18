@@ -10,6 +10,86 @@ deleted, not softened. Every correction below is dated and says what replaced it
 
 ---
 
+## 0.5.0 — 2026-09-18
+
+Wave 4. Three tracks landed on `wave4-improvements` and were re-run against the live network this
+session: the Windows retrieval defect is now fixed rather than only diagnosed, the passport lineage
+is registered in 0G's live ERC-8004 Identity Registry on testnet, and the web app gained a 3D layer
+that does not touch the on-chain values it renders. Mainnet is still not deployed.
+
+### DEFECT-01 is fixed, not just diagnosed — this answers the judge
+
+- **`HttpModelRetriever` retrieves the delivered model on Windows without the SDK.** It downloads
+  the artifact straight from the 0G Storage indexer over plain HTTP (`GET {indexer}/file?root=<modelRootHash>`)
+  — no bundled Linux `0g-storage-client` binary — then re-derives the 0G Storage Merkle root of the
+  bytes (`services/orchestrator/src/storage-hash.ts`, a dependency-free SDK-exact reimplementation
+  pinned by known-answer tests generated from `@0gfoundation/0g-storage-ts-sdk` v1.2.11 across 11
+  sizes) and **refuses to acknowledge unless it matches the on-chain `modelRootHash`.**
+  `preferHttpRetrieval()` selects this path on win32; the SDK path is retained on other platforms.
+- **Verified on this Windows machine (win32), 2026-09-18.** Downloaded the 584-byte Passport #1
+  manifest from `https://indexer-storage-testnet-turbo.0g.ai/file?root=0xc757a7e6…e1140` and
+  recomputed `zgStorageRoot = 0xc757a7e6…e1140` — an exact match. The operation that used to ENOENT
+  on Windows now completes and validates. This is a Windows-verified retrieval + integrity check; it
+  is not a new fine-tune.
+- **Adapter-hash provenance in `packages/core`.** `type AdapterHashSource = 'sentinel' | 'onchain-verified'`,
+  an optional `adapter.hashSource` manifest field (optional so legacy manifests hash identically),
+  and `assertAdapterProvenance()` / `isVerifiedAdapterRoot()` guards, so a sentinel can never be
+  published as a real adapter root.
+- **Failed runs are recoverable in place.** `QueueRecovery.retrieveAndUpgrade()` and the route
+  `POST /jobs/:id/retrieve` upgrade a failed run from sentinel to onchain-verified once the artifact
+  is retrieved and validated, with no duplicate passport.
+- This directly answers judge notmartin's Wave 3 feedback — *"Fix the path that anchored a sentinel
+  hash, and make failed training or acknowledgement attempts recoverable without confusing a
+  placeholder with a real adapter root."* Commit `5e089f4`. Tests: `packages/core` 160→172,
+  `services/orchestrator` 200→239, both green this session.
+
+### ERC-8004 option (b) executed on Galileo testnet — registered, not verified
+
+- The optional experiment §4(b) in `docs/ERC8004.md` was run. Passport #1's model manifest is now
+  registered in the **live 0G Identity Registry** (`0x8004A818BFB912233c491871b3d84c89A494BD9e`) on
+  Galileo testnet (chain 16602) as **agentId 420**, plus six `setMetadata` lineage writes, all read
+  back byte-equal on chain. `ownerOf(420)` = the dev wallet `0xf4cEE5c1…FD3EF`. `register` tx
+  [`0x2a2e86d0…d2c85a`](https://chainscan-galileo.0g.ai/tx/0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a),
+  block 55,445,626. Commit `55d1f32`. Full detail in `docs/ERC8004.md` §7; the machine-readable
+  record is `runs/erc8004-galileo.json`.
+- **Described as "registered", not "verified", on purpose.** It registers a model artifact *as* an
+  agent (a category claim); the registry is an upgradeable proxy whose admin is unidentified; and
+  Crucible is a *user* of the registries, not an implementation — so there is no claim of "ERC-8004
+  compliance". The Validation Registry that actually fits a passport is still not deployed on any
+  chain. No mainnet write was attempted.
+
+### Frontend 3D overhaul — without touching what the passport asserts
+
+- **react-three-fiber, inside the existing monochrome design system.** A wireframe "forged core" 3D
+  hero on the landing page and a small 3D seal on the passport certificate, both lazy client-only
+  (`next/dynamic` `ssr: false`) so the passport still server-renders its real on-chain values, with
+  a static SVG fallback under no-WebGL and `prefers-reduced-motion`. Deps: `three@0.170.0`,
+  `@react-three/fiber@8.18.0`, `@react-three/drei@9.122.0`. Commit `a709f33`. `apps/web` tests
+  342→349, `next build` green (7 routes) — verified this session.
+
+### ✗ Corrected — things we said that were wrong
+
+| We said | Actually | How we know |
+|---|---|---|
+| `AGENTIC_ID_ALIGNMENT.md` attributed manifest hash `0x0f46406e…` to Passport #1 | **`0x0f46406e…` is token #2's value.** Passport #1's manifest hash is `0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f` — the value anchored on `Passport.sol` for token #1 and read back off the ERC-8004 registry for agentId 420 | `verifyManifest(1, 0x4f64bfe6…)` = true; the alignment doc corrected by the ERC-8004 track |
+| DEFECT-01 was "a Windows user hits both and has no path left" | The SDK's paths are still broken, but **Crucible no longer depends on them on Windows** — `HttpModelRetriever` retrieves over HTTP and validates the 0G Storage root. Present-tense "no path left" is superseded; the historical loss stands | win32 run 2026-09-18, root recomputed to an exact match |
+
+### Still open
+
+- **Mainnet (16661).** Still not deployed. `Passport.sol` mainnet and ERC-8004 mainnet registration
+  are both pending funding of the mainnet wallet `0xD68235F859f3756c87f50619b165F68b80FDdFD4`
+  (balance 0). This remains the top open item.
+- **`verifyService()` / `attestationVerified`.** Still honestly `false` — the field is not yet
+  earned. Unchanged this wave.
+- Wave 3 scored **3 points / 202.5 USDC**. Wave 4 closes 2026-09-20.
+
+### Test totals — re-run this session
+
+`packages/core` 172 · `packages/cli` 62 · `packages/ml` 320 · `services/orchestrator` 239 ·
+`apps/web` 349 · `contracts` 104 — **1,246 total**, every suite re-run 2026-09-18.
+
+---
+
 ## 0.4.0 — 2026-08-16
 
 ### The daemon did the thing it claims

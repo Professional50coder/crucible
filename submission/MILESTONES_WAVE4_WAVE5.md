@@ -9,6 +9,12 @@
 ### Objective
 Land the Wave 3 hard requirement honestly and remove the two places a new builder currently loses a day or a model. Compute stays on Galileo (cost), Chain moves to mainnet (value) — exactly the FAQ split `submission/CHECKLIST.md:38`.
 
+> **Progress — landed 2026-09-18 (`wave4-improvements`).** Three tracks are already in, re-run against the live network this session; the plan below is now partly done.
+> - **DEFECT-01 fixed** (part of B): `HttpModelRetriever` retrieves the delivered model on Windows over plain HTTP (`GET {indexer}/file?root=<modelRootHash>`) and re-derives the 0G Storage Merkle root (`services/orchestrator/src/storage-hash.ts`) before acknowledging — no bundled Linux binary. Win32-verified 2026-09-18 (manifest root `0xc757a7e6…e1140`, exact match). Adapter-hash provenance typed; failed runs upgrade in place via `retrieveAndUpgrade()` / `POST /jobs/:id/retrieve`. Commit `5e089f4`. Answers judge notmartin. *(Note: this fixed the download/retrieval path; moving the orchestrator's upload path onto the storage SDK, as B describes, is a separate item still to do.)*
+> - **ERC-8004 registered on Galileo testnet**: Passport #1's manifest registered in the live Identity Registry `0x8004A818…BD9e` as agentId 420, six lineage writes read back byte-equal (register tx `0x2a2e86d0…d2c85a`, block 55,445,626, commit `55d1f32`). **Registered, not verified**; no mainnet write. Detail: `docs/ERC8004.md` §7.
+> - **3D UI**: react-three-fiber hero + passport seal, `ssr:false` so on-chain values still server-render, SVG fallback. Commit `a709f33`. `apps/web` 342→349 tests, next build green.
+> - **Still open:** A (mainnet deploy + mint), the C/D/E items below, and `verifyService()` (`attestationVerified` still `false`).
+
 ### Deliverables & Technical Approach
 
 #### A. Passport.sol on 0G Mainnet (16661) — source-verified + activity

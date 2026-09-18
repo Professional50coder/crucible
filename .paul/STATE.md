@@ -12,18 +12,34 @@ See: .paul/PROJECT.md
 
 **Core value:** Anyone who fine-tunes on 0G gets a working adapter and a verifiable public
 record of how it was made — without touching a CLI or losing their model to a 48-hour deadline.
-**Current focus:** v1.0 Wave 3 Submission — mainnet deployment is the one thing left that the
-rules actually require.
+**Current focus:** v1.1 Wave 4 — mainnet deployment is still the one thing the rules require that
+is not done. Wave 3 scored 3 points / 202.5 USDC.
 
-## Current Position — 2026-08-15
+## Current Position — 2026-09-18
 
-Milestone: v1.0 Wave 3 Submission
-Status: **Built and proven on testnet. Nothing on mainnet.**
+Milestone: v1.1 Wave 4 (Wave 3 closed 2026-08-30, scored **3 points / 202.5 USDC**)
+Status: **Built and proven on testnet, and three Wave 4 tracks landed. Still nothing on mainnet.**
+
+Wave 4 (committed on `wave4-improvements`, all re-run against the live network 2026-09-18):
+- **DEFECT-01 fixed** — `HttpModelRetriever` downloads the delivered model from the 0G Storage
+  indexer over plain HTTP and re-derives the 0G Storage Merkle root (`storage-hash.ts`) before
+  acknowledging, so the Windows retrieval that used to ENOENT now completes. Verified on this win32
+  machine: the manifest downloaded and its root recomputed to `0xc757a7e6…e1140`, an exact match — a
+  retrieval + integrity check, not a new fine-tune. Adapter-hash provenance typed
+  (`sentinel`/`onchain-verified`); failed runs upgrade in place via `retrieveAndUpgrade()` /
+  `POST /jobs/:id/retrieve`. Commit `5e089f4`. Answers judge notmartin's Wave 3 feedback.
+- **ERC-8004 registered on testnet** — Passport #1's manifest registered in the live Galileo
+  Identity Registry `0x8004A818…BD9e` as agentId 420, six `setMetadata` lineage writes read back
+  byte-equal, `ownerOf(420)` = dev wallet. Register tx `0x2a2e86d0…d2c85a`, block 55,445,626.
+  Commit `55d1f32`. **Registered, not verified**; no mainnet write. Detail in `docs/ERC8004.md` §7.
+- **Frontend 3D overhaul** — react-three-fiber hero + passport seal, `ssr:false` so on-chain values
+  still server-render, SVG fallback under no-WebGL / reduced-motion. Commit `a709f33`.
 
 | | |
 |---|---|
-| Code | `core`, `ml`, `orchestrator`, `contracts`, `web` all built and tested — **808 tests** |
+| Code | `core`, `ml`, `orchestrator`, `contracts`, `web` all built and tested — **1,246 tests** (see totals below) |
 | `Passport.sol` on Galileo testnet (16602) | ✅ deployed `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`, passport #1 minted, `verifyManifest` proven live |
+| ERC-8004 Identity Registry (Galileo) | ✅ agentId 420 registered, 6 lineage writes byte-equal — registered, not verified |
 | `Passport.sol` on mainnet (16661) | ❌ **not deployed.** Wallet balance 0, nonce 0. The single largest gap and a hard Wave 3 requirement — but it costs **~0.0103 0G of gas**, not 3 0G |
 | AKINDO | GitHub **connected** (`Professional50coder`), team `Crucible` exists. No product yet, nothing submitted |
 | First authenticated fine-tune | Ran on testnet. Reached delivery, then **was never acknowledged** — settled with 0G's 30% penalty. The model was lost. Detail below |
@@ -201,16 +217,21 @@ Do not conflate these; both are readable on-chain:
 
 `penaltyPercentage()` reads **30** on-chain, which is where the 30% figure comes from.
 
-## Verified test totals — all re-run 2026-08-15
+## Verified test totals — all re-run 2026-09-18
 
 | Package | Tests | Files |
 |---|---|---|
-| `packages/core` | 105 | 6 |
+| `packages/core` | 172 | — |
+| `packages/cli` | 62 | — |
 | `packages/ml` | 320 | 15 |
-| `services/orchestrator` | 155 | 11 |
-| `apps/web` | 158 | 13 |
-| `contracts` | 70 | — |
-| **Total** | **808** | |
+| `services/orchestrator` | 239 | — |
+| `apps/web` | 349 | — |
+| `contracts` | 104 | — |
+| **Total** | **1,246** | |
+
+Every suite above was re-run this session, `packages/ml` included (15 files, 320 tests, exit 0).
+The 2026-08-15 baseline was 808 (core 105, ml 320, orchestrator 155, web 158, contracts 70) before
+the Wave 4 tracks and the cli suite were counted in.
 
 Datasets: **614 valid records across 6 files**; 11 invalid fixtures, all correctly rejected
 (`node tools/verify-datasets.mjs`).
