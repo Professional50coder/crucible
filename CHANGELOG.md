@@ -15,7 +15,11 @@ deleted, not softened. Every correction below is dated and says what replaced it
 Wave 4. Three tracks landed on `wave4-improvements` and were re-run against the live network this
 session: the Windows retrieval defect is now fixed rather than only diagnosed, the passport lineage
 is registered in 0G's live ERC-8004 Identity Registry on testnet, and the web app gained a 3D layer
-that does not touch the on-chain values it renders. Mainnet is still not deployed.
+that does not touch the on-chain values it renders. The fix has since been exercised end to end: a
+fresh fine-tune was retrieved, acknowledged and minted on native Windows as **Passport #3** — the
+first fully honest passport, carrying a real on-chain-verified adapter root — and `verifyService`
+now passes, so its `attestationVerified` flag is earned rather than reported false. Mainnet is still
+not deployed.
 
 ### DEFECT-01 is fixed, not just diagnosed — this answers the judge
 
@@ -29,8 +33,9 @@ that does not touch the on-chain values it renders. Mainnet is still not deploye
 - **Verified on this Windows machine (win32), 2026-09-18.** Downloaded the 584-byte Passport #1
   manifest from `https://indexer-storage-testnet-turbo.0g.ai/file?root=0xc757a7e6…e1140` and
   recomputed `zgStorageRoot = 0xc757a7e6…e1140` — an exact match. The operation that used to ENOENT
-  on Windows now completes and validates. This is a Windows-verified retrieval + integrity check; it
-  is not a new fine-tune.
+  on Windows now completes and validates. This was, at the time, a Windows-verified retrieval +
+  integrity check rather than a fine-tune; a full fresh fine-tune on Windows followed — see
+  **Passport #3** below.
 - **Adapter-hash provenance in `packages/core`.** `type AdapterHashSource = 'sentinel' | 'onchain-verified'`,
   an optional `adapter.hashSource` manifest field (optional so legacy manifests hash identically),
   and `assertAdapterProvenance()` / `isVerifiedAdapterRoot()` guards, so a sentinel can never be
@@ -42,6 +47,45 @@ that does not touch the on-chain values it renders. Mainnet is still not deploye
   hash, and make failed training or acknowledgement attempts recoverable without confusing a
   placeholder with a real adapter root."* Commit `5e089f4`. Tests: `packages/core` 160→172,
   `services/orchestrator` 200→239, both green this session.
+
+### Passport #3 — the first fully honest passport, forged end to end on native Windows
+
+This is the fix exercised, not just described: the exact operation that ENOENTed and lost run 1's
+model — retrieve a delivered ~93 MB adapter on native win32 and acknowledge it — was completed, and
+it produced a passport that carries a real, on-chain-verified adapter **and** an earned attestation.
+
+- **A complete fine-tune, retrieved → acknowledged → minted on win32.** Task
+  `d06d00e2-965b-430c-bf46-4d6444ee1c47` ran `Init → … → Delivered → UserAcknowledged`; its
+  93,642,471-byte adapter was pulled from 0G Storage on this Windows host through `HttpModelRetriever`
+  and its 0G Storage Merkle root re-derived to the on-chain model root
+  `0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c`
+  (`adapter.hashSource: onchain-verified`) **before** acknowledgement, then minted as **Passport #3**
+  (token 3). `ownerOf(3)` = the dev wallet `0xf4cEE5c1…FD3EF`. acknowledge tx
+  [`0xaf0a48b0…01290b1`](https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1)
+  block 55,456,191; mint tx
+  [`0x1dde66f4…66fff3`](https://chainscan-galileo.0g.ai/tx/0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3)
+  block 55,457,526.
+- **A stranger can verify it end to end.** The manifest is on 0G Storage at root `0xdfaa9b83…b216a7`
+  (upload tx `0x990ea1f4…3cc015`); its keccak256 is the anchored hash `0x2e38e49c…85ef13`, and
+  `verifyManifest(3, 0x2e38e49c…)` returns **true** on-chain. Dataset root `0xa5051ae7…9e7dbfd`
+  (the sentiment set, 61 chat examples), reused at its existing root — no upload. Settled task fee
+  **0.0118528 0G**, charged to the compute sub-account; the wallet paid only **~0.00265 0G** of gas
+  for acknowledge + mint + manifest upload.
+- **`verifyService` passes, so `attestationVerified` is earned — for Passport #3.** `runs/attestation-testnet.json`
+  records `success: true`: the TEE signer in the provider's attestation report (`0x24135b4B…5583A`)
+  matches the address registered on-chain for that provider, and the compose hash matches its own
+  event log. Passport #3 is the first Crucible passport minted with `tee.attestationVerified: true`,
+  and the flag stands for exactly those two checks. Passports #1 and #2 keep `false` in their
+  immutable manifests and are not restated.
+- **The 93 MB download dropped once and resumed — a follow-up is flagged.** The first attempt died
+  mid-stream at 61,351,230 bytes (schannel "server closed abruptly"); a resumed retry completed the
+  full 93,642,471 bytes. Run 4 got resume from a curl `fetchImpl` passed into the retriever (transport
+  hardening only; the validation is unchanged). **Known follow-up:** the in-code retriever's own
+  transport (`services/orchestrator/src/retrieval.ts`) should gain streaming + resume for artifacts
+  over ~60 MB — it does not have it yet.
+- Three honest passports now stand apart: #1 a labelled sentinel adapter (unrecoverable), #2 a real
+  adapter retrieved from Linux (attestation `false`), **#3 a real adapter retrieved on Windows with
+  an earned attestation.** Recorded in `runs/run4-e2e.json` and `runs/run4/mint.json`.
 
 ### ERC-8004 option (b) executed on Galileo testnet — registered, not verified
 
@@ -73,14 +117,21 @@ that does not touch the on-chain values it renders. Mainnet is still not deploye
 |---|---|---|
 | `AGENTIC_ID_ALIGNMENT.md` attributed manifest hash `0x0f46406e…` to Passport #1 | **`0x0f46406e…` is token #2's value.** Passport #1's manifest hash is `0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f` — the value anchored on `Passport.sol` for token #1 and read back off the ERC-8004 registry for agentId 420 | `verifyManifest(1, 0x4f64bfe6…)` = true; the alignment doc corrected by the ERC-8004 track |
 | DEFECT-01 was "a Windows user hits both and has no path left" | The SDK's paths are still broken, but **Crucible no longer depends on them on Windows** — `HttpModelRetriever` retrieves over HTTP and validates the 0G Storage root. Present-tense "no path left" is superseded; the historical loss stands | win32 run 2026-09-18, root recomputed to an exact match |
+| `attestationVerified` is "still honestly `false` — the field is not yet earned … unchanged this wave" | **Earned on Passport #3.** `verifyService` passes on the provider (signer + compose hash both match, `runs/attestation-testnet.json`), so #3 was minted with `tee.attestationVerified: true`; the flag names exactly those two checks. #1 and #2 keep `false` in their immutable manifests | the mint manifest `runs/run4/mint.json` (`attestationVerified: true`) and the passing `verifyService` report |
+| "No completed end-to-end fine-tune on Windows" | **Done — Passport #3.** A fresh fine-tune was retrieved, acknowledged and minted on native win32 (task `d06d00e2…`), adapter root `0x113b79c3…8a396c` verified on-chain | `runs/run4-e2e.json`; mint tx `0x1dde66f4…66fff3`, block 55,457,526 |
 
 ### Still open
 
 - **Mainnet (16661).** Still not deployed. `Passport.sol` mainnet and ERC-8004 mainnet registration
   are both pending funding of the mainnet wallet `0xD68235F859f3756c87f50619b165F68b80FDdFD4`
   (balance 0). This remains the top open item.
-- **`verifyService()` / `attestationVerified`.** Still honestly `false` — the field is not yet
-  earned. Unchanged this wave.
+- **`verifyService()` / `attestationVerified`.** ~~Still honestly `false`.~~ **Now earned on
+  Passport #3** — `verifyService` passes (signer + compose match) and #3 carries
+  `attestationVerified: true`. The remaining honest limit is that the flag stands for those two
+  checks, not full TDX quote validation via `dstack-verifier`; #1 and #2 keep `false`.
+- **`retrieval.ts` transport hardening.** The in-code retriever needs streaming + resume for
+  artifacts over ~60 MB — run 4's 93 MB download dropped once at 61,351,230 bytes (schannel) and only
+  a curl `fetchImpl` with resume completed it. Not yet in `services/orchestrator/src/retrieval.ts`.
 - Wave 3 scored **3 points / 202.5 USDC**. Wave 4 closes 2026-09-20.
 
 ### Test totals — re-run this session

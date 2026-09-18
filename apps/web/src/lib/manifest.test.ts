@@ -149,7 +149,7 @@ describe('fixture passports', () => {
     // A demo hash rendered beside a live explorer link teaches the reader that
     // the links are decorative. The UI keys off this flag to refuse that.
     const passports = buildPassports()
-    expect(passports.filter((p) => p.provenance === 'chain')).toHaveLength(2)
+    expect(passports.filter((p) => p.provenance === 'chain')).toHaveLength(3)
     expect(passports.every((p) => p.provenance === 'chain' || p.provenance === 'demo')).toBe(true)
   })
 

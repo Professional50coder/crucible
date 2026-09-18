@@ -82,6 +82,19 @@ export interface PassportManifest {
   adapter: {
     rootHash: string
     sizeBytes?: number
+    /**
+     * Where the adapter root hash came from, when the record states it.
+     *
+     * `sentinel` — `keccak256("crucible:adapter-not-retrieved:<taskId>")`; there
+     *   is no artifact behind it and the preimage proves so.
+     * `onchain-verified` — the artifact was downloaded and its 0G Storage Merkle
+     *   root was re-derived to match the root the provider committed on chain,
+     *   before anything was acknowledged. A real root, checked against the chain.
+     *
+     * Part of the anchored manifest document on records that carry it, so it is
+     * included in the canonical hash rather than bolted on for display.
+     */
+    hashSource?: 'sentinel' | 'onchain-verified'
   }
   fee: FeeBreakdown
   tee: {
@@ -121,6 +134,15 @@ export type RecordProvenance = 'chain' | 'demo'
  */
 export interface AdapterOrigin {
   kind: 'retrieved' | 'sentinel'
+  /**
+   * Where the adapter root came from, mirroring `manifest.adapter.hashSource`.
+   *
+   * `sentinel` — a placeholder; no artifact exists.
+   * `onchain-verified` — a real root, re-derived from the downloaded bytes and
+   *   matched against the root the provider committed on chain before
+   *   acknowledgement. This is what a passport must never let a sentinel imitate.
+   */
+  hashSource?: 'sentinel' | 'onchain-verified'
   /** The exact string hashed to produce a sentinel, so a reader can recompute it. */
   sentinelPreimage?: string
   /** Why the adapter was never retrieved. Shown verbatim. */

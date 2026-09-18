@@ -13,14 +13,35 @@ See: .paul/PROJECT.md
 **Core value:** Anyone who fine-tunes on 0G gets a working adapter and a verifiable public
 record of how it was made — without touching a CLI or losing their model to a 48-hour deadline.
 **Current focus:** v1.1 Wave 4 — mainnet deployment is still the one thing the rules require that
-is not done. Wave 3 scored 3 points / 202.5 USDC.
+is not done. The honest end-to-end run now exists: **Passport #3** was fine-tuned, retrieved,
+acknowledged and minted on native Windows, with an earned attestation. Wave 3 scored 3 points /
+202.5 USDC.
 
 ## Current Position — 2026-09-18
 
 Milestone: v1.1 Wave 4 (Wave 3 closed 2026-08-30, scored **3 points / 202.5 USDC**)
-Status: **Built and proven on testnet, and three Wave 4 tracks landed. Still nothing on mainnet.**
+Status: **Built and proven on testnet; three Wave 4 tracks landed, and the honest end-to-end run
+now exists — Passport #3, fine-tuned and acknowledged on native Windows with an earned attestation.
+Still nothing on mainnet.**
 
 Wave 4 (committed on `wave4-improvements`, all re-run against the live network 2026-09-18):
+- **Passport #3 — the first fully honest passport, forged end to end on native Windows.** Task
+  `d06d00e2-965b-430c-bf46-4d6444ee1c47` ran `Init → … → Delivered → UserAcknowledged`; its
+  93,642,471-byte adapter was pulled from 0G Storage on this win32 host via `HttpModelRetriever`,
+  re-derived to the on-chain model root `0x113b79c3…8a396c` (`hashSource: onchain-verified`) before
+  acknowledgement, and minted as token 3. `ownerOf(3)` = the dev wallet. `verifyManifest(3, 0x2e38e49c…)`
+  = **true** (manifest on 0G Storage at root `0xdfaa9b83…b216a7`). mint tx `0x1dde66f4…66fff3` (block
+  55,457,526), ack tx `0xaf0a48b0…01290b1` (block 55,456,191). This is the exact operation that
+  ENOENTed and lost run 1's model, now completed. Detail below; record `runs/run4-e2e.json`,
+  `runs/run4/mint.json`.
+- **`verifyService` now passes → `attestationVerified` earned on #3.** `runs/attestation-testnet.json`
+  reads `success: true` (signer `0x24135b4B…5583A` matches on-chain, compose hash matches event log),
+  so Passport #3 is the first minted with `tee.attestationVerified: true`. The flag stands for those
+  two checks, not full TDX quote validation; passports #1 and #2 keep `false` in their immutable
+  manifests.
+- **Known follow-up:** the in-code retriever's transport (`services/orchestrator/src/retrieval.ts`)
+  needs streaming + resume — run 4's 93 MB download dropped once at 61,351,230 bytes (schannel) and
+  only a curl `fetchImpl` with resume completed it. Not yet in `retrieval.ts`.
 - **DEFECT-01 fixed** — `HttpModelRetriever` downloads the delivered model from the 0G Storage
   indexer over plain HTTP and re-derives the 0G Storage Merkle root (`storage-hash.ts`) before
   acknowledging, so the Windows retrieval that used to ENOENT now completes. Verified on this win32
@@ -38,11 +59,13 @@ Wave 4 (committed on `wave4-improvements`, all re-run against the live network 2
 | | |
 |---|---|
 | Code | `core`, `ml`, `orchestrator`, `contracts`, `web` all built and tested — **1,246 tests** (see totals below) |
-| `Passport.sol` on Galileo testnet (16602) | ✅ deployed `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`, passport #1 minted, `verifyManifest` proven live |
+| `Passport.sol` on Galileo testnet (16602) | ✅ deployed `0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`, passports #1–#3 minted, `verifyManifest` proven live |
 | ERC-8004 Identity Registry (Galileo) | ✅ agentId 420 registered, 6 lineage writes byte-equal — registered, not verified |
+| **Passport #3 — honest win32 end-to-end run** | ✅ token 3, real on-chain-verified adapter `0x113b79c3…8a396c`, `attestationVerified: true`, `verifyManifest(3)` = true. mint `0x1dde66f4…66fff3`, block 55,457,526. `runs/run4-e2e.json` |
+| TEE attestation (`verifyService`) | ✅ **passes** on the provider (signer + compose match) — earned on #3 (`true`); #1 and #2 keep `false`. Not full TDX quote validation |
 | `Passport.sol` on mainnet (16661) | ❌ **not deployed.** Wallet balance 0, nonce 0. The single largest gap and a hard Wave 3 requirement — but it costs **~0.0103 0G of gas**, not 3 0G |
 | AKINDO | GitHub **connected** (`Professional50coder`), team `Crucible` exists. No product yet, nothing submitted |
-| First authenticated fine-tune | Ran on testnet. Reached delivery, then **was never acknowledged** — settled with 0G's 30% penalty. The model was lost. Detail below |
+| First authenticated fine-tune (run 1) | Ran on testnet. Reached delivery, then **was never acknowledged** — settled with 0G's 30% penalty. The model was lost. This is what Passport #3 later repaired on the same platform. Detail below |
 | Contract source-verified on the explorer | ✅ verified on Galileo — `Passport`, `v0.8.19+commit.7dd6d404`, `paris`, optimizer 200 |
 
 **Target network for the fine-tuning flow is testnet** (decided 2026-08-14). Testnet is 60% more
@@ -131,6 +154,46 @@ the real values from the 2026-08-14 run. Its **adapter hash is a deliberate sent
 It is deliberately not a plausible-looking root hash: anyone who recomputes it gets the sentinel
 and knows immediately that no adapter exists. Every document that mentions passport #1 says so.
 
+## Passport #3 — the honest end-to-end run — read back from chain 2026-09-18
+
+Passport #3 is what passport #1 was a smoke test for: a completed fine-tune carrying a **real**
+adapter root that was independently retrieved and validated, minted on the same native-Windows host
+that lost run 1's model. Task `d06d00e2-965b-430c-bf46-4d6444ee1c47` progressed
+`Init → SettingUp → SetUp → Training → Trained → Delivering → Delivered → UserAcknowledged`; the
+adapter was pulled from 0G Storage by `HttpModelRetriever` and its 0G Storage Merkle root re-derived
+to match the on-chain model root **before** acknowledgement.
+
+| Fact | Value |
+|---|---|
+| `ownerOf(3)` | `0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF` (dev wallet) |
+| Mint tx | `0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3` · block 55457526 · gas 293,502 |
+| Acknowledge tx | `0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1` · block 55456191 · gas 49,263 · status 1 |
+| Adapter root (on-chain verified) | `0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c` · 93,642,471 bytes · `hashSource: onchain-verified` |
+| Manifest on 0G Storage | root `0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7` · upload tx `0x990ea1f4…3cc015` |
+| Anchored manifest hash | `0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13` |
+| `verifyManifest(3, anchored)` | **true** (also verified by downloading the manifest back and hashing it) |
+| Dataset root | `0xa5051ae7…9e7dbfd` — the sentiment set, 61 chat examples, reused at its existing root (no upload) |
+| `tee.attestationVerified` | **true** — earned, see below |
+| Task fee | 0.0118528 0G, charged to the compute sub-account (identical to runs 1–3) |
+| Wallet gas | ~0.00265 0G for acknowledge + mint + manifest upload |
+
+**The milestone.** This is the exact operation that ENOENTed on Windows and cost run 1 its model,
+now completed on native win32 through the fixed `HttpModelRetriever`. The 93 MB download dropped once
+mid-stream at 61,351,230 bytes (schannel "server closed abruptly") and a resumed retry completed the
+full 93,642,471 bytes — which is why the in-code retriever's transport still needs streaming/resume
+(known follow-up; run 4 got resume from a curl `fetchImpl`, not from `retrieval.ts`).
+
+**Attestation, now earned.** `broker.fineTuning.verifyService()` against the provider returns
+`success: true` (`runs/attestation-testnet.json`): the TEE signer `0x24135b4Bd964872284728F79F5f17eB874C5583A`
+in the attestation report matches the address registered on-chain, and the compose hash matches the
+event log. Passport #3 is minted with `attestationVerified: true`, and the flag stands for exactly
+those two checks — the full TDX quote is not yet cryptographically validated via `dstack-verifier`.
+Passports #1 and #2 retain `false` in their immutable manifests; the flag is not restated for them.
+
+**Three passports, three honest positions:** #1 a labelled sentinel adapter (unrecoverable), #2 a
+real adapter retrieved from Linux (attestation `false`), **#3 a real adapter retrieved on Windows
+with an earned attestation.**
+
 ## The fine-tuning run: what actually happened
 
 The authenticated flow ran end to end up to delivery and then **failed at acknowledgement**. This
@@ -183,8 +246,12 @@ On-chain it reads `modelRootHash 0x40a5f256…`, `acknowledged: false`, **`settl
 so its acknowledge window is still open and the outcome is genuinely undecided.
 
 Nothing about run 2 may be claimed anywhere until it either produces an adapter on disk or is
-settled. If it succeeds it is the honest end-to-end demo this project has not had; if it fails
-the same way, that is a second data point for the same finding. Either way, wait for it.
+settled. If it succeeds it is a second honest end-to-end run; if it fails the same way, that is a
+second data point for the same finding. Either way, wait for it.
+
+> **Update 2026-09-18:** the project no longer lacks an honest end-to-end demo — **Passport #3**
+> above is one, retrieved and acknowledged on native Windows with an earned attestation. (Run 2 was
+> also retrieved earlier from Linux and minted as passport #2.)
 
 ### Why the acknowledgement failed
 

@@ -24,10 +24,12 @@ issues every resulting model a verifiable birth certificate — base model, data
 and TEE provider — canonically hashed, anchored on 0G Chain, and minted as an ERC-7857-*style*
 Agentic ID.
 
-**What changed this wave:** the defect that lost a model on Windows is now **fixed, not just
-diagnosed**; the passport lineage is **registered in 0G's live ERC-8004 Identity Registry** on
-testnet; and the app gained a **3D layer that does not touch the on-chain values it renders**. All
-three were re-run against the live network on 2026-09-18.
+**What changed this wave:** the defect that lost a model on Windows is now **fixed and exercised end
+to end** — a fresh fine-tune was retrieved, acknowledged and minted on native Windows as **Passport
+#3**, the first fully honest passport (real on-chain-verified adapter **and** an earned attestation);
+the passport lineage is **registered in 0G's live ERC-8004 Identity Registry** on testnet; and the
+app gained a **3D layer that does not touch the on-chain values it renders**. All were re-run against
+the live network on 2026-09-18.
 
 **Where it is not finished:** `Passport.sol` is **still not on 0G mainnet (16661)**. That is the
 hard requirement carried over from Wave 3 and it is the largest thing still open. It is stated here
@@ -35,7 +37,45 @@ rather than left for a judge to discover.
 
 ---
 
-### 1 · The judge's fix: DEFECT-01 is resolved, and failed runs are recoverable
+### 1 · The flagship: Passport #3 — an honest end-to-end fine-tune on native Windows
+
+Run 1 lost its model at exactly this step — retrieve a ~93 MB delivered adapter on Windows and
+acknowledge it — and forfeited 30% of the fee. This wave that operation was completed on the same
+kind of machine, and it produced the project's first fully honest passport.
+
+- **Retrieved → acknowledged → minted, all on win32.** Task
+  `d06d00e2-965b-430c-bf46-4d6444ee1c47` ran `Init → … → Delivered → UserAcknowledged`. Its
+  93,642,471-byte adapter was pulled from 0G Storage on this Windows host through `HttpModelRetriever`
+  and re-derived to the on-chain model root
+  `0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c`
+  (`adapter.hashSource: onchain-verified`) **before** acknowledgement, then minted as **Passport #3**.
+  `ownerOf(3)` = the dev wallet.
+- **The proof anyone can run.** The manifest lives on 0G Storage at root `0xdfaa9b83…b216a7`; its
+  anchored hash is `0x2e38e49c…85ef13`, and **`verifyManifest(3, 0x2e38e49c…)` returns `true`** on
+  chain — checkable with no wallet and no clone of the repo. Dataset root `0xa5051ae7…9e7dbfd`
+  (sentiment set, 61 chat examples). Settled task fee **0.0118528 0G** on the compute sub-account;
+  wallet gas **~0.00265 0G** for acknowledge + mint + upload.
+- **`verifyService` passes, so `attestationVerified` is earned.** `runs/attestation-testnet.json`
+  reads `success: true` — the provider's TEE signer (`0x24135b4B…5583A`) matches the on-chain
+  registration and the compose hash matches its event log. Passport #3 is the first minted with
+  `tee.attestationVerified: true`; the flag stands for those two checks (not full TDX quote
+  validation). Passports #1 and #2 keep `false` in their immutable manifests.
+- **On-chain evidence.** acknowledge tx
+  [`0xaf0a48b0…01290b1`](https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1)
+  block 55,456,191 · mint tx
+  [`0x1dde66f4…66fff3`](https://chainscan-galileo.0g.ai/tx/0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3)
+  block 55,457,526. Full record: `runs/run4-e2e.json`, `runs/run4/mint.json`.
+
+Three passports now stand distinct: **#1** a labelled sentinel adapter (unrecoverable), **#2** a real
+adapter retrieved from Linux (attestation `false`), **#3** a real adapter retrieved on Windows with
+an earned attestation.
+
+> **One honest follow-up, flagged not hidden:** the 93 MB download dropped once at 61,351,230 bytes
+> (schannel close) and only a curl `fetchImpl` with resume completed it. The in-code retriever's own
+> transport (`services/orchestrator/src/retrieval.ts`) still needs streaming + resume for artifacts
+> over ~60 MB — this is a known open item, not something claimed as already shipped.
+
+### 2 · The judge's fix: DEFECT-01 is resolved, and failed runs are recoverable
 
 Wave 3's headline defect was that on Windows + Node 22 the 0G SDK's `acknowledgeModel` cannot
 retrieve a delivered model on either path — the 0G Storage path spawns a Linux ELF binary that
@@ -67,7 +107,7 @@ confusing a placeholder with a real adapter root."* Both halves are done (commit
 
 Tests: `packages/core` 160→172, `services/orchestrator` 200→239, both green this session.
 
-### 2 · ERC-8004: the passport lineage is registered on-chain — registered, not verified
+### 3 · ERC-8004: the passport lineage is registered on-chain — registered, not verified
 
 `docs/ERC8004.md` worked out in Wave 3 that a Model Passport structurally fits the ERC-8004
 Validation Registry, which is not deployed on any chain, and that the Identity Registry that *is*
@@ -98,7 +138,7 @@ is a **user** of these registries, not an implementation — nothing here is "ER
 > manifest hash is `0x4f64bfe6…059890f`, as `verifyManifest(1, …)` and the registry read-back both
 > confirm.
 
-### 3 · A 3D UI that leaves the evidence untouched
+### 4 · A 3D UI that leaves the evidence untouched
 
 react-three-fiber was added **inside the existing monochrome design system**, not over it:
 
@@ -119,6 +159,7 @@ react-three-fiber was added **inside the existing monochrome design system**, no
 |---|---|
 | `Passport.sol` | [`0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7`](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7) — source-verified, `v0.8.19` / `paris` / 200 |
 | Passport #1 / #2 mints | [`0xb608a8a5…00b3b1`](https://chainscan-galileo.0g.ai/tx/0xb608a8a5eeed36baa04c338ffed54b93458b1486b0cc66739fe36d68e400b3b1) · [`0x60094f63…420324`](https://chainscan-galileo.0g.ai/tx/0x60094f63813827391266d7f77c02649342b435d86d297964d499d2deae420324) |
+| **Passport #3** — honest win32 run | mint [`0x1dde66f4…66fff3`](https://chainscan-galileo.0g.ai/tx/0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3) · ack [`0xaf0a48b0…01290b1`](https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1) · adapter root `0x113b79c3…8a396c` · `verifyManifest(3, 0x2e38e49c…)` = **true** · `attestationVerified: true` |
 | ERC-8004 registration | agentId **420** · register tx [`0x2a2e86d0…d2c85a`](https://chainscan-galileo.0g.ai/tx/0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a) · block 55,445,626 |
 | Manifest on 0G Storage | root `0xc757a7e6…e1140` · 584 bytes · re-derived on Windows this wave to an exact match |
 | Daemon acknowledgement tx | [`0x4e2c81e2…7e4cfa`](https://chainscan-galileo.0g.ai/tx/0x4e2c81e237efc53623d869d361f212bf649ff132dc6274fbb18dc0d80c7e4cfa) · block 49716408 — sent by the orchestrator itself |
@@ -133,12 +174,13 @@ react-three-fiber was added **inside the existing monochrome design system**, no
   `0xD68235F859f3756c87f50619b165F68b80FDdFD4` (balance 0). Deploy + mint is a measured
   **~0.0103 0G** of gas at 4 gwei; the block is holding any mainnet 0G at all, not engineering.
   `tools/erc8004-register.mjs` knows the mainnet registry address but refuses to broadcast to it.
-- **`verifyService()` / `attestationVerified` is still `false`.** The TEE signer is recorded but
-  the attestation is not verified end to end, so the field is not yet earned. Unchanged this wave.
-- **No completed end-to-end fine-tune on Windows through the product.** The retrieval + integrity
-  path is now proven on Windows against real 0G Storage bytes, but a fresh fine-tune carried all
-  the way to a retrieved adapter on win32 has not been run. Passport #1's adapter hash remains a
-  labelled sentinel; its artifact is unrecoverable (empty `encryptedSecret`).
+- **`retrieval.ts` transport hardening — open.** The in-code retriever needs streaming + resume for
+  artifacts over ~60 MB; run 4's 93 MB download dropped once at 61,351,230 bytes (schannel) and was
+  completed only by a curl `fetchImpl` with resume. Not yet folded into
+  `services/orchestrator/src/retrieval.ts`.
+- **End-to-end fine-tune through the orchestrator daemon on Windows — not yet.** Passport #3 was
+  driven by the `tools/run4-*` scripts calling the real `HttpModelRetriever` and validation; carrying
+  the same flow through `POST /jobs` and the daemon on win32 has not been run.
 
 ### Test totals — every suite re-run 2026-09-18
 

@@ -148,6 +148,15 @@ export function PassportView({
   /** The adapter field, and whether it holds an artifact or an admission. */
   const adapter = record.adapterOrigin ?? { kind: 'retrieved' as const }
   const sentinel = adapter.kind === 'sentinel'
+  /**
+   * Adapter provenance and attestation, as two distinct, legible states. A
+   * sentinel (no artifact) must never read as a real root, and a re-derived,
+   * chain-matched root must read as exactly that. `hashSource` is carried on the
+   * manifest because it is part of the anchored document; the origin mirrors it.
+   */
+  const adapterVerified =
+    manifest.adapter.hashSource === 'onchain-verified' || adapter.hashSource === 'onchain-verified'
+  const attestationVerified = manifest.tee.attestationVerified
 
   /**
    * The deliverable was never acknowledged, so 0G destroyed the artifact and
@@ -293,6 +302,40 @@ export function PassportView({
                   {record.summary}
                 </p>
               ) : null}
+
+              {/* Adapter provenance and attestation, as two unmistakable states,
+                  read before any hash below. A sentinel is never allowed to read
+                  like a real root, and an unverified attestation never like a
+                  verified one. */}
+              <div
+                className="mt-4 flex flex-wrap items-center gap-1.5"
+                data-testid="provenance-badges"
+              >
+                {sentinel ? (
+                  <Badge tone="danger">
+                    <AlertIcon className="h-3 w-3" />
+                    adapter · sentinel (not retrieved)
+                  </Badge>
+                ) : adapterVerified ? (
+                  <Badge tone="ok">
+                    <CheckIcon className="h-3 w-3" />
+                    adapter · on-chain verified
+                  </Badge>
+                ) : (
+                  <Badge>adapter · retrieved</Badge>
+                )}
+                {attestationVerified ? (
+                  <Badge tone="ok">
+                    <CheckIcon className="h-3 w-3" />
+                    attestation · verified
+                  </Badge>
+                ) : (
+                  <Badge tone="warn">
+                    <AlertIcon className="h-3 w-3" />
+                    attestation · not verified
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* The record quad, mirroring how an attestation states its metadata:
@@ -363,9 +406,11 @@ export function PassportView({
               tone={
                 manifest.task.state === 'Failed' || lost
                   ? 'danger'
-                  : sentinel || manifest.task.state !== 'Finished'
+                  : sentinel
                     ? 'warn'
-                    : 'ok'
+                    : record.settlement?.acknowledged === true || manifest.task.state === 'Finished'
+                      ? 'ok'
+                      : 'warn'
               }
               hint={
                 lost
@@ -376,7 +421,9 @@ export function PassportView({
                       ? (record.durationSeconds
                           ? formatElapsed(record.durationSeconds)
                           : 'model retrieved')
-                      : 'did not reach Finished'
+                      : record.settlement?.acknowledged === true
+                        ? 'acknowledged on chain'
+                        : 'did not reach Finished'
               }
             />
           </dl>
