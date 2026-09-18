@@ -174,6 +174,14 @@ unvalidated would be the same species of error as reading `progress: Finished` a
 model was acknowledged. Whatever the field asserts, the passport must name which steps stand
 behind it.
 
+> **Update 2026-09-18 — the decision is made, for Passport #3.** `verifyService` passes on the
+> provider (`runs/attestation-testnet.json`, `success: true`), so **Passport #3 was minted with
+> `tee.attestationVerified: true`** — the first Crucible passport to carry it. The flag stands for
+> exactly the two checks above: the TEE signer matches the on-chain registration, and the compose
+> hash matches the event log. It does **not** yet assert full TDX quote validation via
+> `dstack-verifier` — that remains the open, stated limit. Passports #1 and #2 keep `false` in their
+> immutable manifests; the flag is not restated for them.
+
 One incidental oddity, recorded because it is checkable and unexplained: the report's Docker image
 list reads `leechael/phala-cloud-nextjs-starter:latest\\n` — a Next.js starter image, carrying a
 literal escaped newline. That is what the provider published.
@@ -588,6 +596,29 @@ broker.fineTuning.acknowledgeModel(provider, taskId, outDir, { downloadMethod: '
 ```
 
 Do not rely on `'auto'`, and do not rely on `'tee'` at all until the stream bug is fixed.
+
+### ✅ AND THEN IT CAME BACK ON WINDOWS — 2026-09-18, no WSL
+
+The workaround above was "run it from Linux." That is no longer the only path. A fresh fine-tune
+(task `d06d00e2-965b-430c-bf46-4d6444ee1c47`) was retrieved, acknowledged and minted **on native
+win32** — the exact platform that ENOENTed and lost task `10551604` — using Crucible's own
+`HttpModelRetriever` instead of the SDK. It downloads straight from the 0G Storage indexer over
+plain HTTP (`GET {indexer}/file?root=<modelRootHash>`), spawns no binary, and re-derives the 0G
+Storage Merkle root of the bytes to match the on-chain model root
+`0x113b79c3…8a396c` **before** acknowledging. Result: **Passport #3**, real adapter root, earned
+attestation, `verifyManifest(3)` = true. Full record `runs/run4-e2e.json`, `runs/run4/mint.json`.
+
+**One real transport wrinkle, recorded because it will bite the next person.** The 93,642,471-byte
+download **failed on its first attempt at 61,351,230 bytes** — schannel "server closed abruptly",
+the same class of mid-stream drop that plagues large HTTPS reads on Windows. A resumed retry
+(HTTP `Range` / curl `-C -`) completed the full file, and the re-derived root matched exactly. Run 4
+got resume from a curl `fetchImpl` handed into the retriever — **transport hardening only, the
+validation is unchanged.**
+
+> **Known follow-up, not yet done:** the in-code retriever's own transport
+> (`services/orchestrator/src/retrieval.ts`) does **not** yet stream to disk with resume. It needs
+> to, for any artifact over ~60 MB, or it will drop the same way without the curl wrapper. Do not
+> read this note as a claim that `retrieval.ts` already resumes — it does not.
 
 ---
 

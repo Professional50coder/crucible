@@ -21,7 +21,9 @@ pivot to inference provenance was never needed.
 
 **v1.1 Wave 4** (Wave 3 closed 2026-08-30, scored **3 points / 202.5 USDC**)
 Status: In progress — three Wave 4 tracks landed 2026-09-18 (DEFECT-01 fixed, ERC-8004 registered on
-testnet, 3D UI); the mainnet deployment carried over from Wave 3 is still not done
+testnet, 3D UI), plus **Passport #3**: the first honest end-to-end fine-tune retrieved, acknowledged
+and minted on native Windows, and `verifyService` now passes so its `attestationVerified` is earned.
+The mainnet deployment carried over from Wave 3 is still not done
 Wave 3 phases: **4 of 6 complete** (Phase 3 mainnet and Phase 6 publish/AKINDO still open)
 
 ## Phases
@@ -159,6 +161,13 @@ stored on 0G Storage" clause is now literally satisfied, not just structurally.
 One caveat stands: passport #1 is a smoke test of the contract, not a completed fine-tune, and
 its adapter hash is a labelled sentinel.
 
+**Testnet now carries a completed, honest fine-tune (Wave 4, 2026-09-18).** Passport #3 (token 3)
+was fine-tuned, retrieved, acknowledged and minted on native Windows via `HttpModelRetriever`,
+carrying a real on-chain-verified adapter root `0x113b79c3…8a396c` and `attestationVerified: true`;
+`verifyManifest(3, 0x2e38e49c…)` returns **true**. mint tx `0x1dde66f4…66fff3`, block 55,457,526.
+So the Phase 3 exit criterion is now met by a real completed run, not only by the smoke-test mint.
+Detail in `.paul/STATE.md`; record `runs/run4-e2e.json`, `runs/run4/mint.json`.
+
 **Source verification — done on Galileo.** Confirmed via the explorer's own `getsourcecode`
 endpoint: `Passport`, `v0.8.19+commit.7dd6d404`, `EVMVersion paris`, optimizer 200 runs. The
 blocker was the API path — 0G chainscan is a Conflux-Scan derivative whose Etherscan-compatible
@@ -295,6 +304,12 @@ platform steps are gated on an OAuth grant only the account owner can make.
 **Deadline:** 2026-09-20 20:30
 
 **Landed 2026-09-18** (ahead of the phase list below):
+- **Passport #3 — honest end-to-end on native Windows.** Task `d06d00e2…` fine-tuned, retrieved,
+  acknowledged and minted on win32 via `HttpModelRetriever`; real on-chain-verified adapter root
+  `0x113b79c3…8a396c`, `verifyManifest(3)` = true, `attestationVerified: true`. mint tx `0x1dde66f4…66fff3`
+  (block 55,457,526), ack tx `0xaf0a48b0…01290b1`. `runs/run4-e2e.json`. The operation that lost run 1's model.
+- **`verifyService` passes → `attestationVerified` earned on #3** (signer + compose match,
+  `runs/attestation-testnet.json`). #1 and #2 keep `false`. This closes Phase 7's headline (see below).
 - **DEFECT-01 fixed** — `HttpModelRetriever` retrieves on Windows over HTTP + re-derives the 0G
   Storage root, refuses on mismatch; provenance typed; failed runs upgrade in place. `5e089f4`.
   Directly answers judge notmartin's Wave 3 feedback.
@@ -302,11 +317,13 @@ platform steps are gated on an OAuth grant only the account owner can make.
   tx `0x2a2e86d0…d2c85a`. `55d1f32`. Registered, not verified; no mainnet write.
 - **3D UI** — react-three-fiber hero + passport seal, `ssr:false`, SVG fallback. `a709f33`.
 
-**Still open:** mainnet deploy (16661); `verifyService()` → `attestationVerified` (Phase 7 below).
+**Still open:** mainnet deploy (16661); the orchestrator-daemon end-to-end path on Windows; a
+`retrieval.ts` transport with streaming/resume for artifacts over ~60 MB; full TDX quote validation
+via `dstack-verifier` (Phase 7's fuller meaning).
 
 | Phase | Focus | Research | Status |
 |-------|-------|----------|--------|
-| 7 | TEE attestation verification in-passport (`verifyService`) | Likely | ⏳ pending — `attestationVerified` still honestly `false` |
+| 7 | TEE attestation verification in-passport (`verifyService`) | Likely | ✅ **landed 2026-09-18** — `verifyService` passes (signer + compose match); `attestationVerified: true` on Passport #3. Fuller meaning (TDX quote via `dstack-verifier`) still to do |
 | 8 | OpenSSF Model Signing (OMS) interop — standards-compliant signatures | Likely | ⏳ not started |
 | 9 | Hosted inference against fine-tuned adapters | Unlikely | ⏳ not started |
 | 10 | Passport marketplace — `authorizeUsage` as model licensing | Unlikely | ⏳ not started |
