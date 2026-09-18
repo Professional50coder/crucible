@@ -639,3 +639,49 @@ Publish the deployed ABI, or generate the page from it. Until then, read the sig
 
 Full analysis, including how Crucible's `Passport.sol` relates to this contract and why both exist:
 [`AGENTIC_ID_ALIGNMENT.md`](AGENTIC_ID_ALIGNMENT.md).
+
+---
+
+## ✅ ERC-8004 Identity Registry — Model Passport REGISTERED (not verified) — 2026-09-18
+
+Option (b) from [`ERC8004.md`](ERC8004.md) §4 was executed on **Galileo testnet (chain
+16602)** with the funded dev wallet `0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF`, via
+`tools/erc8004-register.mjs` (ethers v6, a direct contract call — not the viem AgenticID
+SDK). Preflight asserted chainId 16602, the deployer identity, a non-zero balance, and a
+successful `register(string)` static simulation before any broadcast. All values were read
+back off chain after the writes.
+
+**Say it correctly.** This **registers**; it does not **verify**. It registers a **model
+artifact as an agent** — a category claim. The Identity Registry
+`0x8004A818BFB912233c491871b3d84c89A494BD9e` is an **EIP-1967 upgradeable proxy whose admin
+we have not identified** (impl slot `0x7274e874…399c02`, admin slot reads zero). Crucible is
+a **user** of the registry, not an ERC-8004 implementation — nothing here is "ERC-8004
+compliant". The Validation Registry, the one a passport actually fits, is still not deployed
+on 0G, so the weaker Identity-Registry metadata bag is what was used.
+
+```
+agentId        420  on 0x8004A818BFB912233c491871b3d84c89A494BD9e (AgentIdentity / AGENT)
+ownerOf(420)   0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF
+tokenURI(420)  https://indexer-storage-testnet-turbo.0g.ai/file?root=0xc757a7e6…e1140
+```
+
+register tx
+[`0x2a2e86d0…d2c85a`](https://chainscan-galileo.0g.ai/tx/0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a),
+block 55,445,626, gas 223,944.
+
+Six `setMetadata` lineage writes, each read back byte-equal on chain:
+
+| key | tx |
+|---|---|
+| `crucible.baseModelHash` | [`0x25282a4c…9d4ba0`](https://chainscan-galileo.0g.ai/tx/0x25282a4c9ba49c7238f2ec5549b05ea5021c27fe62a0185701cbaf8afe9d4ba0) |
+| `crucible.datasetRootHash` | [`0x9b5bc858…bc36ea`](https://chainscan-galileo.0g.ai/tx/0x9b5bc858f4fd3d1606ee76d76a98ccf80eb2823931f149bcf6a41d7f2bbc36ea) |
+| `crucible.adapterRootHash` | [`0x5fce9609…de2b123`](https://chainscan-galileo.0g.ai/tx/0x5fce9609791d134d30aaed7ed4ee55e3142ea193f247e2bc93a4c1be5de2b123) |
+| `crucible.manifestRootHash` | [`0x660d2339…20dbf5`](https://chainscan-galileo.0g.ai/tx/0x660d2339972ef04def0f9111756f1b0f39f3c023360d99a17aee34a0ee20dbf5) |
+| `crucible.taskId` | [`0xeaf8628d…abb7a0`](https://chainscan-galileo.0g.ai/tx/0xeaf8628d7125cc7ab180130ad818fc3907fb30bdede2edfd6f2c7b46f4abb7a0) |
+| `crucible.taskProvider` | [`0xa6c4e0fe…be9363`](https://chainscan-galileo.0g.ai/tx/0xa6c4e0fe4bb6263fe861267a52c3729c95609f9b86fb331877d47cf826be9363) |
+
+`crucible.manifestRootHash` = `0x4f64bfe6…059890f`, the keccak256 of the bytes at the
+`agentURI` and the same digest `Passport.sol` anchors for token #1
+(`verifyManifest(1, 0x4f64bfe6…)` → `true`, checked in the same run). Full machine-readable
+record: `runs/erc8004-galileo.json`. **No mainnet transaction was sent**; the tool refuses
+to broadcast to mainnet.

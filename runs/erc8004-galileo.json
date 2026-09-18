@@ -1,0 +1,71 @@
+{
+  "what": "ERC-8004 Identity Registry registration of the Crucible Model Passport",
+  "honesty": "registered, not verified; a model artifact registered as an agent (a category claim); the registry is an EIP-1967 upgradeable proxy whose admin is unidentified; Crucible is a user of the registry, not an ERC-8004 implementation.",
+  "network": "0G-Galileo-Testnet",
+  "chainId": 16602,
+  "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "registryName": "AgentIdentity",
+  "registrySymbol": "AGENT",
+  "deployer": "0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF",
+  "agentId": "420",
+  "agentURI": "https://indexer-storage-testnet-turbo.0g.ai/file?root=0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140",
+  "manifestRootHash": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
+  "register": {
+    "txHash": "0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a",
+    "blockNumber": 55445626,
+    "gasUsed": "223944",
+    "explorer": "https://chainscan-galileo.0g.ai/tx/0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a"
+  },
+  "metadata": [
+    {
+      "key": "crucible.baseModelHash",
+      "value": "0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7",
+      "txHash": "0x25282a4c9ba49c7238f2ec5549b05ea5021c27fe62a0185701cbaf8afe9d4ba0",
+      "blockNumber": 55445649,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0x25282a4c9ba49c7238f2ec5549b05ea5021c27fe62a0185701cbaf8afe9d4ba0"
+    },
+    {
+      "key": "crucible.datasetRootHash",
+      "value": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+      "txHash": "0x9b5bc858f4fd3d1606ee76d76a98ccf80eb2823931f149bcf6a41d7f2bbc36ea",
+      "blockNumber": 55445673,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0x9b5bc858f4fd3d1606ee76d76a98ccf80eb2823931f149bcf6a41d7f2bbc36ea"
+    },
+    {
+      "key": "crucible.adapterRootHash",
+      "value": "0x418e9f5f06b5930bd8a7fcb5d50a42d7646485b169916e23b818eb5d8c5ae8eb",
+      "txHash": "0x5fce9609791d134d30aaed7ed4ee55e3142ea193f247e2bc93a4c1be5de2b123",
+      "blockNumber": 55445696,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0x5fce9609791d134d30aaed7ed4ee55e3142ea193f247e2bc93a4c1be5de2b123"
+    },
+    {
+      "key": "crucible.manifestRootHash",
+      "value": "0x4f64bfe6db470029d79ede7d83b184b003ed88ea380f5f4cce81502c6059890f",
+      "txHash": "0x660d2339972ef04def0f9111756f1b0f39f3c023360d99a17aee34a0ee20dbf5",
+      "blockNumber": 55445727,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0x660d2339972ef04def0f9111756f1b0f39f3c023360d99a17aee34a0ee20dbf5"
+    },
+    {
+      "key": "crucible.taskId",
+      "value": "10551604-2664-4516-86cf-269a62f93bfc",
+      "txHash": "0xeaf8628d7125cc7ab180130ad818fc3907fb30bdede2edfd6f2c7b46f4abb7a0",
+      "blockNumber": 55445753,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0xeaf8628d7125cc7ab180130ad818fc3907fb30bdede2edfd6f2c7b46f4abb7a0"
+    },
+    {
+      "key": "crucible.taskProvider",
+      "value": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+      "txHash": "0xa6c4e0fe4bb6263fe861267a52c3729c95609f9b86fb331877d47cf826be9363",
+      "blockNumber": 55445774,
+      "explorer": "https://chainscan-galileo.0g.ai/tx/0xa6c4e0fe4bb6263fe861267a52c3729c95609f9b86fb331877d47cf826be9363"
+    }
+  ],
+  "verification": {
+    "ownerOf": "0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF",
+    "ownerMatchesDeployer": true,
+    "tokenURI": "https://indexer-storage-testnet-turbo.0g.ai/file?root=0xc757a7e66c1c5bf4d642e4fbf246b5c228e2ccbf070de2669b98e0e3b98e1140",
+    "tokenURIMatchesManifest": true,
+    "allMetadataReadBackMatches": true
+  },
+  "executedAt": "2026-09-18T03:27:56.441Z"
+}

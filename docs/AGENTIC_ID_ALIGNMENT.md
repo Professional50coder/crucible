@@ -174,3 +174,17 @@ can read 0G's; a sceptic who distrusts both can hash the file.
 
 Recorded in `contracts/deployments/galileo-agentic-id.json`, written from values read back off the
 chain after the mint rather than from what was sent.
+
+### Also done — ERC-8004 Identity Registry registration, agentId 420, 2026-09-18
+
+The mint above uses 0G's **ERC-7857** Agentic ID (`0x2700F6A3…EF1F`). Separately, the same
+manifest is now also **registered** in the **ERC-8004** Identity Registry that 0G ships on
+Galileo, `0x8004A818BFB912233c491871b3d84c89A494BD9e` (`AgentIdentity` / `AGENT`) — the
+concrete form of 0G's sentence *"An Agentic ID can carry a corresponding ERC-8004
+registration"*. agentId **420**, register tx
+[`0x2a2e86d0…d2c85a`](https://chainscan-galileo.0g.ai/tx/0x2a2e86d027c6865b3be8826142179e97354249bab931c31494062b5352d2c85a),
+with six `setMetadata` lineage writes. It is a **registration, not a verification**, it
+registers a **model as an agent** (a category claim), and the registry is an **upgradeable
+proxy whose admin is unidentified**. Full analysis and every tx hash:
+[`ERC8004.md`](ERC8004.md) §7; machine record `runs/erc8004-galileo.json`; tool
+`tools/erc8004-register.mjs`.
