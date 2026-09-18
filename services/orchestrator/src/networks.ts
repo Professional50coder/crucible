@@ -11,6 +11,8 @@ import type { NetworkName } from './types.js'
 export interface NetworkConfig {
   chainId: number
   rpcUrl: string
+  /** 0G Storage indexer gateway — serves files by root hash over plain HTTP. */
+  indexerUrl: string
   explorerUrl: string
   fineTuningProvider: string
 }
@@ -19,12 +21,14 @@ export const NETWORKS: Record<NetworkName, NetworkConfig> = {
   testnet: {
     chainId: 16602,
     rpcUrl: 'https://evmrpc-testnet.0g.ai',
+    indexerUrl: 'https://indexer-storage-testnet-turbo.0g.ai',
     explorerUrl: 'https://chainscan-galileo.0g.ai',
     fineTuningProvider: '0xA02b95Aa6886b1116C4f334eDe00381511E31A09',
   },
   mainnet: {
     chainId: 16661,
     rpcUrl: 'https://evmrpc.0g.ai',
+    indexerUrl: 'https://indexer-storage-turbo.0g.ai',
     explorerUrl: 'https://chainscan.0g.ai',
     fineTuningProvider: '0x940b4a101CaBa9be04b16A7363cafa29C1660B0d',
   },

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { Orchestrator } from '../src/orchestrator.js'
 import { createApi, type ApiHandle } from '../src/api.js'
 import { ManualClock, HOUR } from '../src/clock.js'
-import { FakeBroker, TESTNET_PROVIDER } from './fakes.js'
+import { FakeBroker, FakeModelRetriever, TESTNET_PROVIDER } from './fakes.js'
 
 let clock: ManualClock
 let dir: string
@@ -222,6 +222,62 @@ describe('POST /jobs/:id/unlock', () => {
     const { res, json } = await post(`/jobs/${a.id}/unlock`)
     expect(res.status).toBe(502)
     expect(json.error).toMatch(/insufficient funds/)
+  })
+})
+
+describe('POST /jobs/:id/retrieve', () => {
+  const REAL_ROOT = '0x40a5f256ff464106f6be38ef146614bd78d5ddfe07af16b156d3efcddb561b4d'
+
+  it('retrieves the real artifact and upgrades the passport in place', async () => {
+    // A second orchestrator wired with a retriever, over the same fake broker.
+    const retriever = new FakeModelRetriever()
+    const orch2 = new Orchestrator({ broker, clock, dataDir: join(dir, 'r'), retriever })
+    const api2 = createApi({ orchestrator: orch2, passportsDir: join(dir, 'p2'), version: '0.1.0' })
+    const { port } = await api2.listen(0)
+    const base2 = `http://127.0.0.1:${port}`
+    try {
+      const created = await fetch(`${base2}/jobs`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(validBody),
+      }).then((r) => r.json())
+      broker.nextTaskId = 'task-up'
+      await orch2.tick()
+      broker.setTask('task-up', 'Delivered')
+      // The run failed retrieval earlier and was rescued to a sentinel.
+      orch2.getJob(created.id)
+      broker.setDeliverable('task-up', REAL_ROOT, true)
+
+      const res = await fetch(`${base2}/jobs/${created.id}/retrieve`, { method: 'POST' })
+      const json = await res.json()
+      expect(res.status).toBe(200)
+      expect(json.ok).toBe(true)
+      expect(json.adapterHashSource).toBe('onchain-verified')
+      expect(json.adapterRootHash).toBe(REAL_ROOT)
+      expect(orch2.getJob(created.id)!.adapterHashSource).toBe('onchain-verified')
+    } finally {
+      await api2.close()
+      orch2.close()
+    }
+  })
+
+  it('404s retrieving an unknown job', async () => {
+    const { res, json } = await post('/jobs/nope/retrieve')
+    expect(res.status).toBe(404)
+    expect(json.error).toMatch(/not found/i)
+  })
+
+  it('502s when retrieval is not configured on this orchestrator', async () => {
+    // The default `orch` in this suite has no retriever.
+    const a = (await post('/jobs', validBody)).json
+    broker.nextTaskId = 'task-nr'
+    await orch.tick()
+    broker.setTask('task-nr', 'Delivered')
+
+    const { res, json } = await post(`/jobs/${a.id}/retrieve`)
+    expect(res.status).toBe(502)
+    expect(json.code).toBe('retrieve_failed')
+    expect(json.error).toMatch(/not configured/i)
   })
 })
 

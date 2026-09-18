@@ -56,6 +56,8 @@ export {
   type PassportManifest,
   type PassportInput,
   type ExplorerLinks,
+  type AdapterHashSource,
+  ADAPTER_HASH_SOURCES,
   STORAGE_SCAN_URLS,
   buildManifest,
   canonicalize,
@@ -77,6 +79,8 @@ export {
   MODEL_CARD_TAGS,
   sentinelAdapterHash,
   hasSentinelAdapter,
+  assertAdapterProvenance,
+  isVerifiedAdapterRoot,
   yamlScalar,
   buildModelCard,
 } from './modelcard.js'

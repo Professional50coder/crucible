@@ -84,6 +84,55 @@ export function hasSentinelAdapter(manifest: PassportManifest): boolean {
 }
 
 /**
+ * The guard that makes a sentinel and a verified root impossible to confuse.
+ *
+ * A passport records provenance in `adapter.hashSource`. That claim is only
+ * trustworthy if the hash itself agrees with it, so this throws on the two
+ * contradictions that would let a placeholder pass as an artifact — or the
+ * reverse:
+ *
+ *   - `hashSource: 'onchain-verified'` on a hash that is actually a sentinel.
+ *     This is the dangerous one: it would present "nothing was retrieved" as a
+ *     verified adapter root. Refused outright.
+ *   - `hashSource: 'sentinel'` on a hash that is not the sentinel for this task.
+ *     A record that labels a real-looking root as a placeholder is also a lie
+ *     about what happened, so it is refused too.
+ *
+ * A manifest with no `hashSource` (the pre-provenance shape) is left alone —
+ * neither contradiction can arise without the field.
+ */
+export function assertAdapterProvenance(manifest: PassportManifest): void {
+  const source = manifest.adapter.hashSource
+  if (source === undefined) return
+  const sentinel = hasSentinelAdapter(manifest)
+
+  if (source === 'onchain-verified' && sentinel) {
+    throw new Error(
+      `Adapter provenance is impossible: adapter.hashSource is "onchain-verified" but ` +
+        `adapter.rootHash is a sentinel (keccak256("crucible:adapter-not-retrieved:<taskId>")). ` +
+        `A sentinel stands for an absence and can never be a verified adapter root.`,
+    )
+  }
+  if (source === 'sentinel' && !sentinel) {
+    throw new Error(
+      `Adapter provenance is inconsistent: adapter.hashSource is "sentinel" but adapter.rootHash ` +
+        `"${manifest.adapter.rootHash}" is not the sentinel for task "${manifest.task.id}".`,
+    )
+  }
+}
+
+/**
+ * True only for a passport whose adapter root is a genuine, on-chain-verified
+ * artifact. This is the ONLY sanctioned way to decide whether the adapter hash
+ * may be treated as a real 0G Storage root: it demands the explicit
+ * `onchain-verified` provenance AND independently confirms the value is not a
+ * sentinel, so a mislabelled placeholder can never read as verified.
+ */
+export function isVerifiedAdapterRoot(manifest: PassportManifest): boolean {
+  return manifest.adapter.hashSource === 'onchain-verified' && !hasSentinelAdapter(manifest)
+}
+
+/**
  * Plain YAML scalars may not begin with an indicator character or contain `: ` or ` #`, and
  * a bare `yes` / `1.0` / `null` would be read back as a boolean, a float or a null rather
  * than as the string it is. Anything outside this set gets quoted.
@@ -160,6 +209,11 @@ function frontMatter(manifest: PassportManifest, options: ModelCardOptions): str
  * lineage fields, then a body stating what the run was and how a stranger checks it.
  */
 export function buildModelCard(manifest: PassportManifest, options: ModelCardOptions = {}): string {
+  // Refuse to render a card whose recorded provenance contradicts its hash — in
+  // particular a sentinel dressed up as an `onchain-verified` root. Publishing is
+  // exactly where that lie would do the most damage.
+  assertAdapterProvenance(manifest)
+
   const { explorerUrl } = NETWORKS[manifest.network]
   const baseModel = resolveBaseModel(manifest, options)
   const hash = manifestHash(manifest)

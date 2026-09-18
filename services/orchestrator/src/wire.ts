@@ -42,6 +42,15 @@ export interface WireJob {
   acknowledgeScheduledFor: string | null
   datasetRootHash: string | null
   adapterPath: string | null
+  /**
+   * The adapter root the passport will anchor, and where it came from. Optional:
+   * a job that has not resolved an adapter yet simply omits both keys. When
+   * `adapterHashSource` is `sentinel` the hash stands for an artifact that was
+   * never retrieved; `onchain-verified` means it was downloaded and checked
+   * against the provider's on-chain model root.
+   */
+  adapterRootHash?: string
+  adapterHashSource?: 'sentinel' | 'onchain-verified'
   error: string | null
   /** The provider is `occupied`. A normal waiting state, never an error. */
   queued: boolean
@@ -99,6 +108,8 @@ export function toWireJob(job: Job): WireJob {
     acknowledgeScheduledFor: iso(job.scheduledAckAt),
     datasetRootHash: job.datasetRootHash ?? null,
     adapterPath: job.adapterPath ?? null,
+    ...(job.adapterRootHash !== undefined ? { adapterRootHash: job.adapterRootHash } : {}),
+    ...(job.adapterHashSource !== undefined ? { adapterHashSource: job.adapterHashSource } : {}),
     error: job.error ?? null,
     queued: Boolean(job.providerOccupied),
     artifactAtRisk: Boolean(job.artifactAtRisk),
