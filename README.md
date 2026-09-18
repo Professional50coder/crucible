@@ -14,7 +14,7 @@ Hitansh Gopani · 16 August 2026
 
 **[Open the app →](https://crucible-orpin.vercel.app/)** · no wallet, no clone
 
-`Passport.sol 0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` · verified · passports #1 and #2 minted · chain 16602
+`Passport.sol 0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7` · verified · passports #1, #2 and #3 minted · chain 16602
 
 0G Bridge Buildathon — Wave 4 · [@Hitansh54](https://x.com/Hitansh54)
 
@@ -34,7 +34,9 @@ That part works, end to end, and § 03 gives you the commands to check it yourse
 
 The other half of the question I did not expect to answer. To produce a passport I had to actually fine-tune something — and **the first time, the network took my money and destroyed the model.** Not through my error. Through a defect in the SDK's retrieval path that makes the documented happy path impossible on Windows.
 
-The second time, I retrieved it. The only thing I changed was the operating system. That comparison — two runs, one variable, both recorded on the same contract — is § 04, and it is the most useful thing in this repository.
+The second time, I retrieved it. The only thing I changed was the operating system. That comparison — two runs, one variable, both recorded on the same contract — is § 04, and it is the diagnosis this repository is built around.
+
+The third time, I changed the code, not the machine. Crucible stopped asking the broken SDK to download anything on Windows and fetched the model itself, straight from 0G Storage over HTTP, refusing to trust a byte of it until it re-hashed to what the chain already said. Then I ran the whole thing again on the same laptop that lost the first model: a fresh fine-tune, its 93,642,471-byte adapter retrieved and verified, acknowledged on-chain inside the window, and minted as **Passport #3** — a real adapter root instead of a placeholder, and an attestation that for once was checked rather than assumed. The failure in the paragraph above no longer happens on the platform that caused it. That is the ending the first two runs were missing.
 
 > [!WARNING]
 > **The 0G SDK's `acknowledgeModel` cannot retrieve a delivered model on Windows + Node 22 — on either path**, and there are two separate defects behind that.
@@ -45,7 +47,9 @@ The second time, I retrieved it. The only thing I changed was the operating syst
 >
 > **The same code retrieved the model from WSL2 Linux**: 93,642,469 bytes, validated against the provider's on-chain root hash, `acknowledged: true`.
 >
-> **Fixed 2026-09-18 (commit `5e089f4`).** Crucible no longer routes retrieval through the broken SDK on Windows: `HttpModelRetriever` pulls the delivered model straight from the 0G Storage indexer over plain HTTP, re-derives the 0G Storage Merkle root of the bytes, and refuses to acknowledge unless it matches the on-chain `modelRootHash`. Proven on **this Windows machine** on 2026-09-18 — the 584-byte Passport #1 manifest downloaded from the indexer and its `zgStorageRoot` recomputed to `0xc757a7e6…e1140`, an exact match. That is a Windows-verified retrieval + integrity check; it is not a new fine-tune. Reproduction of both the original defect and the fix in [DEFECT-01](#section-05--defects).
+> **Fixed 2026-09-18 (commit `5e089f4`).** Crucible no longer routes retrieval through the broken SDK on Windows: `HttpModelRetriever` pulls the delivered model straight from the 0G Storage indexer over plain HTTP, re-derives the 0G Storage Merkle root of the bytes, and refuses to acknowledge unless it matches the on-chain `modelRootHash`. Proven on **this Windows machine** on 2026-09-18 — the 584-byte Passport #1 manifest downloaded from the indexer and its `zgStorageRoot` recomputed to `0xc757a7e6…e1140`, an exact match. That is a Windows-verified retrieval + integrity check; it is not a new fine-tune.
+>
+> **And then the real thing, end to end, on that same Windows machine (2026-09-18):** task `d06d00e2…` fine-tuned, its **93,642,471-byte** adapter pulled over HTTP — the first attempt dropped at 61 MB on a `schannel` close, a resumed retry completed it — validated against the on-chain root `0x113b79c3…`, acknowledged on-chain (tx [`0xaf0a48b0…`](https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1), `acknowledged: true`), and minted as **Passport #3** with a real adapter root and `attestationVerified: true`. The very failure this box opens with, on the platform that caused it, no longer happens. Reproduction of the original defect, the fix, and the end-to-end run in [DEFECT-01](#section-05--defects).
 
 ---
 
@@ -85,7 +89,7 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
   ## the network, with real money
 + PASS  Ledger + sub-account funded             true cost 0.15 0G, not the 3 0G the SDK demands
 + PASS  Dataset uploaded to 0G Storage          root 0xa5051ae7…9e7dbfd
-+ PASS  Fine-tuning task created, three times   Init → SettingUp → … → Delivered, ~4 min
++ PASS  Fine-tuning task created, four times    Init → SettingUp → … → Delivered, ~4 min
 + PASS  Manifest uploaded to 0G Storage         584 B · submission 146937
 + PASS  Manifest hash == on-chain anchor        the whole verification loop closes
 - WAS   Model retrieval — task 1, on Windows    both SDK download paths broken · model lost, 30% taken — now fixed, below
@@ -95,6 +99,9 @@ The consequence worth stating plainly: Crucible never asks you to trust its own 
 + PASS  Model retrieval — task 2, from Linux    93,642,469 bytes · validated · acknowledged=true
 + PASS  Passport #2 minted from the real adapter  adapter hash read off-chain, not from our notes
 + PASS  Run 3 acknowledged by the daemon itself   tx 0x4e2c81e2…7e4cfa · no script involved
++ PASS  Run 4 — fine-tune completed on Windows     task d06d00e2 · 93,642,471 B pulled over HTTP · ack tx 0xaf0a48b0…
++ PASS  verifyService attestation passes           TEE signer + compose hash match on-chain — attestationVerified earned
++ PASS  Passport #3 — the first honest passport    real adapter 0x113b79c3… · attestationVerified: true · verifyManifest true · mint 0x1dde66f4…
 
   ## the app
 + PASS  3D forged-core hero + passport seal     react-three-fiber, lazy client-only, static SVG fallback (no-WebGL / reduced-motion)

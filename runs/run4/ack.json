@@ -1,0 +1,15 @@
+{
+  "taskId": "d06d00e2-965b-430c-bf46-4d6444ee1c47",
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "acknowledged": true,
+  "modelRootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+  "encryptedSecretBytes": 0,
+  "ackTxHash": "0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1",
+  "ackTxBlock": 55456191,
+  "ackTxGasUsed": "49263",
+  "ackTxStatus": 1,
+  "allTx": [
+    "0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1"
+  ],
+  "acknowledgedAt": "2026-09-18T04:53:02.735Z"
+}

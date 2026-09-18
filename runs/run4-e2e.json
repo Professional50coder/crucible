@@ -1,0 +1,151 @@
+{
+  "what": "The first fine-tuning run driven end to end on native Windows: created, trained, delivered, RETRIEVED over the Windows-safe HTTP path, acknowledged on-chain, and minted into a Model Passport carrying a REAL adapter root and an EARNED attestation flag.",
+  "why": "Run 1 lost its model at acknowledgement on Windows (ENOENT + 429). Run 2 recovered only by moving to WSL2 Linux. Run 3 proved the daemon on Linux. None of them was a complete, honest end-to-end fine-tune on native win32 that ended in a minted passport with an on-chain-verified adapter. This run is that: the DEFECT-01 HttpModelRetriever downloaded the 93 MB artifact on this Windows host and re-derived its 0G Storage root to match the on-chain model root before anything was acknowledged.",
+  "taskId": "d06d00e2-965b-430c-bf46-4d6444ee1c47",
+  "provider": "0xA02b95Aa6886b1116C4f334eDe00381511E31A09",
+  "network": "testnet",
+  "chainId": 16602,
+  "outcome": "RETRIEVED_AND_ACKNOWLEDGED_ON_WINDOWS_THEN_MINTED",
+  "platform": "Windows 11 (win32), Node v22.14.0, curl 8.12.1 (schannel)",
+  "wallet": "0xf4cEE5c1C4A1Bfe5AFD4bE3B223d85b1181FD3EF",
+  "driver": {
+    "created_by": "tools/run4-create.mjs (broker.fineTuning.createTask)",
+    "watched_by": "tools/run4-watch.mjs (broker.fineTuning.getTask)",
+    "retrieved_by": "tools/run4-retrieve.mts — services/orchestrator/src/retrieval.ts HttpModelRetriever, with a curl streaming+resume fetchImpl (transport hardening only; validation unchanged)",
+    "acknowledged_by": "tools/run4-ack.mjs (broker.fineTuning.acknowledgeDeliverable — on-chain, after validated retrieval)",
+    "minted_by": "tools/run4-mint.mts (@crucible/core buildManifest + isVerifiedAdapterRoot; ethers mint against Passport.sol; @0gfoundation/0g-storage-ts-sdk upload)"
+  },
+  "preflight": {
+    "ledgerTotalBalance0G": "0.27273856",
+    "ledgerAvailable0G": "0.15",
+    "fineTuningSubAccount0G": "0.12273856",
+    "providerOccupied": false,
+    "pricePerTokenNeuron": "800000000000",
+    "note": "Ledger and fine-tuning sub-account already existed and were funded from prior runs; nothing needed funding. Landmine #4 (false 3 0G addLedger guard) avoided."
+  },
+  "configuration": {
+    "model": "Qwen2.5-0.5B-Instruct",
+    "datasetRoot": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+    "datasetReused": true,
+    "datasetFile": "datasets/sentiment/train.jsonl (resolved by tools/identify-dataset.mjs — the chain-anchored root is authoritative over any path note)",
+    "trainingConfig": {
+      "neftune_noise_alpha": 5,
+      "num_train_epochs": 3,
+      "per_device_train_batch_size": 2,
+      "learning_rate": 0.0002,
+      "max_steps": 10
+    },
+    "note": "Dataset REUSED at its existing 0G Storage root — no upload, avoiding landmine #1 (Windows uploadDataset spawns a Linux ELF)."
+  },
+  "timeline": {
+    "task_created": "2026-09-18T04:42Z (approx; createTask is a provider-API call, not a wallet tx)",
+    "settingUp": "2026-09-18T04:43:10.276Z",
+    "setUp": "2026-09-18T04:43:26.157Z",
+    "training": "2026-09-18T04:44:13.793Z",
+    "trained": "2026-09-18T04:45:33.790Z",
+    "delivering": "2026-09-18T04:46:05.521Z",
+    "delivered": "2026-09-18T04:46:53.074Z",
+    "acknowledged": "2026-09-18T04:53:02.230Z",
+    "minted": "2026-09-18T05:04:14.665Z",
+    "note": "Delivered ~4 min after SettingUp. Acknowledged ~6 min after delivery (promptly — landmine #3), well inside the 48h window and before the provider's ~6h settlement."
+  },
+  "stateTransitions": ["SettingUp", "SetUp", "Training", "Trained", "Delivering", "Delivered"],
+  "retrieval": {
+    "modelRootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+    "recomputedRoot": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+    "rootMatch": true,
+    "sizeBytes": 93642471,
+    "sha256": "0x1209dc978678b280a0bd35182f2024c590acde396c0d761ee482a6bf5b37d3a0",
+    "path": "runs/run4/adapter/model.bin",
+    "transport": "HTTP GET {indexer}/file?root=<modelRootHash>, streamed to disk by curl with resume (-C -) and retry",
+    "note": "The exact failure the coordinator warned about occurred: the first curl attempt died mid-stream at 61,351,230 bytes (schannel 'server closed abruptly'). Resume + retry completed the full 93,642,471 bytes on the second attempt. HttpModelRetriever then recomputed the 0G Storage Merkle root (storage-hash.ts zgStorageRoot) and it matched the on-chain model root EXACTLY before anything was acknowledged. Do NOT use the SDK 'auto' download (landmine #2) — this is the Windows-safe path."
+  },
+  "onChain": {
+    "acknowledgeTxHash": "0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1",
+    "acknowledgeBlock": 55456191,
+    "acknowledgeGasUsed": "49263",
+    "acknowledgeStatus": 1,
+    "acknowledgeExplorer": "https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1",
+    "deliverable": {
+      "acknowledged": true,
+      "modelRootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+      "encryptedSecretBytes": 129,
+      "readWith": "node tools/deliverable-status.mjs d06d00e2",
+      "note": "acknowledged=true read back from FineTuningServing.getDeliverables — the chain is authoritative, not the provider status text. encryptedSecret filled to 129 bytes once the provider settled."
+    }
+  },
+  "dataset": {
+    "rootHash": "0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd",
+    "file": "datasets/sentiment/train.jsonl",
+    "format": "chat",
+    "exampleCount": 61,
+    "tokenCount": 14816,
+    "tokenCountDerivation": "settled task fee 11852800000000000 neuron / price 800000000000 neuron-per-token = 14816 tokens (checkable)"
+  },
+  "fee": {
+    "settledTaskFeeNeuron": "11852800000000000",
+    "settledTaskFee0G": "0.0118528",
+    "chargedTo": "fine-tuning sub-account (compute ledger), not the wallet",
+    "note": "Identical to runs 1-3 on the same dataset/config. Charged against the sub-account; the wallet paid only gas + the storage-upload fee."
+  },
+  "passport": {
+    "contract": "0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7",
+    "tokenId": "3",
+    "mintTxHash": "0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3",
+    "mintBlock": 55457526,
+    "mintGasUsed": "293502",
+    "mintExplorer": "https://chainscan-galileo.0g.ai/tx/0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3",
+    "tokenExplorer": "https://chainscan-galileo.0g.ai/token/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7?a=3",
+    "adapterRootHash": "0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c",
+    "adapterHashSource": "onchain-verified",
+    "attestationVerified": true,
+    "configHash": "0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1",
+    "manifestRootHash": "0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13",
+    "verifyManifestCorrect": true,
+    "verifyManifestWrong": false,
+    "note": "First Crucible passport with adapter.hashSource='onchain-verified' AND tee.attestationVerified=true. The adapter root was read off the chain and independently retrieved+validated on win32; the attestation flag is earned by runs/attestation-testnet.json (verifyService passed: signer + compose match)."
+  },
+  "manifestStorage": {
+    "rootHash": "0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7",
+    "uploadTxHash": "0x990ea1f49214a1182fa0e51e712ddb5ad8c30b6d0363a0f6bc7d4a501a3cc015",
+    "uploadExplorer": "https://chainscan-galileo.0g.ai/tx/0x990ea1f49214a1182fa0e51e712ddb5ad8c30b6d0363a0f6bc7d4a501a3cc015",
+    "bytes": 1027,
+    "indexerUrl": "https://indexer-storage-testnet-turbo.0g.ai",
+    "storageScanByRootHash": "https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7",
+    "strangerVerification": {
+      "downloadedBytes": 1027,
+      "keccak256OfDownload": "0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13",
+      "matchesAnchoredManifestHash": true,
+      "verifyManifestOnChain": true,
+      "note": "Downloaded the manifest back from 0G Storage by root hash, hashed the exact bytes, and verifyManifest(3, that hash) returned true on-chain — checkable by anyone with no wallet and no clone of this repo."
+    }
+  },
+  "cost": {
+    "walletBalanceBefore0G": "1.278516480345578797",
+    "walletBalanceAfter0G": "1.275862994672710656",
+    "walletDelta0G": "0.002653485672868141",
+    "walletDeltaNote": "gas for acknowledge + mint + the storage-upload transaction. The 0.0118528 0G training fee is debited from the compute sub-account, not the wallet.",
+    "subAccountFeeCharged0G": "0.0118528"
+  },
+  "whatThisProves": [
+    "The DEFECT-01 HttpModelRetriever completes a real ~93 MB model download on native Windows and validates it against the on-chain root — the retrieval that ENOENTed and cost run 1 its model.",
+    "A delivered deliverable can be acknowledged on-chain on Windows via acknowledgeDeliverable AFTER an out-of-band validated HTTP retrieval, avoiding the broken SDK acknowledgeModel download path.",
+    "A Model Passport can carry a genuinely on-chain-verified adapter root plus an earned attestationVerified=true, and its manifest lives on 0G Storage where a stranger can verify it end to end."
+  ],
+  "whatThisDoesNotProve": [
+    "That the provider trained honestly on the dataset. Crucible proves lineage, not honest training — a provider returning arbitrary weights would produce a passport that verifies the same way.",
+    "That the SDK's own acknowledgeModel download works on Windows. It does not; this run deliberately routed around it (landmine #2)."
+  ],
+  "artifacts": {
+    "taskId": "runs/run4/task-id.txt",
+    "create": "runs/run4/create.json",
+    "watch": "runs/run4/watch.json",
+    "retrieval": "runs/run4/retrieval.json",
+    "acknowledge": "runs/run4/ack.json",
+    "mint": "runs/run4/mint.json",
+    "manifest": "runs/run4/manifest-4.json",
+    "adapter": "runs/run4/adapter/model.bin (93,642,471 bytes; gitignored per .gitignore runs/**/*.bin)",
+    "mintsRegistry": "contracts/deployments/galileo-mints.json"
+  },
+  "recordedAt": "2026-09-18"
+}
