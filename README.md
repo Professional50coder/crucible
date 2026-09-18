@@ -2,7 +2,7 @@
 
 # Crucible
 
-**Verifiable fine-tuning on 0G: every model gets a birth certificate — and the 48-hour deadline that quietly destroys them, measured on-chain against my own two runs**
+**Verifiable fine-tuning on 0G: every model gets a birth certificate — and the 48-hour deadline that quietly destroys them, diagnosed on-chain across two runs, then beaten end-to-end on Windows**
 
 Hitansh Gopani · 16 August 2026
 
@@ -188,6 +188,24 @@ node tools/task-status.mjs
 #   mint tx  0x60094f63813827391266d7f77c02649342b435d86d297964d499d2deae420324  block 49612106
 #   ack tx   0x0911a1326338fc260a237c3c27baf8a697ffa193f2aec7c876c7d43207c15aeb
 ```
+
+### 3.5 · The honest end-to-end run — Passport #3, retrieved and acknowledged on Windows
+
+The comparison above is the diagnosis. This is the resolution, on the platform that caused the
+failure. On 2026-09-18 a fresh fine-tune ran end to end on **native Windows**, its model pulled
+through the fixed `HttpModelRetriever` and minted as passport #3.
+
+| | task `d06d00e2-…ee1c47` — **Windows, after the fix** |
+|---|---|
+| `modelRootHash` | `0x113b79c3…396c` |
+| Artifact retrieved | **93,642,471 bytes** over plain HTTP — first attempt dropped at 61 MB on a `schannel` close, a resumed retry completed it — then the 0G Storage root was re-derived and matched |
+| `acknowledged` | **`true`** — ack tx [`0xaf0a48b0…`](https://chainscan-galileo.0g.ai/tx/0xaf0a48b0d538f26f9b5d482ca435593c51005b6fcb0f64d58dc95005d01290b1) |
+| Adapter provenance | **`onchain-verified`** — a real root, not a sentinel |
+| Attestation | **`attestationVerified: true`** — `verifyService` checked the TEE signer and compose hash against the chain |
+| Passport | **#3** — mint tx [`0x1dde66f4…`](https://chainscan-galileo.0g.ai/tx/0x1dde66f40f24bbd353160e6995764ba208096e74ce39a3563c3726e13066fff3), `verifyManifest(3, …)` = **true** |
+
+Same contract, same wallet, same provider as the run that lost its model in § 3.4 — and this time,
+on Windows, the model came home. That is the difference between diagnosing a defect and closing it.
 
 ---
 
