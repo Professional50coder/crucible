@@ -15,6 +15,7 @@ import {
   UploadIcon,
 } from '@/components/icons'
 import { Badge, Dot, HatchBand, IconTile, SectionHead } from '@/components/ui'
+import { HeroVisual } from '@/components/three/HeroVisual'
 import { addressUrl, storageLookupUrl, storageSubmissionUrl, txUrl } from '@/lib/chains'
 
 /**
@@ -300,8 +301,19 @@ export default function LandingPage() {
       {/* ================================================================== */}
       {/* Hero — one claim, at display size, and the proof directly beneath.  */}
       {/* ================================================================== */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
-        <Stagger onMount className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
+      <section className="relative mx-auto max-w-6xl overflow-hidden px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
+        {/* The forged core, rendered behind the certificate card on the right.
+            A decorative, inert layer: it never intercepts a pointer and it is
+            masked to fade out before it reaches the reading column on the left.
+            WebGL is an enhancement over the static SVG this always falls back to. */}
+        <div
+          className="pointer-events-none absolute right-[-8%] top-1/2 hidden aspect-square w-[38rem] max-w-[60%] -translate-y-1/2 opacity-80 [mask-image:radial-gradient(closest-side,#000_55%,transparent_100%)] lg:block"
+          aria-hidden="true"
+        >
+          <HeroVisual className="h-full w-full" />
+        </div>
+
+        <Stagger onMount className="relative grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
           <div className="min-w-0">
             <Rise className="flex flex-wrap items-center gap-2">
               {/* Chain 16602 is where the contract actually is. Claiming
