@@ -48,8 +48,14 @@ get a plain message rather than a wrong answer.
 `crucible doctor / validate / convert` polished and documented as a template others can start from.
 *Check:* CLI tests; a fresh-clone walkthrough that runs.
 
-## M7 — Standalone write-up ⏳
+## M7 — Standalone write-up ✅
 Publish `FIELD_NOTES.md` as a self-contained tutorial (retrieval defect, fix, resume, signing).
+Written as `docs/TUTORIAL_RETRIEVAL_AND_SIGNING.md`, linked from the README documentation row.
+*Check:* every file, function and CLI flag it names was read in the repo, and the worked example uses
+`runs/manifest-1.json` and the token 1 anchor in `contracts/deployments/galileo-mints.json`. **Not
+checked:** the commands were not executed while writing it, and there is no live-network run of the
+in-code Range resume. It also notes that FIELD_NOTES.md, CHANGELOG.md and the Wave 4 changelog still say
+the retriever does not resume, which predates the current `retrieval.ts`.
 
 ## M8 — Mainnet (queued) ⛔
 Deploy + verify `Passport.sol` on 16661, one real mint. Blocked only on funding the deploy wallet.
