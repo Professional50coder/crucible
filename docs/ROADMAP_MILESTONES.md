@@ -35,6 +35,15 @@ envelope to the web passport export.
 A plain-language notice on the hosted site wherever a record is a demo, visible at every width.
 *Check:* `apps/web/src/components/SampleNotice.test.tsx` (3 tests, including that no engineering terms appear); typecheck clean. Shown site-wide only when the app has no live backend; uses the same "on chain" / "demo" words as the record badges. **Not yet viewed** on the deployed site after release.
 
+## M5b — Verify in the browser ✅
+A `/verify` page: paste a signed envelope, the signer's public key and (optionally) the hash anchored
+on chain, and check it on your own device with WebCrypto — no wallet, no RPC, nothing sent anywhere.
+*Check:* `apps/web/src/lib/envelope-verify.test.ts` (7 tests; the envelope is signed with Node's
+crypto the way `@crucible/core` signs, so the two implementations are proven to agree) and
+`apps/web/src/app/verify/verify.test.tsx` (4 tests); typecheck clean. **Not yet checked:** a run in a
+real browser. Ed25519 in WebCrypto needs a current Chrome, Edge, Safari or Firefox; older browsers
+get a plain message rather than a wrong answer.
+
 ## M6 — Builder kit ⏳
 `crucible doctor / validate / convert` polished and documented as a template others can start from.
 *Check:* CLI tests; a fresh-clone walkthrough that runs.
