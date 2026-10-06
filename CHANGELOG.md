@@ -10,6 +10,30 @@ deleted, not softened. Every correction below is dated and says what replaced it
 
 ---
 
+## 0.6.0 — 2026-10-06
+
+### Added
+- **Streaming, resumable retrieval.** `HttpModelRetriever` now reads the body as a stream, keeps
+  what has arrived, and resumes a dropped download with `Range: bytes=<received>-`; a server that
+  answers 200 to a Range request restarts from zero rather than splicing. 5xx and 429 are retried
+  with capped backoff; other HTTP errors fail at once. The on-chain root check is unchanged and
+  nothing unvalidated is written. Six tests in `services/orchestrator/test/retrieval-resume.test.ts`.
+- **Signed passport envelope.** `packages/core/src/dsse.ts`: a DSSE envelope (in-toto Statement,
+  ed25519) over the canonical manifest, checkable without a 0G RPC and bindable to the on-chain
+  keccak256. CLI: `crucible keygen | sign | verify-envelope`. Browser: the `/verify` page.
+- **Usage licensing page** (`/license`) over `authorizeUsage`, `revokeAuthorization` and
+  `isAuthorized`; reads need no wallet, writes are owner-only.
+- A plain-language sample-data notice on the hosted site.
+
+### Corrected
+- **The 2026-09-18 follow-up "the in-code retriever has no streaming or resume" is resolved.** The
+  0.5.0 entries below describing it as open were true on that date and are left as written. Still
+  unrecorded: a live run of the in-code resume against the real indexer with a large file.
+- Not claimed: compatibility of the envelope with the OpenSSF `model-signing` CLI (untested), or
+  that a signature says anything about whether training was honest.
+
+---
+
 ## 0.5.0 — 2026-09-18
 
 Wave 4. Three tracks landed on `wave4-improvements` and were re-run against the live network this
