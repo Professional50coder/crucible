@@ -17,7 +17,7 @@ import {
 } from '@crucible/core'
 import { JsonRpcProvider, Wallet, formatEther } from 'ethers'
 import dotenv from 'dotenv'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -26,8 +26,11 @@ import {
   cardCommand,
   configCommand,
   convertCommand,
+  keygenCommand,
+  signCommand,
   validateCommand,
   verifyCommand,
+  verifyEnvelopeCommand,
   type CommandResult,
 } from './commands.js'
 import { doctor, REFERENCE_TOKEN_COUNT, type TokenSource, type WalletState } from './doctor.js'
@@ -119,6 +122,55 @@ switch (command.kind) {
     // the human report stays on stderr, as with convert.
     if (result.output !== undefined) process.stdout.write(result.output)
 
+    process.exit(result.code)
+    break
+  }
+
+  case 'keygen': {
+    const privPath = path.join(command.dir, 'passport-signing.key')
+    const pubPath = path.join(command.dir, 'passport-signing.pub')
+    if (existsSync(privPath) || existsSync(pubPath)) {
+      console.error(`  ${bad} a key already exists in ${command.dir}; refusing to overwrite it`)
+      process.exit(1)
+    }
+    const result = keygenCommand()
+    mkdirSync(command.dir, { recursive: true })
+    writeFileSync(privPath, result.privateKeyPem, { encoding: 'utf8', mode: 0o600 })
+    writeFileSync(pubPath, result.publicKeyPem, 'utf8')
+    report(result)
+    console.error(`  wrote ${privPath}\n  wrote ${pubPath}`)
+    process.exit(result.code)
+    break
+  }
+
+  case 'sign': {
+    const result = signCommand(
+      read(command.file),
+      path.basename(command.file),
+      read(command.key),
+      read(command.pub),
+    )
+    report(result)
+    if (result.output !== undefined) {
+      if (command.out !== undefined) {
+        writeFileSync(command.out, result.output, 'utf8')
+        console.error(`  wrote ${command.out}`)
+      } else {
+        process.stdout.write(result.output)
+      }
+    }
+    process.exit(result.code)
+    break
+  }
+
+  case 'verify-envelope': {
+    const result = verifyEnvelopeCommand(
+      read(command.file),
+      path.basename(command.file),
+      read(command.pub),
+      command.expect,
+    )
+    report(result)
     process.exit(result.code)
     break
   }

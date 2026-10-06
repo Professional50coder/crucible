@@ -45,6 +45,19 @@ USAGE
       takes an SPDX id for the adapter; without it the Hub shows "unknown",
       which is honest, and a guessed licence is not.
 
+  crucible keygen <out-dir>
+      Generate an ed25519 key pair (passport-signing.key / passport-signing.pub).
+      Refuses to overwrite an existing key.
+
+  crucible sign <manifest.json> --key <private.pem> --pub <public.pem> [--out <envelope.json>]
+      Wrap the manifest in a signed DSSE envelope (in-toto Statement). The
+      signature proves who signed the manifest, not that training was honest.
+
+  crucible verify-envelope <envelope.json> --pub <public.pem> [--expect <0xhash>]
+      Check a signed envelope offline: no network, no 0G RPC. With --expect the
+      manifest inside must also hash to the value anchored on chain. Exit 1 on
+      any failure.
+
   crucible help
       This text.
 
@@ -60,6 +73,9 @@ export type Command =
   | { kind: 'config'; file: string }
   | { kind: 'verify'; file: string; expect?: string }
   | { kind: 'card'; file: string; license?: string }
+  | { kind: 'keygen'; dir: string }
+  | { kind: 'sign'; file: string; key: string; pub: string; out?: string }
+  | { kind: 'verify-envelope'; file: string; pub: string; expect?: string }
   | { kind: 'help' }
   | { kind: 'error'; message: string }
 
@@ -114,6 +130,42 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
     return cmd
   }
 
+  if (command === 'keygen') {
+    const dir = rest.shift()
+    if (dir === undefined) return { kind: 'error', message: 'keygen needs an output directory.' }
+    return { kind: 'keygen', dir }
+  }
+
+  if (command === 'sign') {
+    const key = takeFlag(rest, 'key')
+    if (key.error) return { kind: 'error', message: key.error }
+    const pub = takeFlag(rest, 'pub')
+    if (pub.error) return { kind: 'error', message: pub.error }
+    const out = takeFlag(rest, 'out')
+    if (out.error) return { kind: 'error', message: out.error }
+    const file = rest.shift()
+    if (file === undefined) return { kind: 'error', message: 'sign needs a manifest path.' }
+    if (key.value === undefined || pub.value === undefined) {
+      return { kind: 'error', message: 'sign needs --key <private.pem> and --pub <public.pem>.' }
+    }
+    const cmd: Command = { kind: 'sign', file, key: key.value, pub: pub.value }
+    if (out.value !== undefined) cmd.out = out.value
+    return cmd
+  }
+
+  if (command === 'verify-envelope') {
+    const pub = takeFlag(rest, 'pub')
+    if (pub.error) return { kind: 'error', message: pub.error }
+    const expect = takeFlag(rest, 'expect')
+    if (expect.error) return { kind: 'error', message: expect.error }
+    const file = rest.shift()
+    if (file === undefined) return { kind: 'error', message: 'verify-envelope needs an envelope path.' }
+    if (pub.value === undefined) return { kind: 'error', message: 'verify-envelope needs --pub <public.pem>.' }
+    const cmd: Command = { kind: 'verify-envelope', file, pub: pub.value }
+    if (expect.value !== undefined) cmd.expect = expect.value
+    return cmd
+  }
+
   if (command === 'card') {
     const license = takeFlag(rest, 'license')
     if (license.error) return { kind: 'error', message: license.error }
@@ -153,6 +205,6 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
     kind: 'error',
     message:
       `Unknown command "${command}". ` +
-      `Available: doctor, validate, convert, config, verify, card, help.`,
+      `Available: doctor, validate, convert, config, verify, card, keygen, sign, verify-envelope, help.`,
   }
 }

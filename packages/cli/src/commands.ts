@@ -14,6 +14,10 @@
 import {
   buildModelCard,
   canonicalize,
+  generateSigningKey,
+  signManifest,
+  verifyEnvelope,
+  type DsseEnvelope,
   convertDataset,
   manifestHash,
   recordsToJsonl,
@@ -311,4 +315,99 @@ export function convertCommand(
   }
 
   return { code: 0, lines, output: recordsToJsonl(result.records) }
+}
+
+/**
+ * `crucible keygen` — a fresh ed25519 key pair for signing passports.
+ *
+ * Returns both PEMs and writes nothing: the caller decides where the private key
+ * lives, because a command that silently drops a private key on disk is a
+ * command that gets one committed.
+ */
+export function keygenCommand(): {
+  code: number
+  lines: string[]
+  privateKeyPem: string
+  publicKeyPem: string
+} {
+  const { privateKeyPem, publicKeyPem } = generateSigningKey()
+  return {
+    code: 0,
+    lines: [
+      `  ${ok} generated an ed25519 key pair`,
+      c.dim('     keep the private key out of version control'),
+    ],
+    privateKeyPem,
+    publicKeyPem,
+  }
+}
+
+/**
+ * `crucible sign` — wrap a manifest in a DSSE envelope.
+ *
+ * The signature proves the holder of the key signed this manifest. It does not
+ * say the training was honest; Crucible proves lineage, not honest training.
+ */
+export function signCommand(
+  manifestContent: string,
+  label: string,
+  privateKeyPem: string,
+  publicKeyPem: string,
+): CommandResult {
+  const { manifest, result } = readManifest(manifestContent, label)
+  if (result) return result
+
+  const typed = manifest as unknown as PassportManifest
+  try {
+    const envelope = signManifest(typed, privateKeyPem, publicKeyPem)
+    return {
+      code: 0,
+      lines: [`  ${ok} signed ${c.bold(label)}`, `  keccak256  ${c.cyan(manifestHash(typed))}`],
+      output: JSON.stringify(envelope, null, 2) + '\n',
+    }
+  } catch (e) {
+    return {
+      code: 1,
+      lines: [`  ${bad} could not sign ${label}`, `     ${e instanceof Error ? e.message : String(e)}`],
+    }
+  }
+}
+
+/**
+ * `crucible verify-envelope` — check a signed envelope offline.
+ *
+ * Needs the envelope and a public key and nothing else: no network, no 0G RPC.
+ * With `--expect` the manifest inside must also re-hash to the anchored value.
+ */
+export function verifyEnvelopeCommand(
+  envelopeContent: string,
+  label: string,
+  publicKeyPem: string,
+  expected?: string,
+): CommandResult {
+  let envelope: DsseEnvelope
+  try {
+    envelope = JSON.parse(envelopeContent) as DsseEnvelope
+  } catch {
+    return { code: 1, lines: [`  ${bad} ${label} is not valid JSON`] }
+  }
+
+  const verdict = verifyEnvelope(envelope, publicKeyPem, expected)
+  if (!verdict.ok) {
+    return {
+      code: 1,
+      lines: [`  ${bad} ${label} FAILED verification`, `     ${verdict.reason ?? 'unknown reason'}`],
+    }
+  }
+
+  const lines = [
+    `  ${ok} signature verifies for ${c.bold(label)}`,
+    `  keccak256  ${c.cyan(verdict.statement!.predicate.manifestKeccak256)}`,
+  ]
+  lines.push(
+    expected === undefined
+      ? c.dim('     compare against the anchored hash with --expect <0x…>')
+      : `  ${ok} matches the expected on-chain hash`,
+  )
+  return { code: 0, lines }
 }
