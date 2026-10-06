@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { Backdrop } from '@/components/Backdrop'
+import { SampleNotice } from '@/components/SampleNotice'
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome'
 import { ColumnGuides } from '@/components/ui'
 import { Providers } from './providers'
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <div className="relative z-10 flex min-h-screen flex-col">
             <SiteHeader />
+            <SampleNotice />
             <main id="main" className="flex-1">
               {children}
             </main>

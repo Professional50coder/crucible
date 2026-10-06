@@ -31,9 +31,9 @@ envelope and check it against a public key and an optional on-chain anchor, offl
 `contracts/deployments/galileo-mints.json`, while a wrong anchor exits 1. **Not done:** adding the
 envelope to the web passport export.
 
-## M5 — Honest sample-data disclosure ⏳
+## M5 — Honest sample-data disclosure ✅
 A plain-language notice on the hosted site wherever a record is a demo, visible at every width.
-*Check:* component tests; no engineering internals shown to users.
+*Check:* `apps/web/src/components/SampleNotice.test.tsx` (3 tests, including that no engineering terms appear); typecheck clean. Shown site-wide only when the app has no live backend; uses the same "on chain" / "demo" words as the record badges. **Not yet viewed** on the deployed site after release.
 
 ## M6 — Builder kit ⏳
 `crucible doctor / validate / convert` polished and documented as a template others can start from.
