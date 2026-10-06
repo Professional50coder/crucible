@@ -22,7 +22,7 @@ Hitansh Gopani · first published 16 August 2026 · 0G Bridge Buildathon, Wave 4
 | **Contract on explorer** | [chainscan-galileo.0g.ai/address/0x27087B5b…#code](https://chainscan-galileo.0g.ai/address/0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7#code) |
 | **Manifest #1 on 0G Storage** | [storagescan-galileo.0g.ai/submission/146937](https://storagescan-galileo.0g.ai/submission/146937) |
 | **Source** | [github.com/Professional50coder/crucible](https://github.com/Professional50coder/crucible) |
-| **Docs** | [Field notes](docs/FIELD_NOTES.md) · [Claims audit](docs/CLAIMS_AUDIT.md) · [Architecture](submission/ARCHITECTURE.md) · [Interfaces](docs/INTERFACES.md) · [Changelog, including what I got wrong](CHANGELOG.md) · [Prior art](docs/PRIOR_ART.md) |
+| **Docs** | [Field notes](docs/FIELD_NOTES.md) · [Tutorial: Windows retrieval and portable signing](docs/TUTORIAL_RETRIEVAL_AND_SIGNING.md) · [Claims audit](docs/CLAIMS_AUDIT.md) · [Architecture](submission/ARCHITECTURE.md) · [Interfaces](docs/INTERFACES.md) · [Changelog, including what I got wrong](CHANGELOG.md) · [Prior art](docs/PRIOR_ART.md) |
 
 **At a glance**
 
