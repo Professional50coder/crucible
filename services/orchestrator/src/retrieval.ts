@@ -49,7 +49,14 @@ export interface ModelRetriever {
 /** Minimal `fetch` shape, so tests can inject one without a real network. */
 export type FetchLike = (
   url: string,
-) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }>
+  init?: { headers?: Record<string, string> },
+) => Promise<{
+  ok: boolean
+  status: number
+  /** When present the body is consumed as a stream, so a dropped connection keeps its progress. */
+  body?: { getReader(): { read(): Promise<{ done: boolean; value?: Uint8Array }> } } | null
+  arrayBuffer(): Promise<ArrayBuffer>
+}>
 
 export interface HttpModelRetrieverOptions {
   /** Defaults to the global `fetch`. */
@@ -58,6 +65,12 @@ export interface HttpModelRetrieverOptions {
   indexerUrls?: Partial<Record<NetworkName, string>>
   /** Root-hash function. Defaults to the real 0G Storage Merkle root. */
   rootHasher?: (bytes: Uint8Array) => string
+  /** Attempts per download before giving up. Defaults to 8. */
+  maxAttempts?: number
+  /** Delay before retry `n` (1-based), in ms. Defaults to a capped exponential backoff. */
+  backoffMs?: (attempt: number) => number
+  /** Sleep implementation, injectable so tests need not wait. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 /**
@@ -82,6 +95,9 @@ export class HttpModelRetriever implements ModelRetriever {
   readonly #fetch: FetchLike
   readonly #indexerUrls: Partial<Record<NetworkName, string>>
   readonly #rootHasher: (bytes: Uint8Array) => string
+  readonly #maxAttempts: number
+  readonly #backoffMs: (attempt: number) => number
+  readonly #sleep: (ms: number) => Promise<void>
 
   constructor(options: HttpModelRetrieverOptions = {}) {
     const globalFetch = (globalThis as { fetch?: FetchLike }).fetch
@@ -92,6 +108,83 @@ export class HttpModelRetriever implements ModelRetriever {
     this.#fetch = fetchImpl
     this.#indexerUrls = options.indexerUrls ?? {}
     this.#rootHasher = options.rootHasher ?? zgStorageRoot
+    this.#maxAttempts = Math.max(1, options.maxAttempts ?? 8)
+    this.#backoffMs = options.backoffMs ?? ((n) => Math.min(500 * 2 ** (n - 1), 8000))
+    this.#sleep = options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
+  }
+
+  /**
+   * Download `url` fully, resuming after a dropped connection.
+   *
+   * Windows' schannel stack drops large single-shot downloads partway (run 4 lost
+   * a 93 MB body at ~61 MB). Chunks are kept as they arrive; on failure the next
+   * attempt asks for `Range: bytes=<received>-`. A 206 continues, a 200 means the
+   * server ignored the range so we restart from zero rather than splice wrongly.
+   * HTTP errors are not retried except 5xx/429. The result is NOT trusted — the
+   * caller still validates it against the on-chain root.
+   */
+  async #download(url: string): Promise<Uint8Array> {
+    const chunks: Uint8Array[] = []
+    let received = 0
+    let lastError: unknown
+
+    for (let attempt = 1; attempt <= this.#maxAttempts; attempt++) {
+      try {
+        const init = received > 0 ? { headers: { Range: `bytes=${received}-` } } : undefined
+        const response = await this.#fetch(url, init)
+
+        if (response.status === 416 && received > 0) {
+          lastError = undefined
+          break // already have everything
+        }
+        if (!response.ok) {
+          const err = new Error(`Indexer returned HTTP ${response.status} for ${url}`)
+          if (response.status >= 500 || response.status === 429) throw err
+          throw Object.assign(err, { fatal: true })
+        }
+        if (received > 0 && response.status !== 206) {
+          chunks.length = 0
+          received = 0
+        }
+
+        if (response.body) {
+          const reader = response.body.getReader()
+          for (;;) {
+            const { done, value } = await reader.read()
+            if (done) break
+            if (value && value.length > 0) {
+              chunks.push(value)
+              received += value.length
+            }
+          }
+        } else {
+          const whole = new Uint8Array(await response.arrayBuffer())
+          chunks.push(whole)
+          received += whole.length
+        }
+        lastError = undefined
+        break
+      } catch (error) {
+        if ((error as { fatal?: boolean }).fatal) throw error
+        lastError = error
+        if (attempt < this.#maxAttempts) await this.#sleep(this.#backoffMs(attempt))
+      }
+    }
+
+    if (lastError !== undefined) {
+      const reason = lastError instanceof Error ? lastError.message : String(lastError)
+      throw new Error(
+        `Download of ${url} failed after ${this.#maxAttempts} attempts at ${received} bytes: ${reason}`,
+      )
+    }
+
+    const out = new Uint8Array(received)
+    let offset = 0
+    for (const chunk of chunks) {
+      out.set(chunk, offset)
+      offset += chunk.length
+    }
+    return out
   }
 
   #indexerFor(network: NetworkName): string {
@@ -105,12 +198,7 @@ export class HttpModelRetriever implements ModelRetriever {
     }
 
     const url = `${this.#indexerFor(network)}/file?root=${rootHash}`
-    const response = await this.#fetch(url)
-    if (!response.ok) {
-      throw new Error(`Indexer returned HTTP ${response.status} for ${url}`)
-    }
-
-    const bytes = new Uint8Array(await response.arrayBuffer())
+    const bytes = await this.#download(url)
     if (bytes.length === 0) {
       throw new Error(`Indexer returned an empty body for root ${rootHash}`)
     }
