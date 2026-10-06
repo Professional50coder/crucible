@@ -17,7 +17,7 @@ import {
 } from '@crucible/core'
 import { JsonRpcProvider, Wallet, formatEther } from 'ethers'
 import dotenv from 'dotenv'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -26,7 +26,9 @@ import {
   cardCommand,
   configCommand,
   convertCommand,
+  initCommand,
   keygenCommand,
+  scaffoldTargetProblem,
   signCommand,
   validateCommand,
   verifyCommand,
@@ -139,6 +141,24 @@ switch (command.kind) {
     writeFileSync(pubPath, result.publicKeyPem, 'utf8')
     report(result)
     console.error(`  wrote ${privPath}\n  wrote ${pubPath}`)
+    process.exit(result.code)
+    break
+  }
+
+  case 'init': {
+    const entries = existsSync(command.dir) ? readdirSync(command.dir) : undefined
+    const problem = scaffoldTargetProblem(command.dir, entries)
+    if (problem !== undefined) {
+      console.error(`  ${bad} ${problem}`)
+      process.exit(1)
+    }
+    const result = initCommand(path.basename(path.resolve(command.dir)))
+    mkdirSync(command.dir, { recursive: true })
+    for (const file of result.files) {
+      writeFileSync(path.join(command.dir, file.path), file.content, 'utf8')
+    }
+    report(result)
+    console.error(`  wrote ${result.files.map((f) => f.path).join(', ')} to ${command.dir}`)
     process.exit(result.code)
     break
   }

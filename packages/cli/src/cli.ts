@@ -58,6 +58,11 @@ USAGE
       manifest inside must also hash to the value anchored on chain. Exit 1 on
       any failure.
 
+  crucible init <dir>
+      Scaffold a starter project: a valid chat-format dataset.jsonl, a standard
+      config.json, .env.example (placeholders only), .gitignore and a README.
+      Refuses to write into a non-empty directory.
+
   crucible help
       This text.
 
@@ -76,6 +81,7 @@ export type Command =
   | { kind: 'keygen'; dir: string }
   | { kind: 'sign'; file: string; key: string; pub: string; out?: string }
   | { kind: 'verify-envelope'; file: string; pub: string; expect?: string }
+  | { kind: 'init'; dir: string }
   | { kind: 'help' }
   | { kind: 'error'; message: string }
 
@@ -134,6 +140,12 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
     const dir = rest.shift()
     if (dir === undefined) return { kind: 'error', message: 'keygen needs an output directory.' }
     return { kind: 'keygen', dir }
+  }
+
+  if (command === 'init') {
+    const dir = rest.shift()
+    if (dir === undefined) return { kind: 'error', message: 'init needs a target directory.' }
+    return { kind: 'init', dir }
   }
 
   if (command === 'sign') {
@@ -205,6 +217,6 @@ export function parseArgs(argv: string[], defaultNetwork = 'testnet'): Command {
     kind: 'error',
     message:
       `Unknown command "${command}". ` +
-      `Available: doctor, validate, convert, config, verify, card, keygen, sign, verify-envelope, help.`,
+      `Available: doctor, validate, convert, config, verify, card, keygen, sign, verify-envelope, init, help.`,
   }
 }
