@@ -84,3 +84,19 @@ export {
   yamlScalar,
   buildModelCard,
 } from './modelcard.js'
+
+export {
+  DSSE_PAYLOAD_TYPE,
+  STATEMENT_TYPE,
+  PREDICATE_TYPE,
+  type DsseEnvelope,
+  type DsseSignature,
+  type PassportStatement,
+  type SigningKeyPair,
+  type EnvelopeVerification,
+  generateSigningKey,
+  pae,
+  buildStatement,
+  signManifest,
+  verifyEnvelope,
+} from './dsse.js'
