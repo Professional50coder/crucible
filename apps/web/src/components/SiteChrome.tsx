@@ -11,6 +11,7 @@ import { WalletButton } from './WalletButton'
 const NAV = [
   { href: '/gallery', label: 'Gallery' },
   { href: '/jobs', label: 'Runs' },
+  { href: '/license', label: 'Licensing' },
   { href: '/new', label: 'New run' },
 ]
 
