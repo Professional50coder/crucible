@@ -23,9 +23,13 @@ Turn a certificate into a primitive: a `/license` page over `authorizeUsage` / `
 `isAuthorized` / `permissionsOf` / `authorizedExecutors`, with a pure, tested permissions codec.
 *Check:* `apps/web/src/lib/license.test.ts` (15 tests); web suite 370 pass; `next build` green with `/license`; live Galileo reads (`ownerOf`, `authorizedCount`, `authorizedExecutors`) verified for tokens 1-3. **Not yet exercised:** a real grant/revoke transaction from the owner wallet.
 
-## M4 — Verify anywhere ⏳
-`crucible verify-envelope` in `packages/cli`: check a DSSE envelope against a public key and an
-optional on-chain anchor, offline. Add the envelope to the passport export. *Check:* CLI tests.
+## M4 — Verify anywhere ✅
+`crucible keygen`, `sign` and `verify-envelope` in `packages/cli`: sign a manifest into a DSSE
+envelope and check it against a public key and an optional on-chain anchor, offline. *Check:*
+`packages/cli/test/envelope.test.ts` (10 tests, 84 CLI total); run as a real process on
+`runs/manifest-1.json` — the envelope verifies and `--expect` passes against the anchor recorded in
+`contracts/deployments/galileo-mints.json`, while a wrong anchor exits 1. **Not done:** adding the
+envelope to the web passport export.
 
 ## M5 — Honest sample-data disclosure ⏳
 A plain-language notice on the hosted site wherever a record is a demo, visible at every width.
