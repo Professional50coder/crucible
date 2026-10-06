@@ -51,7 +51,7 @@ The indexer gateway is a third-party HTTP server; whatever it returns is just by
 
 ## 3. Resilience: streaming and Range resume
 
-On Windows the 93 MB download in run 4 died on its first attempt at 61,351,230 bytes (schannel "server closed abruptly"). In run 4 the resume came from a curl `fetchImpl` handed to the retriever. docs/FIELD_NOTES.md, CHANGELOG.md and the Wave 4 changelog still say the in-code retriever does not stream or resume; that text predates the current `retrieval.ts`, which does. Behaviour (private method `#download`):
+On Windows the 93 MB download in run 4 died on its first attempt at 61,351,230 bytes (schannel "server closed abruptly"). In run 4 the resume came from a curl `fetchImpl` handed to the retriever. Older entries in docs/FIELD_NOTES.md, the 0.5.0 CHANGELOG entry and the Wave 4 changelog still say the in-code retriever does not stream or resume; that was true on their dates, and the 0.6.0 CHANGELOG entry records that it now does. Behaviour (private method `#download`):
 
 - The body is read as a stream, and chunks are kept as they arrive, so a dropped connection keeps its progress.
 - On failure the next attempt sends `Range: bytes=<received>-`.
@@ -77,7 +77,7 @@ The on-chain anchor is `keccak256` of the canonical manifest. Checking it needs 
 
 ### Commands
 
-Syntax is from the `USAGE` text in `packages/cli/src/cli.ts`. Run from the repository root after `npm install`. The CLI entry point is `packages/cli/src/index.ts` (a `tsx` script, the `crucible` bin in `packages/cli/package.json`); the examples use `npx tsx packages/cli/src/index.ts`, so substitute `crucible` if it is on your PATH. These commands were read from the code, not executed while writing this document.
+Syntax is from the `USAGE` text in `packages/cli/src/cli.ts`. Run from the repository root after `npm install`. The CLI entry point is `packages/cli/src/index.ts` (a `tsx` script, the `crucible` bin in `packages/cli/package.json`); the examples use `npx tsx packages/cli/src/index.ts`, so substitute `crucible` if it is on your PATH. Steps 0–3 were run as real processes on 2026-10-06 against `runs/manifest-1.json`: the manifest hash matched the anchor, the signed envelope verified, `--expect` passed against the anchor, and a wrong anchor exited 1.
 
 ```bash
 CRUCIBLE="npx tsx packages/cli/src/index.ts"
@@ -127,4 +127,4 @@ Notes:
 - **Model file contents.** Signing covers the manifest. The retriever's root check (section 2) is what ties downloaded bytes to the on-chain root.
 - **Live-network resume.** Section 3 is covered by unit tests with injected fetch functions; no recorded live run of the in-code resume exists in this repo.
 - **Browser runs.** The `/verify` page has tests; a real-browser run is recorded in the roadmap as not yet checked.
-- **The commands in this document.** They were checked against the CLI source, not executed while writing it.
+- **Other machines.** The commands were run on one Windows machine; a fresh-clone walkthrough on another has not been done.
