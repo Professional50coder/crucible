@@ -12,6 +12,7 @@ const NAV = [
   { href: '/gallery', label: 'Gallery' },
   { href: '/jobs', label: 'Runs' },
   { href: '/license', label: 'Licensing' },
+  { href: '/verify', label: 'Verify' },
   { href: '/new', label: 'New run' },
 ]
 
