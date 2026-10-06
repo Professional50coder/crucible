@@ -44,9 +44,13 @@ crypto the way `@crucible/core` signs, so the two implementations are proven to 
 real browser. Ed25519 in WebCrypto needs a current Chrome, Edge, Safari or Firefox; older browsers
 get a plain message rather than a wrong answer.
 
-## M6 — Builder kit ⏳
-`crucible doctor / validate / convert` polished and documented as a template others can start from.
-*Check:* CLI tests; a fresh-clone walkthrough that runs.
+## M6 — Builder kit ✅
+`crucible init <dir>` scaffolds a starter project (valid chat dataset, standard config, placeholder
+`.env.example`, `.gitignore`, README); `docs/BUILDER_KIT.md` walks through every CLI command.
+*Check:* `packages/cli/test/init.test.ts` (generated dataset and config pass the real validators, no
+key-like strings, non-empty target refused, `parseArgs` handles `init`) plus `cli.test.ts`, run alone;
+`tsc --noEmit` clean. Not verified: the `init` file I/O in `index.ts` was not run end to end, and no
+fresh-clone walkthrough was executed, so the doc is checked against the usage text, not by running it.
 
 ## M7 — Standalone write-up ✅
 Publish `FIELD_NOTES.md` as a self-contained tutorial (retrieval defect, fix, resume, signing).

@@ -16,6 +16,7 @@ import {
   canonicalize,
   generateSigningKey,
   signManifest,
+  STANDARD_TEMPLATE,
   verifyEnvelope,
   type DsseEnvelope,
   convertDataset,
@@ -410,4 +411,115 @@ export function verifyEnvelopeCommand(
       : `  ${ok} matches the expected on-chain hash`,
   )
   return { code: 0, lines }
+}
+
+/** A file `crucible init` wants written, relative to the target directory. */
+export interface ScaffoldFile {
+  path: string
+  content: string
+}
+
+/**
+ * Chat-format examples for the starter dataset. They are about small,
+ * checkable things (this tool's own vocabulary) so a reader can see what a
+ * record is for. Ten is 0G's minimum; real behaviour change needs hundreds,
+ * which the generated README says.
+ */
+const STARTER_EXAMPLES: ReadonlyArray<readonly [string, string]> = [
+  ['What does keccak256 produce?', 'A 32-byte hash, usually written as a 0x-prefixed string of 64 hex characters.'],
+  ['Why sort the keys before hashing a JSON manifest?', 'JSON objects have no guaranteed key order, so two equal manifests could serialise differently. Sorting the keys and removing whitespace gives one canonical byte string to hash.'],
+  ['What is a training epoch?', 'One full pass over the training dataset.'],
+  ['What does the learning rate control?', 'How large a step the optimiser takes when it updates the model weights. Too high can make training unstable; too low makes it slow.'],
+  ['What is a LoRA adapter?', 'A small set of extra weights trained on top of a frozen base model, so fine-tuning changes only a tiny fraction of the parameters.'],
+  ['Why keep a private signing key out of version control?', 'Anyone who can read the key can sign as you. Once it is committed it stays in the history, so treat it as leaked and replace it.'],
+  ['What does a signature on a manifest prove?', 'That the holder of the key signed exactly this manifest. It does not prove the training itself was honest.'],
+  ['What is the difference between validating a dataset and training on it?', 'Validation only checks the file against the format rules. Training is the paid step that actually updates the model.'],
+  ['Why check a config before submitting a task?', 'The broker can reject a config with an extra or out-of-range parameter after the task is created and funded, so a local check saves money.'],
+  ['What is a record in the chat dataset format?', 'One JSON object per line with a messages array, where each message has a role such as user or assistant and a content string.'],
+  ['How many examples does a useful fine-tune need?', 'The platform minimum is 10, but visibly changing the behaviour of a small model usually takes hundreds to a thousand well-chosen examples.'],
+  ['Can I trust a model just because it has a passport?', 'A passport proves lineage: which dataset hash and config produced which adapter. It does not prove the adapter is good or safe.'],
+]
+
+const SCAFFOLD_ENV = `# Copy to .env and fill in. Never commit .env.
+# Wallet that pays for training on 0G. Fund it only as much as you need.
+PRIVATE_KEY=<your-wallet-private-key>
+
+# testnet or mainnet
+ZG_NETWORK=testnet
+`
+
+const SCAFFOLD_GITIGNORE = `.env
+*.key
+node_modules/
+`
+
+function scaffoldReadme(name: string): string {
+  return `# ${name}
+
+A starter project for a verifiable 0G fine-tune, created by \`crucible init\`.
+
+- \`dataset.jsonl\`: ${STARTER_EXAMPLES.length} chat-format examples. Replace them with your own. 0G's minimum is 10; a visible behaviour change usually needs hundreds.
+- \`config.json\`: 0G's standard five-parameter training config.
+- \`.env.example\`: copy to \`.env\` and fill in. \`.env\` and \`*.key\` are git-ignored.
+
+## Flow
+
+\`\`\`
+crucible validate dataset.jsonl
+crucible config config.json
+crucible doctor testnet --dataset dataset.jsonl
+# run the fine-tune, then keep the Model Passport manifest it produces
+crucible verify manifest.json --expect <0xhash>
+crucible keygen keys
+crucible sign manifest.json --key keys/passport-signing.key --pub keys/passport-signing.pub --out envelope.json
+crucible verify-envelope envelope.json --pub keys/passport-signing.pub --expect <0xhash>
+\`\`\`
+
+A signature proves who signed the manifest, not that training was honest.
+`
+}
+
+/**
+ * `crucible init` — the files for a starter project, as data.
+ *
+ * Pure: no filesystem. The caller checks the target with
+ * `scaffoldTargetProblem` and writes the files. Nothing here is a real key;
+ * `.env.example` holds placeholders only.
+ */
+export function initCommand(name: string): { code: number; lines: string[]; files: ScaffoldFile[] } {
+  const dataset =
+    STARTER_EXAMPLES.map(([user, assistant]) =>
+      JSON.stringify({
+        messages: [
+          { role: 'user', content: user },
+          { role: 'assistant', content: assistant },
+        ],
+      }),
+    ).join('\n') + '\n'
+
+  const files: ScaffoldFile[] = [
+    { path: 'dataset.jsonl', content: dataset },
+    { path: 'config.json', content: JSON.stringify(STANDARD_TEMPLATE, null, 2) + '\n' },
+    { path: '.env.example', content: SCAFFOLD_ENV },
+    { path: '.gitignore', content: SCAFFOLD_GITIGNORE },
+    { path: 'README.md', content: scaffoldReadme(name) },
+  ]
+
+  return {
+    code: 0,
+    lines: [
+      `  ${ok} scaffolded ${files.length} files`,
+      c.dim('     next: crucible validate dataset.jsonl && crucible config config.json'),
+    ],
+    files,
+  }
+}
+
+/**
+ * Why a directory cannot be scaffolded into, or undefined if it can.
+ * `entries` is the directory listing, or undefined when it does not exist.
+ */
+export function scaffoldTargetProblem(dir: string, entries: string[] | undefined): string | undefined {
+  if (entries === undefined || entries.length === 0) return undefined
+  return `${dir} is not empty; refusing to overwrite it`
 }
