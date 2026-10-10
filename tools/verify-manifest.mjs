@@ -127,13 +127,29 @@ async function main() {
   // 6. The manifest describes a run; the token stores the same facts. Cross-check them,
   //    so a manifest that verifies but describes a different task cannot slip through.
   const onChain = await passport.passportOf(tokenId)
+  // Two manifest shapes exist: the flat one uploaded for passports #1-#2 by
+  // tools/upload-manifest.mjs, and the nested @crucible/core shape (base.modelHash,
+  // dataset.rootHash, training, adapter.rootHash, task.id) used from passport #3 on.
+  // The token stores configHash = keccak256(canonical training config), so for the
+  // nested shape it is recomputed here rather than read.
+  const nested = manifest.baseModelHash === undefined && manifest.base !== undefined
+  const view = nested
+    ? {
+        baseModelHash: manifest.base?.modelHash,
+        datasetRootHash: manifest.dataset?.rootHash,
+        configHash: manifest.training ? keccakUtf8(canonicalize(manifest.training)) : undefined,
+        adapterRootHash: manifest.adapter?.rootHash,
+        taskId: manifest.task?.id,
+        provider: manifest.task?.provider,
+      }
+    : manifest
   const fields = [
-    ['baseModelHash', manifest.baseModelHash, onChain.baseModelHash],
-    ['datasetRootHash', manifest.datasetRootHash, onChain.datasetRootHash],
-    ['configHash', manifest.configHash, onChain.configHash],
-    ['adapterRootHash', manifest.adapterRootHash, onChain.adapterRootHash],
-    ['taskId', manifest.taskId, onChain.taskId],
-    ['provider', manifest.provider, onChain.provider],
+    ['baseModelHash', view.baseModelHash, onChain.baseModelHash],
+    ['datasetRootHash', view.datasetRootHash, onChain.datasetRootHash],
+    ['configHash', view.configHash, onChain.configHash],
+    ['adapterRootHash', view.adapterRootHash, onChain.adapterRootHash],
+    ['taskId', view.taskId, onChain.taskId],
+    ['provider', view.provider, onChain.provider],
   ]
 
   console.log('\nmanifest field vs on-chain struct')
@@ -146,8 +162,8 @@ async function main() {
 
   // The adapter hash is a sentinel, not a root hash: no adapter was ever retrieved for
   // this task. Say so here rather than let a reader mistake it for a stored artifact.
-  const sentinel = keccakUtf8(`crucible:adapter-not-retrieved:${manifest.taskId}`)
-  if (manifest.adapterRootHash?.toLowerCase() === sentinel.toLowerCase()) {
+  const sentinel = keccakUtf8(`crucible:adapter-not-retrieved:${view.taskId}`)
+  if (view.adapterRootHash?.toLowerCase() === sentinel.toLowerCase()) {
     console.log('\n  note: adapterRootHash is keccak256("crucible:adapter-not-retrieved:<taskId>").')
     console.log('        No adapter exists for this task, and the passport says so on-chain.')
   }
