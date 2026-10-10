@@ -1,0 +1,24 @@
+$ node tools/verify-manifest.mjs 0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7 3   # run live against Galileo, 2026-10-10
+root hash             : 0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7
+token                 : #3 on 0x27087B5bD124f2a570eb22B6B5bbe05F5d83C1c7
+storage scan          : https://storagescan-galileo.0g.ai/api/txs?skip=0&limit=10&rootHash=0xdfaa9b837e339c2aa87c8e52fed102390ffeb22392beb58d4ffb3589aab216a7
+downloaded            : 1027 bytes
+
+keccak256(download)   : 0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+keccak256(canonical)  : 0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+bytes are canonical   : PASS
+
+verifyManifest(real)  : true   PASS
+verifyManifest(fake)  : false  PASS
+
+manifest field vs on-chain struct
+  baseModelHash      PASS  0xb4f76a886b8655c92bb021922d60b5e4d9271a5c9da98b6cb10937a06c2c75a7
+  datasetRootHash    PASS  0xa5051ae76e5bc0e3c64975dea37231dba744945ad50f564c9534948139e7dbfd
+  configHash         PASS  0xe65b3e5183dff7b35bb409425f55ba0f6210c726cb1e8ae83e33b8e89cca55f1
+  adapterRootHash    PASS  0x113b79c3b6c6a0bfa418e044770171b02b475e185fbbdf0ddc932ec6348a396c
+  taskId             PASS  d06d00e2-965b-430c-bf46-4d6444ee1c47
+  provider           PASS  0xA02b95Aa6886b1116C4f334eDe00381511E31A09
+
+browse it             : https://storagescan-galileo.0g.ai/submission/150715
+
+VERIFIED — passport #3

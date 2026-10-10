@@ -1,0 +1,19 @@
+$ crucible verify runs/run4/manifest-4.json --expect 0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+  manifest-4.json  ·  1027 canonical bytes
+  keccak256  0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+  ✓ matches the expected hash
+0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+
+$ crucible verify-envelope docs/sample/passport-3.envelope.json --pub docs/sample/demo-signing.pub --expect 0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+  ✓ signature verifies for passport-3.envelope.json
+  keccak256  0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+  ✓ matches the expected on-chain hash
+
+$ crucible verify runs/run4/manifest-4.json --expect 0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef14   # one digit changed
+  manifest-4.json  ·  1027 canonical bytes
+  keccak256  0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+  ✗ does not match the expected hash
+     expected  0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef14
+     computed  0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
+     one byte of the manifest differs from the one that was anchored
+0x2e38e49c164712d533c600f6a0242cca9cf75bf3832a28699d9208127685ef13
