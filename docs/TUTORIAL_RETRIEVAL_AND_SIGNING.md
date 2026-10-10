@@ -9,9 +9,9 @@ Every file and command named here exists in this repository. Where something was
 
 ## 1. The problem
 
-After a 0G fine-tuning task reaches `Delivered`, the SDK's `acknowledgeModel` is supposed to download the model and acknowledge it on chain. 0G's documentation says this must happen within 48 hours, and that missing it costs 30% of the task fee (quoted in the README, in the section on the 48-hour window).
+After a 0G fine-tuning task reaches `Delivered`, the SDK's `acknowledgeModel` is supposed to download the model and acknowledge it on chain. 0G's documentation says this must happen within 48 hours, and that missing it costs 30% of the task fee (quoted in [EVIDENCE.md](EVIDENCE.md), under "The 48-hour budget").
 
-With `@0gfoundation/0g-compute-ts-sdk@0.9.0` there are two download paths, and on Windows neither works (docs/FIELD_NOTES.md; README finding 01):
+With `@0gfoundation/0g-compute-ts-sdk@0.9.0` there are two download paths, and on Windows neither works (docs/FIELD_NOTES.md; [NETWORK_DEFECTS.md](NETWORK_DEFECTS.md) finding 01):
 
 | Path | Failure | Where |
 |---|---|---|
